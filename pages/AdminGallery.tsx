@@ -84,6 +84,8 @@ const AdminGallery: React.FC = () => {
 
   // Load folders
   const loadFolders = useCallback(async () => {
+    // Skip if tenantId not yet loaded
+    if (!tenantId) return;
     try {
       const res = await fetch(`${apiBase}/api/upload/folders?tenantId=${tenantId}`, {
         credentials: 'include',
@@ -100,6 +102,8 @@ const AdminGallery: React.FC = () => {
 
   // Load trash
   const loadTrash = useCallback(async () => {
+    // Skip if tenantId not yet loaded
+    if (!tenantId) return;
     setIsLoadingTrash(true);
     try {
       const res = await fetch(`${apiBase}/api/upload/trash?tenantId=${tenantId}`, {
@@ -444,6 +448,13 @@ const AdminGallery: React.FC = () => {
     const files = input.files;
     if (!files || files.length === 0) return;
 
+    // Ensure tenantId is valid before uploading
+    if (!tenantId) {
+      toast.error('Tenant not loaded yet. Please try again in a moment.');
+      if (input) input.value = '';
+      return;
+    }
+
     const uploadPromises = Array.from(files).map(async (file) => {
       try {
         const imageUrl = await uploadImageToServer(file, tenantId);
@@ -501,6 +512,12 @@ const AdminGallery: React.FC = () => {
     const files = e.dataTransfer.files;
     if (!files || files.length === 0) return;
 
+    // Ensure tenantId is valid before uploading
+    if (!tenantId) {
+      toast.error('Tenant not loaded yet. Please try again in a moment.');
+      return;
+    }
+
     // Filter only image files
     const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
     if (imageFiles.length === 0) {
@@ -546,11 +563,20 @@ const AdminGallery: React.FC = () => {
       {/* Drag and Drop Overlay */}
       {isDragging && (
         <div className="absolute inset-0 bg-purple-500/10 backdrop-blur-sm z-50 flex items-center justify-center pointer-events-none">
-          <div className="bg-white rounded-xl p-8 shadow-2xl border-2 border-dashed border-purple-500">
+          <div className={`bg-white rounded-xl p-8 shadow-2xl border-2 border-dashed ${tenantId ? 'border-purple-500' : 'border-gray-400'}`}>
             <div className="text-center">
-              <Upload size={48} className="mx-auto mb-4 text-purple-500" />
-              <p className="text-lg font-bold text-purple-700">Drop images here to upload</p>
-              <p className="text-sm text-gray-500 mt-1">Images will be uploaded to {currentFolder || 'Gallery Root'}</p>
+              <Upload size={48} className={`mx-auto mb-4 ${tenantId ? 'text-purple-500' : 'text-gray-400'}`} />
+              {tenantId ? (
+                <>
+                  <p className="text-lg font-bold text-purple-700">Drop images here to upload</p>
+                  <p className="text-sm text-gray-500 mt-1">Images will be uploaded to {currentFolder || 'Gallery Root'}</p>
+                </>
+              ) : (
+                <>
+                  <p className="text-lg font-bold text-gray-600">Please wait...</p>
+                  <p className="text-sm text-gray-500 mt-1">Store is still loading</p>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -896,11 +922,17 @@ const AdminGallery: React.FC = () => {
               />
               <button 
                 onClick={() => fileInputRef.current?.click()}
-                className="flex items-center gap-1.5 sm:gap-2 px-4 sm:px-6 py-2 sm:py-3 bg-purple-100 text-purple-700 hover:bg-purple-200 rounded-lg font-bold transition uppercase tracking-wide text-xs sm:text-sm border border-purple-200"
+                disabled={!tenantId}
+                className={`flex items-center gap-1.5 sm:gap-2 px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-bold transition uppercase tracking-wide text-xs sm:text-sm border ${
+                  tenantId 
+                    ? 'bg-purple-100 text-purple-700 hover:bg-purple-200 border-purple-200' 
+                    : 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200'
+                }`}
+                title={!tenantId ? 'Waiting for store to load...' : 'Upload images'}
               >
                 <Upload size={16} className="sm:hidden" />
                 <Upload size={18} className="hidden sm:block" />
-                Upload
+                {tenantId ? 'Upload' : 'Loading...'}
               </button>
               
               <div className="px-3 sm:px-6 py-2 sm:py-3 border border-purple-600 text-purple-600 rounded-lg font-medium text-xs sm:text-sm min-w-[80px] sm:min-w-[120px] text-center">

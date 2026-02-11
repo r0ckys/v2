@@ -60,7 +60,9 @@ export function getHostTenantSlug(): string | null {
   if (isLocalhost) {
     if (hostSegments.length > 1) {
       const candidate = sanitizeSubdomainSlug(hostSegments[0]);
-      return candidate || null;
+      // Skip reserved subdomains like 'admin', 'www', etc.
+      if (!candidate || isReservedTenantSlug(candidate)) return null;
+      return candidate;
     }
     return DEFAULT_TENANT_SLUG || null;
   }

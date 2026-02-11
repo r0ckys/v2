@@ -21,6 +21,7 @@ import React, { useEffect, useCallback, lazy, Suspense } from 'react';
 // Core services
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider } from './context/AuthContext';
+import { DarkModeProvider } from './context/DarkModeContext';
 import { HelmetProvider } from 'react-helmet-async';
 import { DataService } from './services/DataService';
 
@@ -399,10 +400,11 @@ const App = () => {
   return (
     <HelmetProvider>
       <AuthProvider>
+        <DarkModeProvider>
         <ThemeProvider themeConfig={themeConfig || undefined}>
           <Suspense fallback={null}>
             <Toaster position="top-right" toastOptions={{ duration: 2500 }} />
-            <div className="relative bg-gray-50">
+            <div className="relative bg-gray-50 dark:bg-gray-900 min-h-screen transition-colors duration-300">
               <AppRoutes
               currentView={currentView}
               isSuperAdminSubdomain={isSuperAdminSubdomain}
@@ -493,6 +495,7 @@ const App = () => {
           </div>
         </Suspense>
       </ThemeProvider>
+      </DarkModeProvider>
     </AuthProvider>
   </HelmetProvider>
 );

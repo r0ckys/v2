@@ -81,6 +81,7 @@ export interface ProductVariantStock extends ProductVariantSelection {
 }
 
 export interface Product {
+  sales: number;
   id: number;
   name: string;
   tenantId?: string;

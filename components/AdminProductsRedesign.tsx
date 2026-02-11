@@ -88,10 +88,15 @@ const AdminProductsRedesign: React.FC<Props> = ({
   onSwitchSection,
   activeSection
 }) => {
-  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
   const [isDeepSearchOpen, setIsDeepSearchOpen] = useState(false);
-  const [openActionDropdown, setOpenActionDropdown] = useState<number | null>(null);
+  const [openActionDropdown, setOpenActionDropdown] = useState<string | null>(null);
+
+  // Helper to get selected product IDs from Set of keys
+  const getSelectedProductIds = (): number[] => {
+    return products.filter((p, idx) => selectedIds.has(getProductKey(p, idx))).map(p => p.id);
+  };
 
   // Deep Search Local State
   const [deepSearchTerm, setDeepSearchTerm] = useState('');
@@ -105,16 +110,30 @@ const AdminProductsRedesign: React.FC<Props> = ({
   const [priceRange, setPriceRange] = useState({ min: '', max: '' });
   const [stockRange, setStockRange] = useState({ min: '', max: '' });
 
+  // Helper to get unique key for each product
+  const getProductKey = (product: Product, idx: number) => {
+    return (product as any)._id || `${product.id}-${idx}`;
+  };
+
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedIds(products.map(p => p.id));
+      const allKeys = products.map((p, idx) => getProductKey(p, idx));
+      setSelectedIds(new Set(allKeys));
     } else {
-      setSelectedIds([]);
+      setSelectedIds(new Set());
     }
   };
 
-  const toggleSelect = (id: number) => {
-    setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+  const toggleSelect = (key: string) => {
+    setSelectedIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(key)) {
+        newSet.delete(key);
+      } else {
+        newSet.add(key);
+      }
+      return newSet;
+    });
   };
 
   const handleApplyDeepSearch = () => {
@@ -275,7 +294,7 @@ const AdminProductsRedesign: React.FC<Props> = ({
                       <input
                         type="checkbox"
                         className="w-5 h-5 rounded border-gray-300 text-sky-500 focus:ring-sky-500 cursor-pointer"
-                        checked={selectedIds.length === products.length && products.length > 0}
+                        checked={selectedIds.size === products.length && products.length > 0}
                         onChange={(e) => handleSelectAll(e.target.checked)}
                       />
                     </th>
@@ -292,21 +311,23 @@ const AdminProductsRedesign: React.FC<Props> = ({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {products.map((product, idx) => (
-                    <tr key={product.id} className={`hover:bg-sky-50/30 transition-colors ${selectedIds.includes(product.id) ? 'bg-sky-50/50' : ''}`}>
+                  {products.map((product, idx) => {
+                    const productKey = getProductKey(product, idx);
+                    return (
+                    <tr key={productKey} className={`hover:bg-sky-50/30 transition-colors ${selectedIds.has(productKey) ? 'bg-sky-50/50' : ''}`}>
                       <td className="px-6 py-4">
                         <input
                           type="checkbox"
                           className="w-5 h-5 rounded border-gray-300 text-sky-500 focus:ring-sky-500 cursor-pointer"
-                          checked={selectedIds.includes(product.id)}
-                          onChange={() => toggleSelect(product.id)}
+                          checked={selectedIds.has(productKey)}
+                          onChange={() => toggleSelect(productKey)}
                         />
                       </td>
                       <td className="px-4 py-4 text-stone-900 text-xs font-normal">{(currentPage - 1) * 10 + idx + 1}</td>
                       <td className="px-4 py-4">
                         <div className="w-12 h-12 bg-gradient-to-r from-sky-400 to-blue-500 rounded-lg overflow-hidden border border-gray-100 shadow-sm">
                           <OptimizedImage
-                            src={product.images?.[0] || product.image || 'https://placehold.co/40x40'}
+                            src={product.image?.[0] || product.image || 'https://placehold.co/40x40'}
                             alt={product.name}
                             className="w-full h-full object-cover"
                           />
@@ -336,23 +357,23 @@ const AdminProductsRedesign: React.FC<Props> = ({
                       </td>
                       <td className="px-4 py-4">
                         <span className={`px-3 py-1 rounded-full text-[10px] font-medium transition-colors ${
-                          product.status === 'Active' || product.status === 'Publish'
+                          product.status === 'Active'
                           ? 'bg-green-100 text-green-700'
                           : 'bg-amber-100 text-amber-700'
                         }`}>
-                          {product.status || 'Publish'}
+                          {product.status || 'Draft'}
                         </span>
                       </td>
                       <td className="px-4 py-4 text-center">
                         <div className="relative inline-block">
                           <button
-                            onClick={() => setOpenActionDropdown(openActionDropdown === product.id ? null : product.id)}
+                            onClick={() => setOpenActionDropdown(openActionDropdown === productKey ? null : productKey)}
                             className="p-2 hover:bg-gray-100 rounded-lg transition"
                           >
                             <MoreVertical size={16} className="text-black" />
                           </button>
 
-                          {openActionDropdown === product.id && (
+                          {openActionDropdown === productKey && (
                             <div className="absolute right-0 bottom-full mb-2 w-40 bg-white border border-gray-100 rounded-xl shadow-2xl z-50 overflow-hidden py-1 animate-in slide-in-from-bottom-2">
                               <button onClick={() => { onEditProduct(product); setOpenActionDropdown(null); }} className="w-full px-4 py-2.5 text-left text-xs text-gray-700 hover:bg-sky-50 flex items-center gap-2 transition">
                                 <Edit size={14} className="text-sky-500" /> Edit Product
@@ -369,7 +390,8 @@ const AdminProductsRedesign: React.FC<Props> = ({
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
 
@@ -439,26 +461,26 @@ const AdminProductsRedesign: React.FC<Props> = ({
 
             <div className="flex items-center gap-3">
               <button
-                onClick={() => onBulkStatusUpdate(selectedIds, 'Active')}
+                onClick={() => onBulkStatusUpdate(getSelectedProductIds(), 'Active')}
                 className="px-4 py-2 rounded-lg bg-green-50 text-green-700 text-xs font-bold hover:bg-green-100 transition flex items-center gap-2"
               >
                 <CheckCircle size={14} /> Publish
               </button>
               <button
-                onClick={() => onBulkStatusUpdate(selectedIds, 'Draft')}
+                onClick={() => onBulkStatusUpdate(getSelectedProductIds(), 'Draft')}
                 className="px-4 py-2 rounded-lg bg-amber-50 text-amber-700 text-xs font-bold hover:bg-amber-100 transition flex items-center gap-2"
               >
                 <Eye size={14} /> Draft
               </button>
               <button
-                onClick={() => onBulkDelete(selectedIds)}
+                onClick={() => onBulkDelete(getSelectedProductIds())}
                 className="px-4 py-2 rounded-lg bg-red-50 text-red-600 text-xs font-bold hover:bg-red-100 transition flex items-center gap-2"
               >
                 <Trash2 size={14} /> Delete
               </button>
             </div>
 
-            <button onClick={() => setSelectedIds([])} className="p-2 hover:bg-gray-100 rounded-full transition text-gray-400">
+            <button onClick={() => setSelectedIds(new Set())} className="p-2 hover:bg-gray-100 rounded-full transition text-gray-400">
               <X size={18} />
             </button>
           </div>

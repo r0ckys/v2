@@ -272,12 +272,19 @@ export function useTenant() {
     }
   }, [activeTenantId]);
 
+  // Derive activeTenantSubdomain from tenants list
+  const activeTenantSubdomain = useMemo(() => {
+    // Check both id and _id for compatibility
+    const tenant = tenants.find(t => t.id === activeTenantId || t._id === activeTenantId);
+    return tenant?.subdomain || '';
+  }, [tenants, activeTenantId]);
 
   return {
     // State
     tenants,
     setTenants,
     activeTenantId,
+    activeTenantSubdomain,
     setActiveTenantId,
     hostTenantId,
     setHostTenantId,

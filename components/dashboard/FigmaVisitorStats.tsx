@@ -66,7 +66,7 @@ const VisitorCard: React.FC<VisitorCardProps> = ({
   const config = themes[theme];
 
   return (
-    <div className="w-full h-[81px] bg-white rounded-lg shadow-[0px_1px_3px_0px_rgba(0,0,0,0.10)] overflow-hidden flex items-center px-4 relative">
+    <div className="w-full h-[81px] bg-white dark:bg-gray-800 rounded-lg shadow-[0px_1px_3px_0px_rgba(0,0,0,0.10)] overflow-hidden flex items-center px-4 relative">
       {/* Background decorative circle */}
       <div className={`w-[198px] h-[198px] absolute -right-[37px] -top-[83px] ${config.circleClass} rounded-full`} />
       
@@ -78,13 +78,13 @@ const VisitorCard: React.FC<VisitorCardProps> = ({
       {/* Text */}
       <div className="flex-1 flex flex-col justify-center ml-4 min-w-0 z-10">
         <div className={`${config.titleColor} text-base font-medium font-['Poppins']`}>{title}</div>
-        <div className="text-black text-[13px] font-normal font-['Poppins']">{subtitle}</div>
+        <div className="text-black dark:text-gray-300 text-[13px] font-normal font-['Poppins']">{subtitle}</div>
       </div>
       
       {/* Value */}
-      <div className="text-black text-[28px] font-medium font-['Poppins'] flex-shrink-0 z-10">
+      <div className="text-black dark:text-white text-[28px] font-medium font-['Poppins'] flex-shrink-0 z-10">
         {loading ? (
-          <div className="w-10 h-8 bg-gray-200 animate-pulse rounded" />
+          <div className="w-10 h-8 bg-gray-200 dark:bg-gray-600 animate-pulse rounded" />
         ) : (
           value
         )}

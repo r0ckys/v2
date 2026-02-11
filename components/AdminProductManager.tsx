@@ -343,7 +343,7 @@ export const AdminProductManager: React.FC<AdminProductManagerProps> = ({
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
-                      {product.status === 'active' ? (
+                      {product.status === 'Active' ? (
                         <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700">
                           <CheckCircle2 size={14} /> Active
                         </span>

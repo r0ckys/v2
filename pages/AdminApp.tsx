@@ -10,7 +10,6 @@ import { DataService } from '../services/DataService';
 import * as authService from '../services/authService';
 import { getAuthHeader } from '../services/authService';
 import { toast } from 'react-hot-toast';
-import { Loader2 } from 'lucide-react';
 import {
   DashboardSkeleton,
   OrdersSkeleton,
@@ -22,6 +21,7 @@ import {
 } from '../components/SkeletonLoaders';
 import { LanguageProvider } from '../context/LanguageContext';
 import { useNotifications } from '../hooks/useNotifications';
+import { useTenant } from '../hooks/useTenant';
 
 // Lazy loaded admin pages with webpackChunkName for better caching
 // const AdminDashboard = lazy(() => import(/* webpackChunkName: "admin-dashboard" */ './ModernDashboard'));
@@ -157,6 +157,7 @@ interface AdminLayoutProps {
   onLogout?: () => void;
   tenants?: Tenant[];
   activeTenantId?: string;
+  activeTenantSubdomain?: string;
   onTenantChange?: (tenantId: string) => void;
   isTenantSwitching?: boolean;
   onOpenChatCenter?: () => void;
@@ -174,6 +175,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
   onLogout,
   tenants,
   activeTenantId,
+  activeTenantSubdomain: propSubdomain,
   onTenantChange,
   isTenantSwitching,
   onOpenChatCenter,
@@ -181,6 +183,41 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
   userPermissions = {}
 }) => {
   const highlightPage = activePage.startsWith('settings') ? 'settings' : activePage;
+  const [resolvedSubdomain, setResolvedSubdomain] = useState<string>('');
+
+  // Get subdomain from useTenant hook (hostTenantSlug is captured once from URL)
+  const { hostTenantSlug, tenants: hookTenants, activeTenantId: hookTenantId } = useTenant();
+  
+  // Resolve subdomain from multiple sources
+  useEffect(() => {
+    const findSubdomain = () => {
+      // Priority 1: URL subdomain (hostTenantSlug)
+      if (hostTenantSlug) return hostTenantSlug;
+      // Priority 2: Prop from parent
+      if (propSubdomain) return propSubdomain;
+      // Priority 3: Find from hook tenants
+      const hookTenant = hookTenants.find(t => t.id === hookTenantId || t._id === hookTenantId);
+      if (hookTenant?.subdomain) return hookTenant.subdomain;
+      // Priority 4: Find from prop tenants
+      const propTenant = tenants?.find(t => t.id === activeTenantId || t._id === activeTenantId);
+      if (propTenant?.subdomain) return propTenant.subdomain;
+      return '';
+    };
+    const resolved = findSubdomain();
+    if (resolved) {
+      setResolvedSubdomain(resolved);
+    } else if (activeTenantId) {
+      // Fallback: load tenants list and find subdomain
+      DataService.listTenants().then(allTenants => {
+        const tenant = allTenants.find(t => t.id === activeTenantId || t._id === activeTenantId);
+        if (tenant?.subdomain) {
+          setResolvedSubdomain(tenant.subdomain);
+        }
+      }).catch(() => {});
+    }
+  }, [hostTenantSlug, propSubdomain, hookTenants, hookTenantId, tenants, activeTenantId]);
+
+  const activeTenantSubdomain = resolvedSubdomain;
 
   // Use notifications hook with tenant context
   const {
@@ -203,9 +240,12 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
       headerProps={{
         user,
         tenantId: activeTenantId,
+        tenantSubdomain: activeTenantSubdomain,
+        currentPage: activePage,
         searchQuery: '',
         onSearchChange: () => {},
         onSearch: () => {},
+        onNavigate: onNavigate,
         // Notification props
         notificationCount: unreadCount,
         notifications: notifications,
@@ -634,7 +674,8 @@ const AdminApp: React.FC<AdminAppProps> = ({
         <AdminDashboard 
           orders={orders} 
           products={products} 
-          tenantId={activeTenantId} 
+          tenantId={activeTenantId}
+          tenantSubdomain={selectedTenantRecord?.subdomain || ''}
           user={user || undefined} 
           onNavigate={setAdminSection}
           hasUnreadChat={hasUnreadChat}
@@ -650,6 +691,7 @@ const AdminApp: React.FC<AdminAppProps> = ({
         onLogout={onLogout}
         tenants={headerTenants}
         activeTenantId={activeTenantId}
+        activeTenantSubdomain={selectedTenantRecord?.subdomain}
         onTenantChange={tenantSwitcher}
         isTenantSwitching={isTenantSwitching}
         onOpenChatCenter={onOpenAdminChat}

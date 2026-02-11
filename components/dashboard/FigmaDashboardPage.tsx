@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   DashboardLayout,
   FigmaOverview,
@@ -13,6 +13,8 @@ import {
 } from './index';
 import { Order, Product } from '../../types';
 import { useNotifications } from '../../hooks/useNotifications';
+import { useTenant } from '../../hooks/useTenant';
+import { DataService } from '../../services/DataService';
 
 interface FigmaDashboardPageProps {
   user?: {
@@ -21,6 +23,7 @@ interface FigmaDashboardPageProps {
     avatar?: string;
   };
   tenantId?: string;
+  tenantSubdomain?: string;
   orders?: Order[];
   products?: Product[];
   onNavigate?: (page: string) => void;
@@ -31,6 +34,7 @@ interface FigmaDashboardPageProps {
 const FigmaDashboardPage: React.FC<FigmaDashboardPageProps> = ({
   user = { name: 'Yuvraj' },
   tenantId = '',
+  tenantSubdomain = '',
   orders = [],
   products = [],
   onNavigate,
@@ -40,6 +44,36 @@ const FigmaDashboardPage: React.FC<FigmaDashboardPageProps> = ({
   const [language, setLanguage] = useState<string>('en');
   const [timeFilter, setTimeFilter] = useState<string>('Month');
   const [currentPage, setCurrentPage] = useState<string>('dashboard');
+  const [resolvedSubdomain, setResolvedSubdomain] = useState<string>(tenantSubdomain);
+
+  // Get subdomain from useTenant hook (captures URL subdomain)
+  const { hostTenantSlug, tenants: hookTenants, activeTenantId: hookTenantId } = useTenant();
+
+  // Resolve subdomain from multiple sources
+  useEffect(() => {
+    const findSubdomain = () => {
+      // Priority 1: Prop passed from parent
+      if (tenantSubdomain) return tenantSubdomain;
+      // Priority 2: URL subdomain (hostTenantSlug)
+      if (hostTenantSlug) return hostTenantSlug;
+      // Priority 3: Find from hook tenants
+      const hookTenant = hookTenants.find(t => t.id === (tenantId || hookTenantId) || t._id === (tenantId || hookTenantId));
+      if (hookTenant?.subdomain) return hookTenant.subdomain;
+      return '';
+    };
+    const resolved = findSubdomain();
+    if (resolved) {
+      setResolvedSubdomain(resolved);
+    } else if (tenantId) {
+      // Fallback: load tenants list and find subdomain
+      DataService.listTenants().then(allTenants => {
+        const tenant = allTenants.find(t => t.id === tenantId || t._id === tenantId);
+        if (tenant?.subdomain) {
+          setResolvedSubdomain(tenant.subdomain);
+        }
+      }).catch(() => {});
+    }
+  }, [tenantSubdomain, hostTenantSlug, hookTenants, hookTenantId, tenantId]);
 
   // Use notifications hook with tenant context
   const {
@@ -105,9 +139,11 @@ const FigmaDashboardPage: React.FC<FigmaDashboardPageProps> = ({
       headerProps={{
         user,
         tenantId,
+        tenantSubdomain: resolvedSubdomain,
         searchQuery: '',
         onSearchChange: (query) => console.log('Search:', query),
         onSearch: () => console.log('Search submitted'),
+        onNavigate: handleSidebarNavigation,
         // Notification props
         notificationCount: unreadCount,
         notifications: notifications,

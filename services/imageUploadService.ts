@@ -166,6 +166,11 @@ export const uploadImageToServer = async (
   file: File,
   tenantId: string
 ): Promise<string> => {
+  // Validate tenantId before attempting upload
+  if (!tenantId || tenantId.trim() === '') {
+    throw new Error('Tenant ID is required for image upload. Please wait for the store to load.');
+  }
+
   try {
     // Convert to fixed 800x800 square and compress to under 15KB
     const compressed = await convertProductImage(file);

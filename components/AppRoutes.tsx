@@ -97,8 +97,8 @@ interface AppRoutesProps {
   onBulkDeleteProducts: (ids: number[]) => void;
   onBulkUpdateProducts: (ids: number[], updates: Partial<Product>) => void;
   onUpdateLogo: (logo: string | null) => void;
-  onUpdateTheme: (config: ThemeConfig) => void;
-  onUpdateWebsiteConfig: (config: WebsiteConfig) => void;
+  onUpdateTheme: (config: ThemeConfig) => Promise<void>;
+  onUpdateWebsiteConfig: (config: WebsiteConfig) => Promise<void>;
   onUpdateDeliveryConfig: (configs: DeliveryConfig[]) => void;
   onUpdateCourierConfig: (config: CourierConfig) => void;
   onPlaceOrder: (formData: any) => Promise<void>;
@@ -248,7 +248,7 @@ export const AppRoutes: React.FC<AppRoutesProps> = (props) => {
           <LoginModal
             onClose={() => setIsLoginOpen(false)}
             onLogin={onLogin}
-            onRegister={onRegister}
+            onRegister={(user: User) => onRegister(user.email || '', '', user.name || '').then(() => true)}
             onGoogleLogin={onGoogleLogin}
           />
         </Suspense>
@@ -308,11 +308,6 @@ export const AppRoutes: React.FC<AppRoutesProps> = (props) => {
             onSwitchToStore={() => setCurrentView('store')}
             onOpenAdminChat={onOpenAdminChat}
             hasUnreadChat={hasUnreadChat}
-            onCreateTenant={onCreateTenant}
-            onDeleteTenant={onDeleteTenant}
-            onRefreshTenants={onRefreshTenants}
-            isTenantCreating={isTenantSeeding}
-            deletingTenantId={deletingTenantId}
             landingPages={landingPages}
             onCreateLandingPage={onCreateLandingPage}
             onUpsertLandingPage={onUpsertLandingPage}
@@ -343,7 +338,10 @@ export const AppRoutes: React.FC<AppRoutesProps> = (props) => {
                   onSearchChange={onSearchChange}
                   onOpenChat={onOpenChat}
                   cart={cartItems}
-                  onToggleCart={onToggleCart}
+                  onToggleCart={(id: number) => {
+                    const product = products.find(p => p.id === id);
+                    if (product) onToggleCart(product, 1);
+                  }}
                   onCheckoutFromCart={onCheckoutFromCart}
                   onAddToCart={onAddToCart}
                   categories={categories}
@@ -392,7 +390,10 @@ export const AppRoutes: React.FC<AppRoutesProps> = (props) => {
                 onSearchChange={onSearchChange}
                 onOpenChat={onOpenChat}
                 cart={cartItems}
-                onToggleCart={onToggleCart}
+                onToggleCart={(id: number) => {
+                  const product = products.find(p => p.id === id);
+                  if (product) onToggleCart(product, 1);
+                }}
                 onCheckoutFromCart={onCheckoutFromCart}
                 onAddToCart={(product, quantity, variant) => onAddToCart(product, quantity, variant, { silent: true })}
                 productCatalog={products}
@@ -422,7 +423,10 @@ export const AppRoutes: React.FC<AppRoutesProps> = (props) => {
                 onSearchChange={onSearchChange}
                 onOpenChat={onOpenChat}
                 cart={cartItems}
-                onToggleCart={onToggleCart}
+                onToggleCart={(id: number) => {
+                  const product = products.find(p => p.id === id);
+                  if (product) onToggleCart(product, 1);
+                }}
                 onCheckoutFromCart={onCheckoutFromCart}
                 productCatalog={products}
                 orders={orders}
@@ -444,7 +448,10 @@ export const AppRoutes: React.FC<AppRoutesProps> = (props) => {
                 onSearchChange={onSearchChange}
                 onOpenChat={onOpenChat}
                 cart={cartItems}
-                onToggleCart={onToggleCart}
+                onToggleCart={(id: number) => {
+                  const product = products.find(p => p.id === id);
+                  if (product) onToggleCart(product, 1);
+                }}
                 onCheckoutFromCart={onCheckoutFromCart}
                 productCatalog={products}
                 orders={orders}
@@ -468,7 +475,10 @@ export const AppRoutes: React.FC<AppRoutesProps> = (props) => {
                   onSearchChange={onSearchChange}
                   onOpenChat={onOpenChat}
                   cart={cartItems}
-                  onToggleCart={onToggleCart}
+                  onToggleCart={(id: number) => {
+                    const product = products.find(p => p.id === id);
+                    if (product) onToggleCart(product, 1);
+                  }}
                   onCheckoutFromCart={onCheckoutFromCart}
                   productCatalog={products}
                 />
@@ -504,18 +514,20 @@ export const AppRoutes: React.FC<AppRoutesProps> = (props) => {
               <PublicOfferPage websiteConfig={websiteConfig} />
             </Suspense>
           )}
-          <StoreChatModal
-            isOpen={isChatOpen}
-            onClose={onCloseChat}
-            websiteConfig={websiteConfig}
-            themeConfig={themeConfig}
-            user={user}
-            messages={chatMessages}
-            onSendMessage={onCustomerSendChat}
-            context="customer"
-            onEditMessage={onEditChatMessage}
-            onDeleteMessage={onDeleteChatMessage}
-          />
+          {themeConfig && (
+            <StoreChatModal
+              isOpen={isChatOpen}
+              onClose={onCloseChat}
+              websiteConfig={websiteConfig}
+              themeConfig={themeConfig}
+              user={user}
+              messages={chatMessages}
+              onSendMessage={onCustomerSendChat}
+              context="customer"
+              onEditMessage={onEditChatMessage}
+              onDeleteMessage={onDeleteChatMessage}
+            />
+          )}
         </>
       )}
 
@@ -524,7 +536,7 @@ export const AppRoutes: React.FC<AppRoutesProps> = (props) => {
           isOpen={Boolean(isAdminChatOpen && currentView.startsWith('admin'))}
           onClose={onCloseAdminChat}
           websiteConfig={websiteConfig}
-          themeConfig={themeConfig}
+          themeConfig={themeConfig ?? undefined}
           user={user}
           messages={chatMessages}
           onSendMessage={onAdminSendChat}

@@ -128,10 +128,10 @@ const FigmaSalesByCategory: React.FC<FigmaSalesByCategoryProps> = ({
   };
 
   return (
-    <div className="w-full h-auto min-h-[380px] sm:h-[402px] p-4 sm:p-5 bg-white rounded-xl border border-zinc-200 overflow-hidden flex flex-col">
+    <div className="w-full h-auto min-h-[380px] sm:h-[402px] p-4 sm:p-5 bg-white dark:bg-gray-800 rounded-xl border border-zinc-200 dark:border-gray-700 overflow-hidden flex flex-col">
       {/* Title */}
       <div className="mb-4">
-        <div className="text-zinc-800 text-lg font-bold font-['Lato']">Sale By Category</div>
+        <div className="text-zinc-800 dark:text-white text-lg font-bold font-['Lato']">Sale By Category</div>
       </div>
 
       {/* Pie Chart - Donut style */}
@@ -153,9 +153,9 @@ const FigmaSalesByCategory: React.FC<FigmaSalesByCategoryProps> = ({
           <div key={index} className="flex justify-start items-center gap-1.5 sm:gap-2.5">
             <div className={`w-2.5 h-2.5 sm:w-3 sm:h-3 ${category.bgColor} rounded-full flex-shrink-0`} />
             <div className="justify-start truncate">
-              <span className="text-black text-xs sm:text-sm font-medium font-['Satoshi']">{category.name}(</span>
+              <span className="text-black dark:text-gray-300 text-xs sm:text-sm font-medium font-['Satoshi']">{category.name}(</span>
               <span className={`${category.textColor} text-xs sm:text-sm font-medium font-['Satoshi']`}>{category.percentage}%</span>
-              <span className="text-black text-xs sm:text-sm font-medium font-['Satoshi']">)</span>
+              <span className="text-black dark:text-gray-300 text-xs sm:text-sm font-medium font-['Satoshi']">)</span>
             </div>
           </div>
         ))}

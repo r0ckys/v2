@@ -127,7 +127,12 @@ router.post('/api/upload', upload.single('file'), handleMulterError, async (req:
   try {
     if (!req.file) return res.status(400).json({ success: false, error: 'No file uploaded' });
 
-    const tenantId = req.body.tenantId || 'default';
+    // Validate tenantId - must be provided and non-empty
+    const tenantId = req.body.tenantId;
+    if (!tenantId || typeof tenantId !== 'string' || tenantId.trim() === '') {
+      return res.status(400).json({ success: false, error: 'Valid tenantId is required' });
+    }
+    
     const folder = sanitizeFolder(req.body.folder);
     const tenantDir = folder ? path.join(uploadDir, folder, tenantId) : path.join(uploadDir, tenantId);
     

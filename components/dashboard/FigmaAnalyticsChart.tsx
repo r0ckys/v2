@@ -166,11 +166,11 @@ const FigmaAnalyticsChart: React.FC<FigmaAnalyticsChartProps> = ({
             className={`px-2 py-1 rounded-lg flex justify-center items-center gap-2.5 cursor-pointer transition-all ${
               dateRange === option.id
                 ? 'bg-gradient-to-b from-orange-500 to-amber-500'
-                : 'bg-white hover:bg-gray-50'
+                : 'bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600'
             }`}
           >
             <span className={`text-sm font-medium font-['Poppins'] ${
-              dateRange === option.id ? 'text-white' : 'text-neutral-400'
+              dateRange === option.id ? 'text-white' : 'text-neutral-400 dark:text-gray-300'
             }`}>
               {option.label}
             </span>
@@ -220,11 +220,11 @@ const FigmaAnalyticsChart: React.FC<FigmaAnalyticsChartProps> = ({
             className={`px-2 py-1 rounded-lg flex justify-center items-center gap-1.5 cursor-pointer transition-all ${
               dateRange === 'custom'
                 ? 'bg-gradient-to-b from-orange-500 to-amber-500'
-                : 'bg-white hover:bg-gray-50'
+                : 'bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600'
             }`}
           >
             <span className={`text-sm font-medium font-['Poppins'] ${
-              dateRange === 'custom' ? 'text-white' : 'text-neutral-400'
+              dateRange === 'custom' ? 'text-white' : 'text-neutral-400 dark:text-gray-300'
             }`}>
               Custom
             </span>
@@ -241,10 +241,10 @@ const FigmaAnalyticsChart: React.FC<FigmaAnalyticsChartProps> = ({
       </div>
 
       {/* Chart */}
-      <div className="w-full h-64 sm:h-72 relative bg-white rounded-lg overflow-hidden overflow-x-auto">
+      <div className="w-full h-64 sm:h-72 relative bg-white dark:bg-gray-800 rounded-lg overflow-hidden overflow-x-auto">
         <div className="h-40 sm:h-48 left-[10px] top-[13px] absolute inline-flex justify-start items-center gap-2">
-          <div className="origin-top-left -rotate-90 text-center justify-start text-neutral-600 text-xs font-normal font-['DM_Sans']">Units of measure</div>
-          <div className="w-0 self-stretch outline outline-[0.70px] outline-offset-[-0.35px] outline-stone-300" />
+          <div className="origin-top-left -rotate-90 text-center justify-start text-neutral-600 dark:text-gray-400 text-xs font-normal font-['DM_Sans']">Units of measure</div>
+          <div className="w-0 self-stretch outline outline-[0.70px] outline-offset-[-0.35px] outline-stone-300 dark:outline-gray-600" />
         </div>
         
         {/* Dynamic bars */}
@@ -299,7 +299,7 @@ const FigmaAnalyticsChart: React.FC<FigmaAnalyticsChartProps> = ({
                     )}
                   </div>
                 </div>
-                <div className="justify-start text-neutral-600 text-xs font-normal font-['DM_Sans']">
+                <div className="justify-start text-neutral-600 dark:text-gray-400 text-xs font-normal font-['DM_Sans']">
                   {formatDateLabel(day.date)}
                 </div>
               </div>
@@ -311,15 +311,15 @@ const FigmaAnalyticsChart: React.FC<FigmaAnalyticsChartProps> = ({
         <div className="left-0 right-0 top-[200px] sm:top-[238px] absolute inline-flex flex-wrap justify-center items-center gap-3 sm:gap-6 md:gap-12 px-2">
           <div className="flex justify-center items-center gap-1.5 sm:gap-2.5">
             <div className="w-4 h-4 sm:w-5 sm:h-5 bg-gradient-to-r from-sky-400 to-blue-500 rounded-3xl" />
-            <div className="text-center justify-start text-neutral-600 text-[10px] sm:text-xs font-medium font-['DM_Sans']">Mobile View</div>
+            <div className="text-center justify-start text-neutral-600 dark:text-gray-400 text-[10px] sm:text-xs font-medium font-['DM_Sans']">Mobile View</div>
           </div>
           <div className="flex justify-center items-center gap-1.5 sm:gap-2.5">
             <div className="w-4 h-4 sm:w-5 sm:h-5 bg-gradient-to-b from-orange-500 to-amber-500 rounded-3xl" />
-            <div className="text-center justify-start text-neutral-600 text-[10px] sm:text-xs font-medium font-['DM_Sans']">Tab View</div>
+            <div className="text-center justify-start text-neutral-600 dark:text-gray-400 text-[10px] sm:text-xs font-medium font-['DM_Sans']">Tab View</div>
           </div>
           <div className="flex justify-center items-center gap-1.5 sm:gap-2.5">
             <div className="w-4 h-4 sm:w-5 sm:h-5 bg-gradient-to-b from-violet-400 to-indigo-600 rounded-3xl" />
-            <div className="text-center justify-start text-neutral-600 text-[10px] sm:text-xs font-medium font-['DM_Sans']">Desktop View</div>
+            <div className="text-center justify-start text-neutral-600 dark:text-gray-400 text-[10px] sm:text-xs font-medium font-['DM_Sans']">Desktop View</div>
           </div>
         </div>
       </div>

@@ -15,10 +15,13 @@ export interface BestSellingProductItem {
 // Component props
 export interface DashboardHeaderProps {
   tenantId?: string;
+  tenantSubdomain?: string;
+  currentPage?: string;
   user?: { name?: string; avatar?: string } | null;
   searchQuery: string;
   onSearchChange: (query: string) => void;
   onSearch?: (query: string) => void;
+  onNavigate?: (page: string) => void;
   // Notification props
   notificationCount?: number;
   onNotificationClick?: () => void;

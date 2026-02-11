@@ -116,10 +116,10 @@ const FigmaSalesPerformance: React.FC<FigmaSalesPerformanceProps> = ({
   };
 
   return (
-    <div className="w-full h-80 sm:h-96 p-3 sm:p-4 bg-white rounded-xl border border-zinc-200 flex flex-col justify-start items-start gap-2 overflow-hidden">
+    <div className="w-full h-80 sm:h-96 p-3 sm:p-4 bg-white dark:bg-gray-800 rounded-xl border border-zinc-200 dark:border-gray-700 flex flex-col justify-start items-start gap-2 overflow-hidden">
       {/* Header */}
       <div className="w-full flex justify-start items-center gap-2.5">
-        <div className="text-zinc-800 text-lg font-bold font-['Lato']">Sale Performance</div>
+        <div className="text-zinc-800 dark:text-white text-lg font-bold font-['Lato']">Sale Performance</div>
       </div>
       
       {/* Legend - Wrap on mobile */}
@@ -130,11 +130,11 @@ const FigmaSalesPerformance: React.FC<FigmaSalesPerformanceProps> = ({
       </div>
 
       {/* Chart Area */}
-      <div className="flex-1 w-full flex overflow-x-auto">
+        <div className="flex-1 w-full flex overflow-x-auto">
         {/* Y-axis labels */}
         <div className="flex flex-col justify-between h-full pr-2">
           {[100, 75, 50, 25, 0].map((val) => (
-            <div key={val} className="w-6 h-9 opacity-50 text-right text-neutral-900 text-[10px] font-medium font-['Poppins'] flex items-center justify-end">
+            <div key={val} className="w-6 h-9 opacity-50 text-right text-neutral-900 dark:text-gray-300 text-[10px] font-medium font-['Poppins'] flex items-center justify-end">
               {val}
             </div>
           ))}
@@ -146,7 +146,7 @@ const FigmaSalesPerformance: React.FC<FigmaSalesPerformanceProps> = ({
           {[0, 1, 2, 3, 4].map((i) => (
             <div 
               key={i} 
-              className="absolute w-full h-0 outline outline-1 outline-offset-[-0.50px] outline-zinc-300" 
+              className="absolute w-full h-0 outline outline-1 outline-offset-[-0.50px] outline-zinc-300 dark:outline-gray-600" 
               style={{ top: `${i * 25}%` }} 
             />
           ))}

@@ -139,7 +139,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = memo(({ activePage, onN
 	};
 
 
-	const SidebarContent = ({ scrollRef }: { scrollRef: React.RefObject<HTMLDivElement> }) => (
+	const SidebarContent = ({ scrollRef }: { scrollRef: React.RefObject<HTMLDivElement | null> }) => (
 		<>
 
 			{/* Sidebar Menu */}
