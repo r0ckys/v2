@@ -18,13 +18,13 @@ interface StatCardProps {
 
 const StatCard: React.FC<StatCardProps> = ({ title, value, iconUrl }) => {
   return (
-    <div className="bg-[#f3f4f6] h-16 bg-stone-50 rounded-lg overflow-hidden flex items-center justify-between px-4">
+    <div className="bg-[#F5F5F5] h-[68px] rounded-lg overflow-hidden flex items-center justify-between px-4">
       <div className="flex flex-col justify-center">
-        <div className="text-black text-2xl font-medium font-['Poppins']">{value}</div>
-        <div className="text-black text-xs font-medium font-['Poppins']">{title}</div>
+        <div className="text-black text-[28px] font-medium font-['Poppins'] leading-tight">{value}</div>
+        <div className="text-black text-[13px] font-normal font-['Poppins']">{title}</div>
       </div>
-      <div className="w-11 h-11 bg-white rounded-lg overflow-hidden flex items-center justify-center flex-shrink-0">
-        <img src={iconUrl} alt={title} className="w-7 h-7 object-contain" />
+      <div className="w-11 h-11 bg-white rounded-lg overflow-hidden flex items-center justify-center flex-shrink-0 shadow-sm">
+        <img src={iconUrl} alt={title} className="w-8 h-8 object-contain" />
       </div>
     </div>
   );
@@ -38,38 +38,37 @@ const LanguageDateCard: React.FC<{
   dayName: string;
 }> = ({ currentLang, onLangChange, date, dayName }) => {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-10 w-full max-w-2xl">
+    <div className="flex gap-4 w-full col-span-2 sm:col-span-1">
       {/* Language Selector - exact Figma design */}
-      <div className="bg-[#f3f4f6] w-32 h-16 relative bg-stone-50 rounded-lg overflow-hidden">
-        <div className="left-[16px] top-[10px] absolute justify-start text-black text-xs font-normal font-['Poppins']">Language</div>
-        <div className="w-24 h-6 left-[16px] top-[32px] absolute bg-white/0 rounded-3xl outline outline-1 outline-offset-[-1px] outline-gray-300 overflow-hidden">
+      <div className="bg-[#F5F5F5] w-[122px] h-[68px] relative rounded-lg overflow-hidden flex-shrink-0">
+        <div className="left-[16px] top-[10px] absolute text-black text-[13px] font-normal font-['Poppins']">Language</div>
+        <div className="w-[92px] h-[26px] left-[16px] top-[32px] absolute rounded-3xl border border-gray-300 overflow-hidden">
           <button 
             onClick={() => onLangChange('en')}
-            className={`w-11 h-4 left-[4px] top-[4px] absolute rounded-[20px] overflow-hidden transition-all ${
-              currentLang === 'en' ? 'bg-white' : 'bg-transparent'
+            className={`w-[43px] h-[18px] left-[4px] top-[4px] absolute rounded-[20px] overflow-hidden transition-all ${
+              currentLang === 'en' ? 'bg-white shadow-sm' : 'bg-transparent'
             }`}
           >
-            <span className="left-[11px] top-[1px] absolute justify-center text-black text-xs font-normal font-['Poppins']">Eng</span>
+            <span className="left-[11px] top-[3px] absolute text-black text-[10px] font-normal font-['Poppins']">Eng</span>
           </button>
           <button 
             onClick={() => onLangChange('bn')}
-            className={`w-11 h-4 right-[4px] top-[4px] absolute rounded-[20px] overflow-hidden transition-all ${
-              currentLang === 'bn' ? 'bg-white' : 'bg-transparent'
+            className={`w-[43px] h-[18px] right-[2px] top-[4px] absolute rounded-[20px] overflow-hidden transition-all ${
+              currentLang === 'bn' ? 'bg-white shadow-sm' : 'bg-transparent'
             }`}
           >
-            <span className="left-[4px] top-[1px] absolute justify-center text-black text-xs font-normal font-['Poppins']">বাংলা</span>
+            <span className="left-[7px] top-[3px] absolute text-black text-[10px] font-normal font-['Poppins']">বাংলা</span>
           </button>
         </div>
       </div>
       
       {/* Date Display - exact Figma design */}
-      <div className="w-32 h-16 relative bg-stone-50 rounded-lg overflow-hidden">
-        <div className="w-40 h-40 left-[26.50px] top-[22px] absolute bg-gradient-to-r from-sky-400 to-blue-500 rounded-full" />
-        <div className="left-[10.50px] top-[10px] absolute justify-start text-black text-base font-medium font-['Poppins']">{date}</div>
-        <div className="left-[67.50px] top-[34px] absolute justify-start text-white text-2xl font-medium font-['Poppins']">{dayName}</div>
+      <div className="w-[122px] h-[68px] relative bg-[#F5F5F5] rounded-lg overflow-hidden flex-shrink-0">
+        <div className="w-40 h-40 left-[26px] top-[22px] absolute bg-gradient-to-r from-sky-400 to-blue-500 rounded-full" />
+        <div className="left-[10px] top-[10px] absolute text-black text-[15px] font-medium font-['Poppins'] z-10">{date}</div>
+        <div className="left-[67px] top-[34px] absolute text-white text-2xl font-medium font-['Poppins'] z-10">{dayName}</div>
       </div>
-     </div>
-     
+    </div>
   );
 };
 

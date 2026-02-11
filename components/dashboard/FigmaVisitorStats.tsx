@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 // Online Now Icon (Broadcast/Radio signal style)
 const OnlineNowIcon: React.FC = () => (
@@ -37,6 +37,7 @@ interface VisitorCardProps {
   subtitle: string;
   value: number;
   theme: 'blue' | 'orange' | 'purple';
+  loading?: boolean;
 }
 
 const VisitorCard: React.FC<VisitorCardProps> = ({
@@ -44,7 +45,8 @@ const VisitorCard: React.FC<VisitorCardProps> = ({
   title,
   subtitle,
   value,
-  theme
+  theme,
+  loading = false
 }) => {
   const themes = {
     blue: {
@@ -64,24 +66,28 @@ const VisitorCard: React.FC<VisitorCardProps> = ({
   const config = themes[theme];
 
   return (
-    <div className="w-full h-[72px] bg-white/95 rounded-lg shadow-[0px_2px_4px_0px_rgba(0,0,0,0.05)] overflow-hidden flex items-center px-3 sm:px-4 relative">
+    <div className="w-full h-[81px] bg-white rounded-lg shadow-[0px_1px_3px_0px_rgba(0,0,0,0.10)] overflow-hidden flex items-center px-4 relative">
       {/* Background decorative circle */}
-      <div className={`w-32 sm:w-48 h-32 sm:h-48 absolute -right-8 sm:-right-12 -top-12 sm:-top-20 ${config.circleClass} rounded-full`} />
+      <div className={`w-[198px] h-[198px] absolute -right-[37px] -top-[83px] ${config.circleClass} rounded-full`} />
       
       {/* Icon */}
-      <div className="w-8 h-8 sm:w-9 sm:h-9 flex-shrink-0 z-10">
+      <div className="w-[38px] h-[38px] flex-shrink-0 z-10">
         {icon}
       </div>
       
       {/* Text */}
-      <div className="flex-1 flex flex-col justify-center ml-2 sm:ml-3 min-w-0 z-10">
-        <div className={`${config.titleColor} text-sm sm:text-base font-medium font-['Poppins'] truncate`}>{title}</div>
-        <div className="text-black text-[10px] sm:text-xs font-normal font-['Poppins'] truncate">{subtitle}</div>
+      <div className="flex-1 flex flex-col justify-center ml-4 min-w-0 z-10">
+        <div className={`${config.titleColor} text-base font-medium font-['Poppins']`}>{title}</div>
+        <div className="text-black text-[13px] font-normal font-['Poppins']">{subtitle}</div>
       </div>
       
       {/* Value */}
-      <div className="text-black text-xl sm:text-2xl font-medium font-['Poppins'] flex-shrink-0 z-10">
-        {value}
+      <div className="text-black text-[28px] font-medium font-['Poppins'] flex-shrink-0 z-10">
+        {loading ? (
+          <div className="w-10 h-8 bg-gray-200 animate-pulse rounded" />
+        ) : (
+          value
+        )}
       </div>
     </div>
   );
@@ -95,17 +101,94 @@ interface FigmaVisitorStatsProps {
     last7Days?: number;
     pageViews?: number;
   };
+  tenantId?: string;
 }
 
 const FigmaVisitorStats: React.FC<FigmaVisitorStatsProps> = ({
-  visitorStats = {
-    onlineNow: 35,
-    todayVisitors: 35,
-    totalVisitors: 35,
-    last7Days: 4,
-    pageViews: 15
-  }
+  visitorStats,
+  tenantId
 }) => {
+  const [stats, setStats] = useState({
+    onlineNow: 0,
+    todayVisitors: 0,
+    totalVisitors: 0,
+    last7Days: 0,
+    pageViews: 0
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // If stats are passed as props, use them
+    if (visitorStats) {
+      setStats({
+        onlineNow: visitorStats.onlineNow || 0,
+        todayVisitors: visitorStats.todayVisitors || 0,
+        totalVisitors: visitorStats.totalVisitors || 0,
+        last7Days: visitorStats.last7Days || 0,
+        pageViews: visitorStats.pageViews || 0
+      });
+      setLoading(false);
+      return;
+    }
+
+    // Fetch from API
+    const fetchStats = async () => {
+      const activeTenantId = tenantId || localStorage.getItem('activeTenantId');
+      if (!activeTenantId) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+        
+        // Fetch stats and online count in parallel
+        const [statsRes, onlineRes] = await Promise.all([
+          fetch(`${apiUrl}/api/visitors/${activeTenantId}/stats?period=7d`),
+          fetch(`${apiUrl}/api/visitors/${activeTenantId}/online`)
+        ]);
+
+        if (statsRes.ok && onlineRes.ok) {
+          const statsData = await statsRes.json();
+          const onlineData = await onlineRes.json();
+
+          setStats({
+            onlineNow: onlineData.online || 0,
+            todayVisitors: statsData.todayVisitors || 0,
+            totalVisitors: statsData.totalVisitors || 0,
+            last7Days: statsData.periodVisitors || 0,
+            pageViews: statsData.totalPageViews || 0
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching visitor stats:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStats();
+    
+    // Refresh online count every 30 seconds
+    const interval = setInterval(async () => {
+      const activeTenantId = tenantId || localStorage.getItem('activeTenantId');
+      if (!activeTenantId) return;
+      
+      try {
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+        const onlineRes = await fetch(`${apiUrl}/api/visitors/${activeTenantId}/online`);
+        if (onlineRes.ok) {
+          const onlineData = await onlineRes.json();
+          setStats(prev => ({ ...prev, onlineNow: onlineData.online || 0 }));
+        }
+      } catch (error) {
+        console.error('Error refreshing online count:', error);
+      }
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [visitorStats, tenantId]);
+
   return (
     <div className="h-full flex flex-col justify-center items-stretch gap-3.5">
       {/* Online Now - Blue theme */}
@@ -113,26 +196,29 @@ const FigmaVisitorStats: React.FC<FigmaVisitorStatsProps> = ({
         icon={<OnlineNowIcon />}
         title="Online Now"
         subtitle="Active visitors on site"
-        value={visitorStats.onlineNow || 35}
+        value={stats.onlineNow}
         theme="blue"
+        loading={loading}
       />
       
       {/* Today Visitors - Orange theme */}
       <VisitorCard
         icon={<TodayVisitorsIcon />}
         title="Today visitors"
-        subtitle={`Last 7 days: ${visitorStats.last7Days || 4}`}
-        value={visitorStats.todayVisitors || 35}
+        subtitle={`Last 7 days: ${stats.last7Days}`}
+        value={stats.todayVisitors}
         theme="orange"
+        loading={loading}
       />
       
       {/* Total Visitors - Purple theme */}
       <VisitorCard
         icon={<TotalVisitorsIcon />}
         title="Total visitors"
-        subtitle={`${visitorStats.pageViews || 15} page view`}
-        value={visitorStats.totalVisitors || 35}
+        subtitle={`${stats.pageViews} page view`}
+        value={stats.totalVisitors}
         theme="purple"
+        loading={loading}
       />
     </div>
   );

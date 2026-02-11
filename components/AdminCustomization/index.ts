@@ -15,3 +15,4 @@ export { WebsiteInfoTab } from './WebsiteInfoTab';
 export { ChatSettingsTab } from './ChatSettingsTab';
 export { ThemeViewTab } from './ThemeViewTab';
 export { ThemeColorsTab } from './ThemeColorsTab';
+export { CustomThemeSections } from './CustomThemeSections';

@@ -12,6 +12,7 @@ import {
   FigmaOrderList
 } from './index';
 import { Order, Product } from '../../types';
+import { useNotifications } from '../../hooks/useNotifications';
 
 interface FigmaDashboardPageProps {
   user?: {
@@ -23,6 +24,8 @@ interface FigmaDashboardPageProps {
   orders?: Order[];
   products?: Product[];
   onNavigate?: (page: string) => void;
+  hasUnreadChat?: boolean;
+  onOpenAdminChat?: () => void;
 }
 
 const FigmaDashboardPage: React.FC<FigmaDashboardPageProps> = ({
@@ -30,11 +33,25 @@ const FigmaDashboardPage: React.FC<FigmaDashboardPageProps> = ({
   tenantId = '',
   orders = [],
   products = [],
-  onNavigate
+  onNavigate,
+  hasUnreadChat = false,
+  onOpenAdminChat
 }) => {
   const [language, setLanguage] = useState<string>('en');
   const [timeFilter, setTimeFilter] = useState<string>('Month');
   const [currentPage, setCurrentPage] = useState<string>('dashboard');
+
+  // Use notifications hook with tenant context
+  const {
+    notifications,
+    unreadCount,
+    markAsRead
+  } = useNotifications({
+    tenantId,
+    autoFetch: true,
+    autoConnect: true,
+    pollingInterval: 30000 // Poll every 30 seconds
+  });
 
   const handleSidebarNavigation = (page: string) => {
     console.log('Navigating to:', page);
@@ -90,13 +107,20 @@ const FigmaDashboardPage: React.FC<FigmaDashboardPageProps> = ({
         tenantId,
         searchQuery: '',
         onSearchChange: (query) => console.log('Search:', query),
-        onSearch: () => console.log('Search submitted')
+        onSearch: () => console.log('Search submitted'),
+        // Notification props
+        notificationCount: unreadCount,
+        notifications: notifications,
+        onMarkNotificationRead: markAsRead,
+        // Chat props
+        unreadChatCount: hasUnreadChat ? 1 : 0,
+        onChatClick: onOpenAdminChat
       }}
     >
       {/* Orders Page */}
       {currentPage === 'orders' && (
         <div className="pb-4">
-          <FigmaOrderList />
+          <FigmaOrderList orders={orders} />
         </div>
       )}
 
@@ -154,12 +178,12 @@ const FigmaDashboardPage: React.FC<FigmaDashboardPageProps> = ({
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4 px-3 sm:px-4 lg:px-6">
           {/* Sales Performance Chart - Left Side */}
           <div className="lg:col-span-8">
-            <FigmaSalesPerformance />
+            <FigmaSalesPerformance orders={orders} />
           </div>
 
           {/* Sales by Category Pie Chart - Right Side */}
           <div className="lg:col-span-4">
-            <FigmaSalesByCategory />
+            <FigmaSalesByCategory orders={orders} />
           </div>
         </div>
 

@@ -119,6 +119,29 @@ export const THEME_DEMO_IMAGES: Record<string, Record<string, string>> = {
     style4: 'https://hdnfltv.com/image/nitimages/bottomNav_4.webp',
     style5: 'https://hdnfltv.com/image/nitimages/bottomNav-5.webp',
   },
+  // Ready Made Theme preview images
+  readyThemes: {
+    gadgets1: 'https://hdnfltv.com/image/nitimages/gadgets-theme-1.webp',
+    gadgets2: 'https://hdnfltv.com/image/nitimages/gadgets-theme-2.webp',
+    gadgets3: 'https://hdnfltv.com/image/nitimages/gadgets-theme-3.webp',
+    gadgets4: 'https://hdnfltv.com/image/nitimages/gadgets-theme-4.webp',
+    fashion1: 'https://hdnfltv.com/image/nitimages/fashion-theme-1.webp',
+    fashion2: 'https://hdnfltv.com/image/nitimages/fashion-theme-2.webp',
+    fashion3: 'https://hdnfltv.com/image/nitimages/fashion-theme-3.webp',
+    fashion4: 'https://hdnfltv.com/image/nitimages/fashion-theme-4.webp',
+    grocery1: 'https://hdnfltv.com/image/nitimages/grocery-theme-1.webp',
+    grocery2: 'https://hdnfltv.com/image/nitimages/grocery-theme-2.webp',
+    grocery3: 'https://hdnfltv.com/image/nitimages/grocery-theme-3.webp',
+    grocery4: 'https://hdnfltv.com/image/nitimages/grocery-theme-4.webp',
+    cosmetics1: 'https://hdnfltv.com/image/nitimages/cosmetics-theme-1.webp',
+    cosmetics2: 'https://hdnfltv.com/image/nitimages/cosmetics-theme-2.webp',
+    cosmetics3: 'https://hdnfltv.com/image/nitimages/cosmetics-theme-3.webp',
+    cosmetics4: 'https://hdnfltv.com/image/nitimages/cosmetics-theme-4.webp',
+    pharmacy1: 'https://hdnfltv.com/image/nitimages/pharmacy-theme-1.webp',
+    pharmacy2: 'https://hdnfltv.com/image/nitimages/pharmacy-theme-2.webp',
+    pharmacy3: 'https://hdnfltv.com/image/nitimages/pharmacy-theme-3.webp',
+    pharmacy4: 'https://hdnfltv.com/image/nitimages/pharmacy-theme-4.webp',
+  },
 };
 
 export const SOCIAL_PLATFORM_OPTIONS = [

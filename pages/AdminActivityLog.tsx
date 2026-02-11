@@ -30,7 +30,232 @@ import {
   ArrowRight,
   TrendingUp,
   TrendingDown,
+  MoreVertical,
+  FilterX,
 } from 'lucide-react';
+
+// Figma-based inline styles
+const figmaStyles = {
+  container: {
+    backgroundColor: '#f9f9f9',
+    minHeight: '100vh',
+    position: 'relative' as const,
+  },
+  mainContent: {
+    backgroundColor: '#ffffff',
+    display: 'flex',
+    flexDirection: 'column' as const,
+    gap: '20px',
+    padding: '20px',
+    overflow: 'hidden',
+  },
+  headerRow: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap' as const,
+    gap: '16px',
+  },
+  title: {
+    fontFamily: "'Lato', sans-serif",
+    fontWeight: 700,
+    fontSize: '22px',
+    color: '#023337',
+    letterSpacing: '0.11px',
+    margin: 0,
+  },
+  filtersRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '24px',
+    flexWrap: 'wrap' as const,
+  },
+  dateRangeGroup: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+  },
+  filterButton: {
+    backgroundColor: '#f9f9f9',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '8px 7px',
+    borderRadius: '8px',
+    border: 'none',
+    cursor: 'pointer',
+    gap: '8px',
+  },
+  filterButtonText: {
+    fontFamily: "'Poppins', sans-serif",
+    fontWeight: 400,
+    fontSize: '12px',
+    color: '#000000',
+  },
+  filterToText: {
+    fontFamily: "'Poppins', sans-serif",
+    fontWeight: 400,
+    fontSize: '12px',
+    color: '#000000',
+  },
+  clearFilterButton: {
+    backgroundColor: '#ffffff',
+    border: '1px solid #ff6a00',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '4px',
+    padding: '6px 16px 6px 12px',
+    borderRadius: '8px',
+    height: '48px',
+    cursor: 'pointer',
+  },
+  clearFilterText: {
+    fontFamily: "'Lato', sans-serif",
+    fontWeight: 700,
+    fontSize: '15px',
+    background: 'linear-gradient(180deg, #ff6a00 0%, #ff9f1c 100%)',
+    WebkitBackgroundClip: 'text',
+    WebkitTextFillColor: 'transparent',
+    backgroundClip: 'text',
+    letterSpacing: '-0.3px',
+  },
+  tableHeader: {
+    height: '48px',
+    background: 'linear-gradient(180deg, #e0f7fa 0%, #b2ebf2 100%)',
+    display: 'grid',
+    gridTemplateColumns: '60px 150px 150px 1fr 120px 160px 40px',
+    alignItems: 'center',
+    padding: '0 20px',
+  },
+  tableHeaderText: {
+    fontFamily: "'Poppins', sans-serif",
+    fontWeight: 500,
+    fontSize: '16px',
+    color: '#000000',
+  },
+  tableRow: {
+    height: '68px',
+    borderBottom: '0.5px solid #b9b9b9',
+    display: 'grid',
+    gridTemplateColumns: '60px 150px 150px 1fr 120px 160px 40px',
+    alignItems: 'center',
+    padding: '0 20px',
+  },
+  cellText: {
+    fontFamily: "'Poppins', sans-serif",
+    fontWeight: 400,
+    fontSize: '12px',
+    color: '#1d1a1a',
+  },
+  entityTitle: {
+    fontFamily: "'Poppins', sans-serif",
+    fontWeight: 500,
+    fontSize: '16px',
+    color: '#1d1a1a',
+  },
+  entitySubtitle: {
+    fontFamily: "'Poppins', sans-serif",
+    fontWeight: 400,
+    fontSize: '12px',
+    color: '#6a717f',
+  },
+  actionBadge: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '4px',
+  },
+  actionIcon: {
+    width: '16px',
+    height: '16px',
+    borderRadius: '28px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bulkBadge: {
+    backgroundColor: '#ded8ff',
+    borderRadius: '28px',
+    padding: '0 8px',
+    height: '16px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bulkText: {
+    fontFamily: "'Poppins', sans-serif",
+    fontWeight: 300,
+    fontSize: '12px',
+    color: '#2300e8',
+  },
+  pagination: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '20px',
+  },
+  pageButton: {
+    width: '32px',
+    height: '32px',
+    borderRadius: '8px',
+    border: '1px solid #e0e0e0',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ffffff',
+    cursor: 'pointer',
+    fontFamily: "'Poppins', sans-serif",
+    fontSize: '14px',
+    color: '#1d1a1a',
+  },
+  pageButtonActive: {
+    backgroundColor: '#38bdf8',
+    border: 'none',
+    color: '#ffffff',
+  },
+  navButton: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    padding: '8px 16px',
+    border: 'none',
+    backgroundColor: 'transparent',
+    cursor: 'pointer',
+    fontFamily: "'Poppins', sans-serif",
+    fontSize: '14px',
+    color: '#1d1a1a',
+  },
+  dropdown: {
+    position: 'absolute' as const,
+    top: '100%',
+    left: 0,
+    marginTop: '4px',
+    backgroundColor: '#ffffff',
+    border: '1px solid #e0e0e0',
+    borderRadius: '8px',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+    zIndex: 50,
+    minWidth: '150px',
+    overflow: 'hidden',
+  },
+  dropdownItem: {
+    padding: '10px 16px',
+    fontFamily: "'Poppins', sans-serif",
+    fontSize: '12px',
+    color: '#1d1a1a',
+    cursor: 'pointer',
+    border: 'none',
+    width: '100%',
+    textAlign: 'left' as const,
+    backgroundColor: 'transparent',
+  },
+  dotsIcon: {
+    width: '24px',
+    height: '24px',
+    cursor: 'pointer',
+    color: '#6a717f',
+  },
+};
 const API_BASE_URL = typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL
   ? String(import.meta.env.VITE_API_BASE_URL)
   : '';
@@ -186,34 +411,73 @@ const AdminActivityLog: React.FC<AdminActivityLogProps> = ({ tenantId }) => {
   };
 
   const getActionIcon = (actionType: string, resourceType: string) => {
-    const iconClass = "w-4 h-4";
+    const iconStyle = { width: '12px', height: '12px' };
     
     // Special icon for inventory
     if (resourceType === 'inventory') {
-      return <Boxes className={`${iconClass} text-emerald-500`} />;
+      return <Edit style={{ ...iconStyle, color: '#ff6a00' }} />;
     }
     
     switch (actionType) {
       case 'create':
       case 'bulk_create':
-        return <Plus className={`${iconClass} text-green-500`} />;
+        return <Plus style={{ ...iconStyle, color: '#22c55e' }} />;
       case 'update':
       case 'bulk_update':
-        return <Edit className={`${iconClass} text-blue-500`} />;
+        return <Edit style={{ ...iconStyle, color: '#6366f1' }} />;
       case 'delete':
       case 'bulk_delete':
-        return <Trash2 className={`${iconClass} text-red-500`} />;
+        return <Trash2 style={{ ...iconStyle, color: '#ef4444' }} />;
       case 'login':
-        return <LogIn className={`${iconClass} text-purple-500`} />;
+        return <LogIn style={{ ...iconStyle, color: '#a855f7' }} />;
       case 'logout':
-        return <LogOut className={`${iconClass} text-orange-500`} />;
+        return <LogOut style={{ ...iconStyle, color: '#ff6a00' }} />;
       case 'export':
-        return <Download className={`${iconClass} text-cyan-500`} />;
+        return <Download style={{ ...iconStyle, color: '#06b6d4' }} />;
       case 'import':
-        return <Upload className={`${iconClass} text-indigo-500`} />;
+        return <Upload style={{ ...iconStyle, color: '#6366f1' }} />;
       default:
-        return <Activity className={`${iconClass} text-gray-500`} />;
+        return <Activity style={{ ...iconStyle, color: '#6b7280' }} />;
     }
+  };
+
+  // Get icon background color based on Figma design
+  const getActionIconBg = (actionType: string, resourceType: string): string => {
+    if (resourceType === 'inventory') {
+      return '#ffefd8'; // Orange background for inventory
+    }
+    if (resourceType === 'admin' || resourceType === 'user') {
+      return '#d8ffe8'; // Green background for admin/user
+    }
+    if (resourceType === 'order') {
+      if (actionType === 'delete' || actionType === 'bulk_delete') {
+        return '#ffd8d8'; // Red background for delete
+      }
+      return '#d8f0ff'; // Light blue for order status
+    }
+    switch (actionType) {
+      case 'create':
+      case 'bulk_create':
+        return '#d8ffe8'; // Green
+      case 'update':
+      case 'bulk_update':
+        return '#ded8ff'; // Purple
+      case 'delete':
+      case 'bulk_delete':
+        return '#ffd8d8'; // Red
+      case 'login':
+      case 'logout':
+        return '#ded8ff'; // Purple
+      default:
+        return '#ded8ff'; // Default purple
+    }
+  };
+
+  // Format action label for display
+  const formatActionLabel = (actionType: string, resourceType: string): string => {
+    const resource = resourceType.charAt(0).toUpperCase() + resourceType.slice(1);
+    const action = actionType.replace('bulk_', '');
+    return `${resource}_${action}`;
   };
 
   const getResourceIcon = (resourceType: string) => {
@@ -366,65 +630,70 @@ const AdminActivityLog: React.FC<AdminActivityLogProps> = ({ tenantId }) => {
   }, []);
 
   return (
-    <div className="p-4 sm:p-6 bg-gray-50 min-h-screen">
-      {/* Header */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6 mb-4 sm:mb-6">
-        <div className="flex flex-col gap-4">
-          {/* Title */}
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-800 flex items-center gap-2">
-              <Activity className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-500" />
-              Activity Log
-            </h1>
-            <p className="text-gray-500 text-xs sm:text-sm mt-1">Track all system activities and changes</p>
-          </div>
-
-          {/* Filters Row - Responsive */}
-          <div className="flex flex-col lg:flex-row lg:items-center gap-3">
-            {/* Date Range - Stack on mobile */}
-            <div className="flex flex-col xs:flex-row items-stretch xs:items-center gap-2">
-              <div className="relative flex-1 xs:flex-initial">
+    <div style={figmaStyles.container}>
+      {/* Main Content */}
+      <div style={figmaStyles.mainContent}>
+        {/* Header Row */}
+        <div style={figmaStyles.headerRow}>
+          <h1 style={figmaStyles.title}>Activity Log</h1>
+          
+          <div style={figmaStyles.filtersRow}>
+            {/* Date Range */}
+            <div style={figmaStyles.dateRangeGroup}>
+              <div style={{ position: 'relative' }} className="dropdown-container">
+                <button
+                  style={figmaStyles.filterButton}
+                  onClick={() => {}}
+                >
+                  <span style={figmaStyles.filterButtonText}>
+                    {startDate || '01-01-2025'}
+                  </span>
+                  <ChevronDown style={{ width: '10px', height: '10px', transform: 'rotate(0deg)', color: '#000' }} />
+                </button>
                 <input
                   type="date"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
-                  className="w-full xs:w-auto pl-3 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  placeholder="Start date"
+                  style={{ position: 'absolute', opacity: 0, top: 0, left: 0, width: '100%', height: '100%', cursor: 'pointer' }}
                 />
               </div>
-              <span className="text-gray-400 hidden xs:inline">to</span>
-              <div className="relative flex-1 xs:flex-initial">
+              <span style={figmaStyles.filterToText}>To</span>
+              <div style={{ position: 'relative' }} className="dropdown-container">
+                <button
+                  style={figmaStyles.filterButton}
+                  onClick={() => {}}
+                >
+                  <span style={figmaStyles.filterButtonText}>
+                    {endDate || '01-01-2026'}
+                  </span>
+                  <ChevronDown style={{ width: '10px', height: '10px', transform: 'rotate(0deg)', color: '#000' }} />
+                </button>
                 <input
                   type="date"
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
-                  className="w-full xs:w-auto pl-3 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  placeholder="End date"
+                  style={{ position: 'absolute', opacity: 0, top: 0, left: 0, width: '100%', height: '100%', cursor: 'pointer' }}
                 />
               </div>
             </div>
 
-            {/* Dropdowns Row */}
-            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-
-            {/* Resource Type Dropdown */}
-            <div className="relative dropdown-container flex-1 xs:flex-initial min-w-[120px]">
+            {/* Type Dropdown */}
+            <div style={{ position: 'relative' }} className="dropdown-container">
               <button
+                style={figmaStyles.filterButton}
                 onClick={() => {
                   setShowTypeDropdown(!showTypeDropdown);
                   setShowActionDropdown(false);
                   setShowItemsDropdown(false);
                 }}
-                className="w-full flex items-center justify-between gap-2 px-3 sm:px-4 py-2 border border-gray-200 rounded-lg text-sm bg-white hover:bg-gray-50 transition-colors"
               >
-                <div className="flex items-center gap-2 truncate">
-                  <Filter className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                  <span className="truncate">{resourceTypes.find(t => t.value === resourceTypeFilter)?.label || 'All Type'}</span>
-                </div>
-                <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform flex-shrink-0 ${showTypeDropdown ? 'rotate-180' : ''}`} />
+                <span style={figmaStyles.filterButtonText}>
+                  {resourceTypes.find(t => t.value === resourceTypeFilter)?.label || 'All Type'}
+                </span>
+                <ChevronDown style={{ width: '10px', height: '10px', transform: showTypeDropdown ? 'rotate(180deg)' : 'rotate(0deg)', color: '#000', transition: 'transform 0.2s' }} />
               </button>
               {showTypeDropdown && (
-                <div className="absolute top-full left-0 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
+                <div style={figmaStyles.dropdown}>
                   {resourceTypes.map(type => (
                     <button
                       key={type.value}
@@ -433,9 +702,11 @@ const AdminActivityLog: React.FC<AdminActivityLogProps> = ({ tenantId }) => {
                         setShowTypeDropdown(false);
                         setCurrentPage(1);
                       }}
-                      className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2 ${resourceTypeFilter === type.value ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700'}`}
+                      style={{
+                        ...figmaStyles.dropdownItem,
+                        backgroundColor: resourceTypeFilter === type.value ? '#e0f7fa' : 'transparent',
+                      }}
                     >
-                      {type.value === 'inventory' && <Boxes className="w-4 h-4 text-emerald-500" />}
                       {type.label}
                     </button>
                   ))}
@@ -443,24 +714,23 @@ const AdminActivityLog: React.FC<AdminActivityLogProps> = ({ tenantId }) => {
               )}
             </div>
 
-            {/* Action Type Dropdown */}
-            <div className="relative dropdown-container flex-1 xs:flex-initial min-w-[120px]">
+            {/* Action Dropdown */}
+            <div style={{ position: 'relative' }} className="dropdown-container">
               <button
+                style={figmaStyles.filterButton}
                 onClick={() => {
                   setShowActionDropdown(!showActionDropdown);
                   setShowTypeDropdown(false);
                   setShowItemsDropdown(false);
                 }}
-                className="w-full flex items-center justify-between gap-2 px-3 sm:px-4 py-2 border border-gray-200 rounded-lg text-sm bg-white hover:bg-gray-50 transition-colors"
               >
-                <div className="flex items-center gap-2 truncate">
-                  <Activity className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                  <span className="truncate">{actionTypes.find(a => a.value === actionTypeFilter)?.label || 'All Actions'}</span>
-                </div>
-                <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform flex-shrink-0 ${showActionDropdown ? 'rotate-180' : ''}`} />
+                <span style={figmaStyles.filterButtonText}>
+                  {actionTypes.find(a => a.value === actionTypeFilter)?.label || 'All Actions'}
+                </span>
+                <ChevronDown style={{ width: '10px', height: '10px', transform: showActionDropdown ? 'rotate(180deg)' : 'rotate(0deg)', color: '#000', transition: 'transform 0.2s' }} />
               </button>
               {showActionDropdown && (
-                <div className="absolute top-full left-0 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
+                <div style={figmaStyles.dropdown}>
                   {actionTypes.map(action => (
                     <button
                       key={action.value}
@@ -469,7 +739,10 @@ const AdminActivityLog: React.FC<AdminActivityLogProps> = ({ tenantId }) => {
                         setShowActionDropdown(false);
                         setCurrentPage(1);
                       }}
-                      className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 ${actionTypeFilter === action.value ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700'}`}
+                      style={{
+                        ...figmaStyles.dropdownItem,
+                        backgroundColor: actionTypeFilter === action.value ? '#e0f7fa' : 'transparent',
+                      }}
                     >
                       {action.label}
                     </button>
@@ -478,21 +751,21 @@ const AdminActivityLog: React.FC<AdminActivityLogProps> = ({ tenantId }) => {
               )}
             </div>
 
-            {/* Items Per Page Dropdown */}
-            <div className="relative dropdown-container">
+            {/* By Admin Dropdown (items per page) */}
+            <div style={{ position: 'relative' }} className="dropdown-container">
               <button
+                style={figmaStyles.filterButton}
                 onClick={() => {
                   setShowItemsDropdown(!showItemsDropdown);
                   setShowTypeDropdown(false);
                   setShowActionDropdown(false);
                 }}
-                className="flex items-center gap-2 px-3 sm:px-4 py-2 border border-gray-200 rounded-lg text-sm bg-white hover:bg-gray-50 transition-colors"
               >
-                <span>{itemsPerPage} <span className="hidden xs:inline">Items</span></span>
-                <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showItemsDropdown ? 'rotate-180' : ''}`} />
+                <span style={figmaStyles.filterButtonText}>By Admin</span>
+                <ChevronDown style={{ width: '10px', height: '10px', transform: showItemsDropdown ? 'rotate(180deg)' : 'rotate(0deg)', color: '#000', transition: 'transform 0.2s' }} />
               </button>
               {showItemsDropdown && (
-                <div className="absolute top-full right-0 mt-1 w-28 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+                <div style={figmaStyles.dropdown}>
                   {itemsPerPageOptions.map(option => (
                     <button
                       key={option}
@@ -501,9 +774,12 @@ const AdminActivityLog: React.FC<AdminActivityLogProps> = ({ tenantId }) => {
                         setShowItemsDropdown(false);
                         setCurrentPage(1);
                       }}
-                      className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 ${itemsPerPage === option ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700'}`}
+                      style={{
+                        ...figmaStyles.dropdownItem,
+                        backgroundColor: itemsPerPage === option ? '#e0f7fa' : 'transparent',
+                      }}
                     >
-                      {option}
+                      {option} Items
                     </button>
                   ))}
                 </div>
@@ -512,224 +788,152 @@ const AdminActivityLog: React.FC<AdminActivityLogProps> = ({ tenantId }) => {
 
             {/* Clear Filter Button */}
             <button
+              style={figmaStyles.clearFilterButton}
               onClick={clearFilters}
-              className="flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 bg-red-500 text-white rounded-lg text-sm hover:bg-red-600 transition-colors"
             >
-              <X className="w-4 h-4" />
-              <span className="hidden xs:inline">Clear filter</span>
+              <FilterX style={{ width: '24px', height: '24px', color: '#ff6a00' }} />
+              <span style={figmaStyles.clearFilterText}>Clear filter</span>
             </button>
-
-            {/* Refresh Button */}
-            <button
-              onClick={fetchLogs}
-              className="p-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-colors"
-            >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            </button>
-            </div>
           </div>
         </div>
-      </div>
 
-      {/* Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        {loading ? (
-          <ActivityLogSkeleton />
-        ) : logs.length === 0 ? (
-          <div className="p-6 sm:p-8 text-center">
-            <Activity className="w-10 h-10 sm:w-12 sm:h-12 text-gray-300 mx-auto mb-3" />
-            <h3 className="text-base sm:text-lg font-medium text-gray-700 mb-1">No Activity Logs Found</h3>
-            <p className="text-gray-500 text-xs sm:text-sm">No logs match your current filters</p>
-          </div>
-        ) : (
-          <>
-            {/* Mobile Card View */}
-            <div className="md:hidden divide-y divide-gray-100">
+        {/* Table */}
+        <div style={{ backgroundColor: '#ffffff', overflow: 'hidden' }}>
+          {loading ? (
+            <ActivityLogSkeleton />
+          ) : logs.length === 0 ? (
+            <div style={{ padding: '48px', textAlign: 'center' }}>
+              <Activity style={{ width: '48px', height: '48px', color: '#d1d5db', margin: '0 auto 12px' }} />
+              <h3 style={{ ...figmaStyles.entityTitle, marginBottom: '4px' }}>No Activity Logs Found</h3>
+              <p style={figmaStyles.entitySubtitle}>No logs match your current filters</p>
+            </div>
+          ) : (
+            <>
+              {/* Table Header */}
+              <div style={figmaStyles.tableHeader}>
+                <span style={figmaStyles.tableHeaderText}>SL</span>
+                <span style={figmaStyles.tableHeaderText}>Action</span>
+                <span style={figmaStyles.tableHeaderText}>Entity</span>
+                <span style={figmaStyles.tableHeaderText}>Description</span>
+                <span style={figmaStyles.tableHeaderText}>Name</span>
+                <span style={figmaStyles.tableHeaderText}>Date & Time</span>
+                <span></span>
+              </div>
+
+              {/* Table Rows */}
               {logs.map((log, index) => (
-                <div key={log._id} className="p-4 hover:bg-gray-50 transition-colors">
-                  <div className="flex items-start gap-3">
-                    <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${
-                      log.resourceType === 'inventory' ? 'bg-emerald-100' : 'bg-gray-100'
-                    }`}>
+                <div key={log._id} style={figmaStyles.tableRow}>
+                  {/* SL */}
+                  <span style={figmaStyles.cellText}>
+                    {(currentPage - 1) * itemsPerPage + index + 1}
+                  </span>
+
+                  {/* Action */}
+                  <div style={figmaStyles.actionBadge}>
+                    <div style={{
+                      ...figmaStyles.actionIcon,
+                      backgroundColor: getActionIconBg(log.actionType, log.resourceType),
+                    }}>
                       {getActionIcon(log.actionType, log.resourceType)}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap mb-1">
-                        <span className="text-sm font-medium text-gray-700">
-                          {log.resourceType === 'inventory' 
-                            ? 'Inventory_update' 
-                            : `${log.resourceType.charAt(0).toUpperCase() + log.resourceType.slice(1)}_${log.actionType}`
-                          }
-                        </span>
-                        {isBulkAction(log.actionType) && (
-                          <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-medium rounded-full">
-                            Bulk
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 mb-2">
-                        {getResourceIcon(log.resourceType)}
-                        <p className="text-xs font-medium text-gray-800 truncate">
-                          {log.resourceName || `${log.resourceType.charAt(0).toUpperCase() + log.resourceType.slice(1)} ${log.resourceId?.slice(-4) || ''}`}
-                        </p>
-                      </div>
-                      <div className="text-xs text-gray-600 mb-2">
-                        {renderInventoryDetails(log)}
-                      </div>
-                      <div className="flex items-center justify-between text-xs text-gray-500">
-                        <div className="flex items-center gap-1.5">
-                          <div className="w-5 h-5 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center">
-                            <span className="text-white text-[10px] font-medium">{log.userName?.charAt(0).toUpperCase() || 'U'}</span>
-                          </div>
-                          <span>{log.userName}</span>
-                        </div>
-                        <span>{formatDateTime(log.createdAt)}</span>
-                      </div>
-                    </div>
+                    <span style={figmaStyles.cellText}>
+                      {formatActionLabel(log.actionType, log.resourceType)}
+                    </span>
                   </div>
+
+                  {/* Entity */}
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <span style={{ ...figmaStyles.entityTitle, fontSize: '16px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '120px' }}>
+                      {log.resourceName || `${log.resourceType.charAt(0).toUpperCase() + log.resourceType.slice(1)} ${log.resourceId?.slice(-4) || ''}`}
+                    </span>
+                    <span style={figmaStyles.entitySubtitle}>
+                      {log.resourceType.charAt(0).toUpperCase() + log.resourceType.slice(1)}
+                    </span>
+                  </div>
+
+                  {/* Description */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <span style={figmaStyles.cellText}>{log.details}</span>
+                    {isBulkAction(log.actionType) && (
+                      <div style={figmaStyles.bulkBadge}>
+                        <span style={figmaStyles.bulkText}>Bulk</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Name */}
+                  <span style={figmaStyles.cellText}>{log.userName}</span>
+
+                  {/* Date & Time */}
+                  <span style={figmaStyles.cellText}>{formatDateTime(log.createdAt)}</span>
+
+                  {/* Actions Menu */}
+                  <MoreVertical style={figmaStyles.dotsIcon} />
                 </div>
               ))}
-            </div>
-
-            {/* Desktop Table View */}
-            <div className="hidden md:block overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-100">
-                  <tr>
-                    <th className="text-left py-3 sm:py-4 px-4 sm:px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">SL</th>
-                    <th className="text-left py-3 sm:py-4 px-4 sm:px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Action</th>
-                    <th className="text-left py-3 sm:py-4 px-4 sm:px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Entity</th>
-                    <th className="text-left py-3 sm:py-4 px-4 sm:px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Description</th>
-                    <th className="text-left py-3 sm:py-4 px-4 sm:px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Vendor</th>
-                    <th className="text-left py-3 sm:py-4 px-4 sm:px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Date & Time</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                {logs.map((log, index) => (
-                  <tr key={log._id} className="hover:bg-gray-50 transition-colors">
-                    {/* SL */}
-                    <td className="py-3 sm:py-4 px-4 sm:px-6">
-                      <span className="text-sm text-gray-600">{(currentPage - 1) * itemsPerPage + index + 1}</span>
-                    </td>
-                    
-                    {/* Action */}
-                    <td className="py-3 sm:py-4 px-4 sm:px-6">
-                      <div className="flex items-center gap-2">
-                        <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center ${
-                          log.resourceType === 'inventory' ? 'bg-emerald-100' : 'bg-gray-100'
-                        }`}>
-                          {getActionIcon(log.actionType, log.resourceType)}
-                        </div>
-                        <span className="text-xs sm:text-sm font-medium text-gray-700">
-                          {log.resourceType === 'inventory' 
-                            ? 'Inventory_update' 
-                            : `${log.resourceType.charAt(0).toUpperCase() + log.resourceType.slice(1)}_${log.actionType}`
-                          }
-                        </span>
-                      </div>
-                    </td>
-                    
-                    {/* Entity */}
-                    <td className="py-3 sm:py-4 px-4 sm:px-6">
-                      <div className="flex items-center gap-2">
-                        {getResourceIcon(log.resourceType)}
-                        <div>
-                          <p className="text-xs sm:text-sm font-medium text-gray-800">
-                            {log.resourceName || `${log.resourceType.charAt(0).toUpperCase() + log.resourceType.slice(1)} ${log.resourceId?.slice(-4) || ''}`}
-                          </p>
-                          <p className="text-xs text-gray-400">{log.resourceType.charAt(0).toUpperCase() + log.resourceType.slice(1)}</p>
-                        </div>
-                      </div>
-                    </td>
-                    
-                    {/* Description */}
-                    <td className="py-3 sm:py-4 px-4 sm:px-6">
-                      <div className="flex items-center gap-2 max-w-xs lg:max-w-sm">
-                        {renderInventoryDetails(log)}
-                        {isBulkAction(log.actionType) && (
-                          <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-medium rounded-full">
-                            Bulk
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    
-                    {/* Vendor */}
-                    <td className="py-3 sm:py-4 px-4 sm:px-6">
-                      <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center">
-                          <span className="text-white text-xs font-medium">{log.userName?.charAt(0).toUpperCase() || 'U'}</span>
-                        </div>
-                        <span className="text-xs sm:text-sm text-gray-600">{log.userName}</span>
-                      </div>
-                    </td>
-                    
-                    {/* Date & Time */}
-                    <td className="py-3 sm:py-4 px-4 sm:px-6">
-                      <span className="text-xs sm:text-sm text-gray-500">{formatDateTime(log.createdAt)}</span>
-                    </td>
-                  </tr>
-                ))}
-                </tbody>
-              </table>
-            </div>
-          </>
-        )}
+            </>
+          )}
+        </div>
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 bg-gray-50">
-            <div className="text-xs sm:text-sm text-gray-500 text-center sm:text-left">
-              Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, totalItems)} of {totalItems} entries
+          <div style={figmaStyles.pagination}>
+            <button
+              style={figmaStyles.navButton}
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+            >
+              <ChevronLeft style={{ width: '16px', height: '16px' }} />
+              <span>Previous</span>
+            </button>
+
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                let pageNum;
+                if (totalPages <= 5) {
+                  pageNum = i + 1;
+                } else if (currentPage <= 3) {
+                  pageNum = i + 1;
+                } else if (currentPage >= totalPages - 2) {
+                  pageNum = totalPages - 4 + i;
+                } else {
+                  pageNum = currentPage - 2 + i;
+                }
+
+                return (
+                  <button
+                    key={pageNum}
+                    onClick={() => setCurrentPage(pageNum)}
+                    style={{
+                      ...figmaStyles.pageButton,
+                      ...(currentPage === pageNum ? figmaStyles.pageButtonActive : {}),
+                    }}
+                  >
+                    {pageNum}
+                  </button>
+                );
+              })}
+              {totalPages > 5 && currentPage < totalPages - 2 && (
+                <>
+                  <span style={{ color: '#6b7280' }}>...</span>
+                  <button
+                    onClick={() => setCurrentPage(totalPages)}
+                    style={figmaStyles.pageButton}
+                  >
+                    {totalPages}
+                  </button>
+                </>
+              )}
             </div>
-            
-            <div className="flex items-center gap-1 sm:gap-2">
-              <button
-                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                disabled={currentPage === 1}
-                className="p-1.5 sm:p-2 rounded-lg border border-gray-200 hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                <ChevronLeft className="w-4 h-4 text-gray-600" />
-              </button>
-              
-              {/* Page Numbers */}
-              <div className="flex items-center gap-0.5 sm:gap-1">
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  let pageNum;
-                  if (totalPages <= 5) {
-                    pageNum = i + 1;
-                  } else if (currentPage <= 3) {
-                    pageNum = i + 1;
-                  } else if (currentPage >= totalPages - 2) {
-                    pageNum = totalPages - 4 + i;
-                  } else {
-                    pageNum = currentPage - 2 + i;
-                  }
-                  
-                  return (
-                    <button
-                      key={pageNum}
-                      onClick={() => setCurrentPage(pageNum)}
-                      className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
-                        currentPage === pageNum
-                          ? 'bg-indigo-500 text-white'
-                          : 'hover:bg-white text-gray-600'
-                      }`}
-                    >
-                      {pageNum}
-                    </button>
-                  );
-                })}
-              </div>
-              
-              <button
-                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                disabled={currentPage === totalPages}
-                className="p-1.5 sm:p-2 rounded-lg border border-gray-200 hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                <ChevronRight className="w-4 h-4 text-gray-600" />
-              </button>
-            </div>
+
+            <button
+              style={figmaStyles.navButton}
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+            >
+              <span>Next</span>
+              <ChevronRight style={{ width: '16px', height: '16px' }} />
+            </button>
           </div>
         )}
       </div>

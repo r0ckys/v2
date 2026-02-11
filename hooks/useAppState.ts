@@ -1,7 +1,7 @@
 /**
  * useAppState.ts - Core data state management extracted from App.tsx
  */
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import type {
   Product, Order, ThemeConfig, WebsiteConfig, DeliveryConfig, PaymentMethod,
   LandingPage, FacebookPixelConfig, CourierConfig, Role, Category,
@@ -242,27 +242,9 @@ export function useAppState(): AppState {
   // Mobile menu handler ref
   const handleMobileMenuOpenRef = useRef<(() => void) | null>(null);
   
-  // Keep refs in sync with state using useEffect
-  useEffect(() => { ordersRef.current = orders; }, [orders]);
-  useEffect(() => { productsRef.current = products; }, [products]);
-  useEffect(() => { logoRef.current = logo; }, [logo]);
-  useEffect(() => { themeConfigRef.current = themeConfig; }, [themeConfig]);
-  useEffect(() => { websiteConfigRef.current = websiteConfig; }, [websiteConfig]);
-  useEffect(() => { deliveryConfigRef.current = deliveryConfig; }, [deliveryConfig]);
-  useEffect(() => { paymentMethodsRef.current = paymentMethods; }, [paymentMethods]);
-  useEffect(() => { courierConfigRef.current = courierConfig; }, [courierConfig]);
-  useEffect(() => { facebookPixelConfigRef.current = facebookPixelConfig; }, [facebookPixelConfig]);
-  useEffect(() => { rolesRef.current = roles; }, [roles]);
-  useEffect(() => { usersRef.current = users; }, [users]);
-  useEffect(() => { categoriesRef.current = categories; }, [categories]);
-  useEffect(() => { subCategoriesRef.current = subCategories; }, [subCategories]);
-  useEffect(() => { childCategoriesRef.current = childCategories; }, [childCategories]);
-  useEffect(() => { brandsRef.current = brands; }, [brands]);
-  useEffect(() => { tagsRef.current = tags; }, [tags]);
-  useEffect(() => { landingPagesRef.current = landingPages; }, [landingPages]);
-  useEffect(() => { userRef.current = user; }, [user]);
-  
-  const refs: AppStateRefs = {
+  // Memoize the refs object to prevent re-renders causing new object references
+  // All individual refs are stable (useRef), so this object should be stable too
+  const refs = useMemo<AppStateRefs>(() => ({
     ordersRef,
     productsRef,
     logoRef,
@@ -304,7 +286,27 @@ export function useAppState(): AppState {
     catalogLoadedRef,
     adminDataLoadedRef,
     sessionRestoredRef,
-  };
+  }), []); // Empty deps since all refs are stable
+  
+  // Keep refs in sync with state using useEffect
+  useEffect(() => { ordersRef.current = orders; }, [orders]);
+  useEffect(() => { productsRef.current = products; }, [products]);
+  useEffect(() => { logoRef.current = logo; }, [logo]);
+  useEffect(() => { themeConfigRef.current = themeConfig; }, [themeConfig]);
+  useEffect(() => { websiteConfigRef.current = websiteConfig; }, [websiteConfig]);
+  useEffect(() => { deliveryConfigRef.current = deliveryConfig; }, [deliveryConfig]);
+  useEffect(() => { paymentMethodsRef.current = paymentMethods; }, [paymentMethods]);
+  useEffect(() => { courierConfigRef.current = courierConfig; }, [courierConfig]);
+  useEffect(() => { facebookPixelConfigRef.current = facebookPixelConfig; }, [facebookPixelConfig]);
+  useEffect(() => { rolesRef.current = roles; }, [roles]);
+  useEffect(() => { usersRef.current = users; }, [users]);
+  useEffect(() => { categoriesRef.current = categories; }, [categories]);
+  useEffect(() => { subCategoriesRef.current = subCategories; }, [subCategories]);
+  useEffect(() => { childCategoriesRef.current = childCategories; }, [childCategories]);
+  useEffect(() => { brandsRef.current = brands; }, [brands]);
+  useEffect(() => { tagsRef.current = tags; }, [tags]);
+  useEffect(() => { landingPagesRef.current = landingPages; }, [landingPages]);
+  useEffect(() => { userRef.current = user; }, [user]);
   
   return {
     isLoading, setIsLoading,

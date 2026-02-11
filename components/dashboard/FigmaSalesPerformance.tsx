@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useMemo } from 'react';
+import { Order } from '../../types';
 
 interface ChartData {
   day: number;
@@ -8,11 +9,63 @@ interface ChartData {
 }
 
 interface FigmaSalesPerformanceProps {
+  orders?: Order[];
   data?: ChartData[];
 }
 
 const FigmaSalesPerformance: React.FC<FigmaSalesPerformanceProps> = ({
-  data = [
+  orders = [],
+  data: propData
+}) => {
+  // Calculate chart data from orders if not provided
+  const data = useMemo(() => {
+    if (propData && propData.length > 0) return propData;
+    
+    // Get current month's days
+    const now = new Date();
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    
+    // Initialize data for each day
+    const dailyData: ChartData[] = Array.from({ length: daysInMonth }, (_, i) => ({
+      day: i + 1,
+      placedOrder: 0,
+      delivered: 0,
+      canceled: 0
+    }));
+
+    // Process orders
+    orders.forEach(order => {
+      const orderDate = order.createdAt ? new Date(order.createdAt) : null;
+      if (!orderDate || orderDate.getMonth() !== now.getMonth() || orderDate.getFullYear() !== now.getFullYear()) return;
+      
+      const dayIndex = orderDate.getDate() - 1;
+      if (dayIndex >= 0 && dayIndex < daysInMonth) {
+        dailyData[dayIndex].placedOrder++;
+        if (order.status === 'Delivered') dailyData[dayIndex].delivered++;
+        if (order.status === 'Cancelled') dailyData[dayIndex].canceled++;
+      }
+    });
+
+    // Convert to cumulative for smooth chart
+    let cumulativePlaced = 0;
+    let cumulativeDelivered = 0;
+    let cumulativeCanceled = 0;
+    
+    return dailyData.map(d => {
+      cumulativePlaced += d.placedOrder;
+      cumulativeDelivered += d.delivered;
+      cumulativeCanceled += d.canceled;
+      return {
+        day: d.day,
+        placedOrder: cumulativePlaced,
+        delivered: cumulativeDelivered,
+        canceled: cumulativeCanceled
+      };
+    });
+  }, [orders, propData]);
+
+  // Use calculated data or fallback
+  const chartData = data.length > 0 ? data : [
     { day: 1, placedOrder: 0, delivered: 0, canceled: 0 },
     { day: 2, placedOrder: 5, delivered: 3, canceled: 0 },
     { day: 3, placedOrder: 8, delivered: 5, canceled: 0 },
@@ -44,9 +97,9 @@ const FigmaSalesPerformance: React.FC<FigmaSalesPerformanceProps> = ({
     { day: 29, placedOrder: 72, delivered: 62, canceled: 0 },
     { day: 30, placedOrder: 75, delivered: 65, canceled: 0 },
     { day: 31, placedOrder: 78, delivered: 68, canceled: 0 },
-  ]
-}) => {
-  const maxValue = 100;
+  ];
+
+  const maxValue = Math.max(100, ...chartData.map(d => Math.max(d.placedOrder, d.delivered, d.canceled)));
   
   // Creates sharp angular lines (not smooth curves)
   const createSharpPath = (values: number[], chartWidth: number, chartHeight: number) => {
@@ -63,17 +116,17 @@ const FigmaSalesPerformance: React.FC<FigmaSalesPerformanceProps> = ({
   };
 
   return (
-    <div className="w-full h-72 sm:h-80 md:h-96 p-2 sm:p-2.5 bg-white rounded-[10px] outline outline-1 outline-offset-[-0.50px] outline-zinc-200 flex flex-col justify-start items-start gap-1.5 sm:gap-2.5 overflow-hidden">
+    <div className="w-full h-80 sm:h-96 p-3 sm:p-4 bg-white rounded-xl border border-zinc-200 flex flex-col justify-start items-start gap-2 overflow-hidden">
       {/* Header */}
       <div className="w-full flex justify-start items-center gap-2.5">
-        <div className="text-zinc-800 text-base sm:text-lg font-bold font-['Lato']">Sale Performance</div>
+        <div className="text-zinc-800 text-lg font-bold font-['Lato']">Sale Performance</div>
       </div>
       
       {/* Legend - Wrap on mobile */}
-      <div className="flex flex-wrap justify-start items-center gap-2 sm:gap-4">
-        <div className="text-sky-400 text-xs sm:text-sm font-bold font-['Poppins']">Placed Order</div>
-        <div className="text-orange-500 text-xs sm:text-sm font-bold font-['Poppins']">Order Delivered</div>
-        <div className="text-red-700 text-xs sm:text-sm font-bold font-['Poppins']">Order Cancel</div>
+      <div className="flex flex-wrap justify-start items-center gap-3 sm:gap-6">
+        <div className="text-sky-400 text-sm font-bold font-['Poppins']">Placed Order</div>
+        <div className="text-orange-500 text-sm font-bold font-['Poppins']">Order Delivered</div>
+        <div className="text-red-600 text-sm font-bold font-['Poppins']">Order Cancel</div>
       </div>
 
       {/* Chart Area */}
@@ -102,21 +155,21 @@ const FigmaSalesPerformance: React.FC<FigmaSalesPerformanceProps> = ({
           <svg className="w-full h-full absolute top-0 left-0" viewBox="0 0 700 180" preserveAspectRatio="none">
             {/* Placed Order (sky-400) */}
             <path
-              d={createSharpPath(data.map(d => d.placedOrder), 700, 180)}
+              d={createSharpPath(chartData.map(d => d.placedOrder), 700, 180)}
               fill="none"
               stroke="#38BDF8"
               strokeWidth="2"
             />
             {/* Order Delivered (orange-500) */}
             <path
-              d={createSharpPath(data.map(d => d.delivered), 700, 180)}
+              d={createSharpPath(chartData.map(d => d.delivered), 700, 180)}
               fill="none"
               stroke="#F97316"
               strokeWidth="2"
             />
             {/* Order Cancel (red-700) */}
             <path
-              d={createSharpPath(data.map(d => d.canceled), 700, 180)}
+              d={createSharpPath(chartData.map(d => d.canceled), 700, 180)}
               fill="none"
               stroke="#B91C1C"
               strokeWidth="2"

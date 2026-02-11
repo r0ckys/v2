@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import { SubscriptionService } from '../services/SubscriptionService';
 
 // Mock API base URL for testing
-const mockApiUrl = 'http://localhost:5000';
+const mockApiUrl = 'http://localhost:5001';
 
 describe('SubscriptionService', () => {
   describe('Plan Management', () => {

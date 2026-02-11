@@ -66,18 +66,18 @@ const FigmaOrderStatus: React.FC<FigmaOrderStatusProps> = ({
 
   return (
     <div className="px-2 sm:px-4 md:px-5 lg:px-6 w-full">
-      <h2 className="text-black text-sm sm:text-base font-semibold mb-2 sm:mb-3 md:mb-4 font-['Poppins']">Order</h2>
+      <h2 className="text-black text-base font-semibold mb-3 font-['Poppins']">Order</h2>
       
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-4">
         {orderItems.map((item, index) => (
-          <div key={index} className="h-12 bg-white rounded-lg shadow-[0px_2px_9.600000381469727px_0px_rgba(0,0,0,0.08)] flex items-center px-2 sm:px-3">
-            <div className={`w-7 h-7 sm:w-8 sm:h-8 ${item.bgColor} rounded-lg flex items-center justify-center flex-shrink-0`}>
+          <div key={index} className="h-12 bg-white rounded-lg shadow-[0px_2px_9.6px_0px_rgba(0,0,0,0.08)] flex items-center px-2">
+            <div className={`w-8 h-8 ${item.bgColor} rounded-lg flex items-center justify-center flex-shrink-0`}>
               {item.icon}
             </div>
             <div className="flex-1 ml-2 min-w-0">
-              <div className="text-black text-[10px] sm:text-xs font-medium font-['Poppins'] truncate">{item.label}</div>
+              <div className="text-black text-[13px] font-normal font-['Poppins'] truncate">{item.label}</div>
             </div>
-            <div className="text-black text-lg sm:text-2xl font-medium font-['Poppins'] flex-shrink-0">{item.value}</div>
+            <div className="text-black text-[28px] font-medium font-['Poppins'] flex-shrink-0">{item.value}</div>
           </div>
         ))}
       </div>

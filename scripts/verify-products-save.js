@@ -1,13 +1,13 @@
 // Minimal manual check script: confirms that tenant-data PUT accepts JSON bodies.
 // Usage (PowerShell):
-//   node scripts/verify-products-save.js http://localhost:5000 TENANT_ID
+//   node scripts/verify-products-save.js http://localhost:5001 TENANT_ID
 // Adjust base URL/tenantId as needed.
 
-const baseUrl = process.argv[2] || 'http://localhost:5000';
+const baseUrl = process.argv[2] || 'http://localhost:5001';
 const tenantId = process.argv[3];
 
 if (!tenantId) {
-  console.error('Missing tenantId. Example: node scripts/verify-products-save.js http://localhost:5000 <TENANT_ID>');
+  console.error('Missing tenantId. Example: node scripts/verify-products-save.js http://localhost:5001 <TENANT_ID>');
   process.exit(1);
 }
 

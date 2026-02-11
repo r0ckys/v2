@@ -3,6 +3,27 @@ import { getAuthHeader } from './authService';
 import { getCached, setCached, deleteCached, CacheKeys, setCachedByType, clearTenantCache } from './RedisService';
 import type { Socket } from 'socket.io-client';
 
+// Safe JSON stringify that handles circular references and DOM elements
+const safeStringify = (obj: unknown): string => {
+  const seen = new WeakSet();
+  return JSON.stringify(obj, (key, value) => {
+    // Skip React internal properties and DOM elements
+    if (key.startsWith('__reactFiber') || key.startsWith('__reactProps') || key === 'stateNode') {
+      return undefined;
+    }
+    if (value instanceof HTMLElement || value instanceof Node) {
+      return undefined;
+    }
+    if (typeof value === 'object' && value !== null) {
+      if (seen.has(value)) {
+        return '[Circular]';
+      }
+      seen.add(value);
+    }
+    return value;
+  });
+};
+
 // Debug flag - set to false to reduce console noise
 const DEBUG_LOGGING = false;
 
@@ -324,7 +345,7 @@ const setLocalCache = <T>(key: string, data: T, tenantId?: string): void => {
   if (typeof window === 'undefined') return;
   try {
     const cacheKey = LOCAL_CACHE_PREFIX + getCacheKey(key, tenantId);
-    localStorage.setItem(cacheKey, JSON.stringify({ data, timestamp: Date.now() }));
+    localStorage.setItem(cacheKey, safeStringify({ data, timestamp: Date.now() }));
   } catch {
     // localStorage full or unavailable
   }
@@ -520,7 +541,7 @@ class DataServiceImpl {
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ data })
+      body: safeStringify({ data })
     });
   }
 

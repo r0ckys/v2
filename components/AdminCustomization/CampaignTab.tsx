@@ -204,9 +204,9 @@ export const CampaignTab: React.FC<CampaignTabProps> = ({
 
   return (
     <>
-      <div className="space-y-4 sm:space-y-6">
+      <div className="space-y-2 sm:space-y-3">
         {/* Filters and Search */}
-        <div className="flex flex-col gap-3 sm:gap-4">
+        <div className="flex flex-col gap-2 sm:gap-3">
           {/* Status Filters */}
           <div className="flex bg-gray-100 rounded-lg p-1 overflow-x-auto scrollbar-hide -mx-3 px-3 sm:mx-0 sm:px-1">
             {(['All', 'Publish', 'Draft'] as CampaignFilterStatus[]).map((status) => (
@@ -265,16 +265,16 @@ export const CampaignTab: React.FC<CampaignTabProps> = ({
             <table className="w-full text-sm text-left">
               <thead className="bg-gray-50 text-gray-700 font-semibold text-xs uppercase border-b">
                 <tr>
-                  <th className="px-4 py-3 w-10">
+                  <th className="px-3 py-2 w-10">
                     <input type="checkbox" className="rounded" />
                   </th>
-                  <th className="px-4 py-3">SL</th>
-                  <th className="px-4 py-3">Product</th>
-                  <th className="px-4 py-3">Campaign Name</th>
-                  <th className="px-4 py-3">Start</th>
-                  <th className="px-4 py-3">End</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3 text-right">Action</th>
+                  <th className="px-3 py-2">SL</th>
+                  <th className="px-3 py-2">Product</th>
+                  <th className="px-3 py-2">Campaign Name</th>
+                  <th className="px-3 py-2">Start</th>
+                  <th className="px-3 py-2">End</th>
+                  <th className="px-3 py-2">Status</th>
+                  <th className="px-3 py-2 text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -283,11 +283,11 @@ export const CampaignTab: React.FC<CampaignTabProps> = ({
                   const rowNumber = (campaignCurrentPage - 1) * campaignItemsPerPage + index + 1;
                   return (
                     <tr key={campaign.id} className="hover:bg-gray-50 group">
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-2">
                         <input type="checkbox" className="rounded" />
                       </td>
-                      <td className="px-4 py-3 font-medium text-gray-800">{campaign.serial || rowNumber}</td>
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-2 font-medium text-gray-800">{campaign.serial || rowNumber}</td>
+                      <td className="px-3 py-2">
                         <div className="flex items-center gap-3">
                           <div className="w-12 h-12 bg-gray-100 rounded border overflow-hidden flex-shrink-0">
                             {product?.images?.[0] ? (
@@ -314,15 +314,15 @@ export const CampaignTab: React.FC<CampaignTabProps> = ({
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-gray-700">{campaign.name}</td>
-                      <td className="px-4 py-3 text-gray-500">{new Date(campaign.startDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-')}</td>
-                      <td className="px-4 py-3 text-gray-500">{new Date(campaign.endDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-')}</td>
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-2 text-gray-700">{campaign.name}</td>
+                      <td className="px-3 py-2 text-gray-500">{new Date(campaign.startDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-')}</td>
+                      <td className="px-3 py-2 text-gray-500">{new Date(campaign.endDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-')}</td>
+                      <td className="px-3 py-2">
                         <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${campaign.status === 'Publish' ? 'bg-green-100 text-green-700' : STATUS_COLORS.Draft}`}>
                           {campaign.status}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-right relative">
+                      <td className="px-3 py-2 text-right relative">
                         <button
                           onClick={() => setCampaignActionMenu(campaignActionMenu === campaign.id ? null : campaign.id)}
                           className="p-1.5 hover:bg-gray-100 rounded-lg transition text-gray-500 hover:text-gray-700"
@@ -351,8 +351,8 @@ export const CampaignTab: React.FC<CampaignTabProps> = ({
                 })}
                 {paginatedCampaigns.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="text-center py-12 text-gray-400">
-                      <CalendarDays size={32} className="mx-auto mb-2 opacity-50" />
+                    <td colSpan={8} className="text-center py-8 text-gray-400">
+                      <CalendarDays size={28} className="mx-auto mb-2 opacity-50" />
                       No campaigns found.
                     </td>
                   </tr>
@@ -364,17 +364,17 @@ export const CampaignTab: React.FC<CampaignTabProps> = ({
           {/* Mobile/Tablet Card View */}
           <div className="lg:hidden divide-y divide-gray-100">
             {paginatedCampaigns.length === 0 ? (
-              <div className="text-center py-12 text-gray-400">
-                <CalendarDays size={32} className="mx-auto mb-2 opacity-50" />
+              <div className="text-center py-8 text-gray-400">
+                <CalendarDays size={28} className="mx-auto mb-2 opacity-50" />
                 No campaigns found.
               </div>
             ) : (
               paginatedCampaigns.map((campaign, index) => {
                 const product = products.find(p => p.id === campaign.productId);
                 return (
-                  <div key={campaign.id} className="p-4 hover:bg-gray-50">
-                    <div className="flex gap-3">
-                      <div className="w-16 h-16 bg-gray-100 rounded border overflow-hidden flex-shrink-0">
+                  <div key={campaign.id} className="p-3 hover:bg-gray-50">
+                    <div className="flex gap-2">
+                      <div className="w-14 h-14 bg-gray-100 rounded border overflow-hidden flex-shrink-0">
                         {product?.images?.[0] ? (
                           <img
                             src={normalizeImageUrl(product.images[0])}
@@ -433,7 +433,7 @@ export const CampaignTab: React.FC<CampaignTabProps> = ({
 
         {/* Pagination */}
         {filteredCampaigns.length > 0 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-2 sm:px-4 py-3 border rounded-lg bg-gray-50">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-2 px-2 sm:px-3 py-2 border rounded-lg bg-gray-50">
             <p className="text-xs sm:text-sm text-gray-600 text-center sm:text-left">
               Showing {((campaignCurrentPage - 1) * campaignItemsPerPage) + 1} to {Math.min(campaignCurrentPage * campaignItemsPerPage, filteredCampaigns.length)} of {filteredCampaigns.length}
             </p>

@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useMemo } from 'react';
+import { Order } from '../../types';
 
 interface CategoryData {
   name: string;
@@ -10,22 +11,77 @@ interface CategoryData {
 
 interface FigmaSalesByCategoryProps {
   categories?: CategoryData[];
+  orders?: Order[];
 }
 
+// Predefined colors for categories
+const categoryColors = [
+  { color: '#4F46E5', bgColor: 'bg-indigo-600', textColor: 'text-indigo-600' },
+  { color: '#FB923C', bgColor: 'bg-orange-400', textColor: 'text-orange-400' },
+  { color: '#FCA5A5', bgColor: 'bg-red-300', textColor: 'text-red-300' },
+  { color: '#EF4444', bgColor: 'bg-red-500', textColor: 'text-red-500' },
+  { color: '#A3E635', bgColor: 'bg-lime-400', textColor: 'text-lime-400' },
+  { color: '#38BDF8', bgColor: 'bg-sky-400', textColor: 'text-slate-600' },
+  { color: '#A21CAF', bgColor: 'bg-fuchsia-700', textColor: 'text-fuchsia-700' },
+  { color: '#059669', bgColor: 'bg-emerald-600', textColor: 'text-emerald-600' },
+  { color: '#7C3AED', bgColor: 'bg-violet-600', textColor: 'text-violet-600' },
+  { color: '#DB2777', bgColor: 'bg-pink-600', textColor: 'text-pink-600' }
+];
+
+const defaultCategories: CategoryData[] = [
+  { name: 'Hair care', percentage: 15, color: '#4F46E5', bgColor: 'bg-indigo-600', textColor: 'text-indigo-600' },
+  { name: 'Serum', percentage: 15, color: '#FB923C', bgColor: 'bg-orange-400', textColor: 'text-orange-400' },
+  { name: 'Cream', percentage: 15, color: '#FCA5A5', bgColor: 'bg-red-300', textColor: 'text-red-300' },
+  { name: 'Home & kitchen', percentage: 15, color: '#EF4444', bgColor: 'bg-red-500', textColor: 'text-red-500' },
+  { name: 'Lip care', percentage: 15, color: '#A3E635', bgColor: 'bg-lime-400', textColor: 'text-lime-400' },
+  { name: 'Air Conditioner', percentage: 15, color: '#38BDF8', bgColor: 'bg-sky-400', textColor: 'text-slate-600' },
+  { name: 'Skin care', percentage: 10, color: '#A21CAF', bgColor: 'bg-fuchsia-700', textColor: 'text-fuchsia-700' }
+];
+
 const FigmaSalesByCategory: React.FC<FigmaSalesByCategoryProps> = ({
-  categories = [
-    { name: 'Hair care', percentage: 15, color: '#4F46E5', bgColor: 'bg-indigo-600', textColor: 'text-indigo-600' },
-    { name: 'Serum', percentage: 15, color: '#FB923C', bgColor: 'bg-orange-400', textColor: 'text-orange-400' },
-    { name: 'Cream', percentage: 15, color: '#FCA5A5', bgColor: 'bg-red-300', textColor: 'text-red-300' },
-    { name: 'Home & kitchen', percentage: 15, color: '#EF4444', bgColor: 'bg-red-500', textColor: 'text-red-500' },
-    { name: 'Lip care', percentage: 15, color: '#A3E635', bgColor: 'bg-lime-400', textColor: 'text-lime-400' },
-    { name: 'Air Conditioner', percentage: 15, color: '#38BDF8', bgColor: 'bg-sky-400', textColor: 'text-slate-600' },
-    { name: 'Skin care', percentage: 15, color: '#A21CAF', bgColor: 'bg-fuchsia-700', textColor: 'text-fuchsia-700' }
-  ]
+  categories,
+  orders = []
 }) => {
+  // Compute categories from orders if no categories prop provided
+  const computedCategories = useMemo(() => {
+    if (categories) return categories;
+    if (orders.length === 0) return defaultCategories;
+
+    // Count orders by product category (using productName as fallback category)
+    const categoryCount: Record<string, number> = {};
+    
+    orders.forEach(order => {
+      // Try to get category from order items
+      const items = Array.isArray(order.items) ? order.items : [];
+      if (items.length > 0) {
+        items.forEach((item: any) => {
+          const category = item.category || item.productName || 'Other';
+          categoryCount[category] = (categoryCount[category] || 0) + (item.quantity || 1);
+        });
+      } else {
+        // Use productName as category fallback
+        const category = order.productName || 'Uncategorized';
+        categoryCount[category] = (categoryCount[category] || 0) + (order.quantity || 1);
+      }
+    });
+
+    const total = Object.values(categoryCount).reduce((sum, count) => sum + count, 0);
+    
+    // Sort by count and take top categories
+    const sorted = Object.entries(categoryCount)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 7);
+
+    return sorted.map(([name, count], index) => ({
+      name,
+      percentage: Math.round((count / total) * 100),
+      ...categoryColors[index % categoryColors.length]
+    }));
+  }, [categories, orders]);
+  
   // Calculate angles for pie chart
   let currentAngle = 0;
-  const segments = categories.map((category) => {
+  const segments = computedCategories.map((category) => {
     const angle = (category.percentage / 100) * 360;
     const segment = {
       ...category,
@@ -72,10 +128,10 @@ const FigmaSalesByCategory: React.FC<FigmaSalesByCategoryProps> = ({
   };
 
   return (
-    <div className="w-full h-auto min-h-[350px] sm:h-96 p-4 sm:p-5 bg-white rounded-[10px] shadow-[0px_1px_6px_1px_rgba(0,0,0,0.25)] overflow-hidden flex flex-col">
+    <div className="w-full h-auto min-h-[380px] sm:h-[402px] p-4 sm:p-5 bg-white rounded-xl border border-zinc-200 overflow-hidden flex flex-col">
       {/* Title */}
-      <div className="mb-3 sm:mb-4">
-        <div className="text-zinc-800 text-base sm:text-lg font-bold font-['Lato']">Sale By Category</div>
+      <div className="mb-4">
+        <div className="text-zinc-800 text-lg font-bold font-['Lato']">Sale By Category</div>
       </div>
 
       {/* Pie Chart - Donut style */}
@@ -93,7 +149,7 @@ const FigmaSalesByCategory: React.FC<FigmaSalesByCategoryProps> = ({
 
       {/* Legend - Responsive grid */}
       <div className="mt-4 sm:mt-6 grid grid-cols-2 gap-x-2 gap-y-1.5 sm:gap-x-4 sm:gap-y-2.5">
-        {categories.map((category, index) => (
+        {computedCategories.map((category, index) => (
           <div key={index} className="flex justify-start items-center gap-1.5 sm:gap-2.5">
             <div className={`w-2.5 h-2.5 sm:w-3 sm:h-3 ${category.bgColor} rounded-full flex-shrink-0`} />
             <div className="justify-start truncate">

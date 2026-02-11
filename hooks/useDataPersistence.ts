@@ -11,6 +11,24 @@ import { DataService, isKeyFromSocket, clearSocketFlag } from '../services/DataS
 import type { AppStateRefs } from './useAppState';
 import { logInventoryChanges } from '../utils/inventoryLogger';
 
+// Safe JSON stringify that handles circular references
+const safeStringify = (obj: unknown): string => {
+  const seen = new WeakSet();
+  return JSON.stringify(obj, (key, value) => {
+    if (typeof value === 'object' && value !== null) {
+      if (seen.has(value)) {
+        return '[Circular]';
+      }
+      seen.add(value);
+    }
+    // Skip DOM nodes and React fibers
+    if (value instanceof HTMLElement || key === '_reactFiber' || key === '__reactFiber' || key.startsWith('__reactFiber')) {
+      return undefined;
+    }
+    return value;
+  });
+};
+
 interface UseDataPersistenceProps {
   activeTenantId: string;
   isLoading: boolean;
@@ -104,7 +122,7 @@ export function useDataPersistence(props: UseDataPersistenceProps) {
       if (orders.length === 0 && prevOrdersRef.current.length > 0) {
         return;
       }
-      if (JSON.stringify(orders) !== JSON.stringify(prevOrdersRef.current)) {
+      if (safeStringify(orders) !== safeStringify(prevOrdersRef.current)) {
         prevOrdersRef.current = orders;
         DataService.save('orders', orders, activeTenantId);
       }
@@ -155,7 +173,7 @@ export function useDataPersistence(props: UseDataPersistenceProps) {
       return;
     }
     
-    if (JSON.stringify(products) === JSON.stringify(prevProductsRef.current)) return;
+    if (safeStringify(products) === safeStringify(prevProductsRef.current)) return;
     
     // Log inventory changes before saving
     logInventoryChanges(prevProductsRef.current, products, activeTenantId);
@@ -167,7 +185,7 @@ export function useDataPersistence(props: UseDataPersistenceProps) {
   // === ROLES PERSISTENCE ===
   useEffect(() => { 
     if(!isLoading && !isTenantSwitching && activeTenantId && adminDataLoadedRef.current && roles.length > 0) {
-      if (JSON.stringify(roles) === JSON.stringify(prevRolesRef.current)) return;
+      if (safeStringify(roles) === safeStringify(prevRolesRef.current)) return;
       if (isKeyFromSocket('roles', activeTenantId)) {
         clearSocketFlag('roles', activeTenantId);
         prevRolesRef.current = roles;
@@ -201,7 +219,7 @@ export function useDataPersistence(props: UseDataPersistenceProps) {
   // === THEME CONFIG PERSISTENCE ===
   useEffect(() => {
     if (!activeTenantId || isLoading || isTenantSwitching || !initialDataLoadedRef.current) return;
-    if (JSON.stringify(themeConfig) === JSON.stringify(prevThemeConfigRef.current)) return;
+    if (safeStringify(themeConfig) === safeStringify(prevThemeConfigRef.current)) return;
     if (isKeyFromSocket('theme', activeTenantId)) {
       clearSocketFlag('theme', activeTenantId);
       prevThemeConfigRef.current = themeConfig;
@@ -214,7 +232,7 @@ export function useDataPersistence(props: UseDataPersistenceProps) {
   // === WEBSITE CONFIG PERSISTENCE ===
   useEffect(() => {
     if (!activeTenantId || isLoading || isTenantSwitching || !initialDataLoadedRef.current) return;
-    if (JSON.stringify(websiteConfig) === JSON.stringify(prevWebsiteConfigRef.current)) return;
+    if (safeStringify(websiteConfig) === safeStringify(prevWebsiteConfigRef.current)) return;
     if (isKeyFromSocket('website', activeTenantId)) {
       clearSocketFlag('website', activeTenantId);
       prevWebsiteConfigRef.current = websiteConfig;
@@ -229,7 +247,7 @@ export function useDataPersistence(props: UseDataPersistenceProps) {
   // === DELIVERY CONFIG PERSISTENCE ===
   useEffect(() => { 
     if(!isLoading && !isTenantSwitching && activeTenantId) {
-      if (JSON.stringify(deliveryConfig) === JSON.stringify(prevDeliveryConfigRef.current)) return;
+      if (safeStringify(deliveryConfig) === safeStringify(prevDeliveryConfigRef.current)) return;
       if (isKeyFromSocket('delivery', activeTenantId)) {
         clearSocketFlag('delivery', activeTenantId);
         prevDeliveryConfigRef.current = deliveryConfig;
@@ -257,7 +275,7 @@ export function useDataPersistence(props: UseDataPersistenceProps) {
   // === CATEGORIES PERSISTENCE ===
   useEffect(() => { 
     if(!isLoading && !isTenantSwitching && activeTenantId && catalogLoadedRef.current) {
-      if (JSON.stringify(categories) === JSON.stringify(prevCategoriesRef.current)) return;
+      if (safeStringify(categories) === safeStringify(prevCategoriesRef.current)) return;
       if (isKeyFromSocket('categories', activeTenantId)) {
         clearSocketFlag('categories', activeTenantId);
         prevCategoriesRef.current = categories;
@@ -271,7 +289,7 @@ export function useDataPersistence(props: UseDataPersistenceProps) {
   // === SUBCATEGORIES PERSISTENCE ===
   useEffect(() => { 
     if(!isLoading && !isTenantSwitching && activeTenantId && catalogLoadedRef.current) {
-      if (JSON.stringify(subCategories) === JSON.stringify(prevSubCategoriesRef.current)) return;
+      if (safeStringify(subCategories) === safeStringify(prevSubCategoriesRef.current)) return;
       if (isKeyFromSocket('subcategories', activeTenantId)) {
         clearSocketFlag('subcategories', activeTenantId);
         prevSubCategoriesRef.current = subCategories;
@@ -285,7 +303,7 @@ export function useDataPersistence(props: UseDataPersistenceProps) {
   // === CHILD CATEGORIES PERSISTENCE ===
   useEffect(() => { 
     if(!isLoading && !isTenantSwitching && activeTenantId && catalogLoadedRef.current) {
-      if (JSON.stringify(childCategories) === JSON.stringify(prevChildCategoriesRef.current)) return;
+      if (safeStringify(childCategories) === safeStringify(prevChildCategoriesRef.current)) return;
       if (isKeyFromSocket('childcategories', activeTenantId)) {
         clearSocketFlag('childcategories', activeTenantId);
         prevChildCategoriesRef.current = childCategories;
@@ -299,7 +317,7 @@ export function useDataPersistence(props: UseDataPersistenceProps) {
   // === BRANDS PERSISTENCE ===
   useEffect(() => { 
     if(!isLoading && !isTenantSwitching && activeTenantId && catalogLoadedRef.current) {
-      if (JSON.stringify(brands) === JSON.stringify(prevBrandsRef.current)) return;
+      if (safeStringify(brands) === safeStringify(prevBrandsRef.current)) return;
       if (isKeyFromSocket('brands', activeTenantId)) {
         clearSocketFlag('brands', activeTenantId);
         prevBrandsRef.current = brands;
@@ -313,7 +331,7 @@ export function useDataPersistence(props: UseDataPersistenceProps) {
   // === TAGS PERSISTENCE ===
   useEffect(() => { 
     if(!isLoading && !isTenantSwitching && activeTenantId && catalogLoadedRef.current) {
-      if (JSON.stringify(tags) === JSON.stringify(prevTagsRef.current)) return;
+      if (safeStringify(tags) === safeStringify(prevTagsRef.current)) return;
       if (isKeyFromSocket('tags', activeTenantId)) {
         clearSocketFlag('tags', activeTenantId);
         prevTagsRef.current = tags;
@@ -336,7 +354,7 @@ export function useDataPersistence(props: UseDataPersistenceProps) {
     // Remove initialDataLoadedRef requirement for landing pages - save immediately when created
     if(!isLoading && !isTenantSwitching && activeTenantId && landingPages.length > 0) {
       // Skip if data is identical
-      if (JSON.stringify(landingPages) === JSON.stringify(prevLandingPagesRef.current)) {
+      if (safeStringify(landingPages) === safeStringify(prevLandingPagesRef.current)) {
         console.log('[LandingPages Persistence] Skipped - no changes');
         return;
       }

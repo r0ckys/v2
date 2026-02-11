@@ -1,4 +1,5 @@
 import React from 'react';
+import { normalizeImageUrl } from '../../utils/imageUrlHelper';
 
 interface Product {
   id: string;
@@ -11,6 +12,8 @@ interface Product {
 
 interface FigmaBestSellingProductsProps {
   products?: Product[];
+  onDetailsClick?: () => void;
+  onProductClick?: (productId: string) => void;
 }
 
 const FigmaBestSellingProducts: React.FC<FigmaBestSellingProductsProps> = ({
@@ -19,11 +22,13 @@ const FigmaBestSellingProducts: React.FC<FigmaBestSellingProductsProps> = ({
     { id: '2', name: 'Nike Air Jordan', totalOrder: '56', status: 'Stock out', price: '$999.00' },
     { id: '3', name: 'T-shirt', totalOrder: '266', status: 'Stock', price: '$999.00' },
     { id: '4', name: 'Cross Bag', totalOrder: '506', status: 'Stock', price: '$999.00' }
-  ]
+  ],
+  onDetailsClick,
+  onProductClick
 }) => {
   return (
-    <div className="w-full px-3 sm:px-5 py-3 sm:py-4 bg-white rounded-lg shadow-[0px_1px_3px_0px_rgba(0,0,0,0.20)] flex flex-col justify-start items-start gap-2.5 overflow-hidden">
-      <div className="w-full flex flex-col justify-start items-end gap-3 sm:gap-5">
+    <div className="w-full px-4 sm:px-5 py-4 sm:py-[18px] bg-white rounded-xl border border-zinc-200 flex flex-col justify-start items-start gap-3 overflow-hidden">
+      <div className="w-full flex flex-col justify-start items-end gap-4 sm:gap-5">
         {/* Header */}
         <div className="w-full h-8 flex justify-start items-center gap-2.5">
           <div className="justify-start text-zinc-800 text-base sm:text-lg font-bold font-['Lato']">Best Selling Product</div>
@@ -51,12 +56,16 @@ const FigmaBestSellingProducts: React.FC<FigmaBestSellingProductsProps> = ({
           {/* Table Rows */}
           <div className="self-stretch flex flex-col justify-start items-start gap-1">
             {products.map((product) => (
-              <div key={product.id} className="self-stretch rounded-lg border-b inline-flex justify-start items-center">
+              <div 
+                key={product.id} 
+                className="self-stretch rounded-lg border-b inline-flex justify-start items-center hover:bg-gray-50 transition-colors cursor-pointer"
+                onClick={() => onProductClick?.(product.id)}
+              >
                 {/* Product */}
                 <div className="w-60 self-stretch pr-5 pb-2 border-zinc-300 flex justify-start items-center gap-1">
                   <div className="w-11 h-11 relative rounded-[9.86px] overflow-hidden bg-zinc-100 flex items-center justify-center">
                     {product.image ? (
-                      <img className="w-11 h-11 object-cover" src={product.image} alt={product.name} />
+                      <img className="w-11 h-11 object-cover" src={normalizeImageUrl(product.image)} alt={product.name} />
                     ) : (
                       <span className="text-zinc-400 text-sm font-medium">{product.name.charAt(0)}</span>
                     )}
@@ -90,9 +99,12 @@ const FigmaBestSellingProducts: React.FC<FigmaBestSellingProductsProps> = ({
         </div>
 
         {/* Details Button */}
-        <div className="w-20 sm:w-24 h-7 sm:h-8 px-2 sm:px-3 py-1 rounded-[50px] outline outline-1 outline-offset-[-1px] outline-sky-400 inline-flex justify-center items-center gap-2.5 cursor-pointer hover:bg-sky-50 transition-colors">
-          <div className="justify-start text-sky-400 text-sm sm:text-base font-normal font-['Lato'] leading-6">Details</div>
-        </div>
+        <button 
+          onClick={onDetailsClick}
+          className="w-20 sm:w-24 h-7 sm:h-8 px-2 sm:px-3 py-1 rounded-[50px] outline outline-1 outline-offset-[-1px] outline-sky-400 inline-flex justify-center items-center gap-2.5 cursor-pointer hover:bg-sky-50 transition-colors"
+        >
+          <span className="justify-start text-sky-400 text-sm sm:text-base font-normal font-['Lato'] leading-6">Details</span>
+        </button>
       </div>
     </div>
   );

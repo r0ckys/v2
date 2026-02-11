@@ -1,16 +1,16 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import {
-  Image as ImageIcon,
-  Globe,
   Plus,
-  Trash2
+  Trash2,
+  RefreshCw,
+  Save,
+  ChevronDown
 } from 'lucide-react';
-import { WebsiteConfig, SocialLink, FooterLink, FooterLinkField, ImageUploadType } from './types';
+import { WebsiteConfig, SocialLink, FooterLink, FooterLinkField } from './types';
 import { SOCIAL_PLATFORM_OPTIONS, FOOTER_LINK_SECTIONS } from './constants';
 import { normalizeImageUrl } from '../../utils/imageUrlHelper';
 import { convertFileToWebP, dataUrlToFile } from '../../services/imageUtils';
 import { uploadPreparedImageToServer } from '../../services/imageUploadService';
-import { ActionButton } from './shared/TabButton';
 
 interface WebsiteInfoTabProps {
   websiteConfiguration: WebsiteConfig;
@@ -19,6 +19,401 @@ interface WebsiteInfoTabProps {
   onUpdateLogo: (logo: string | null) => void;
   tenantId: string;
 }
+
+// Figma-styled Logo Upload Card
+const LogoUploadCard: React.FC<{
+  title: string;
+  imageUrl: string | null;
+  onSelect: () => void;
+  onRemove: () => void;
+}> = ({ title, imageUrl, onSelect, onRemove }) => (
+  <div
+    style={{
+      width: '270px',
+      height: '154px',
+      border: '1px dashed #bababa',
+      borderRadius: '8px',
+      overflow: 'hidden',
+      position: 'relative',
+    }}
+  >
+    {/* Title */}
+    <p
+      style={{
+        position: 'absolute',
+        top: '11px',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        fontFamily: '"Poppins", sans-serif',
+        fontWeight: 500,
+        fontSize: '12px',
+        color: 'black',
+        whiteSpace: 'nowrap',
+      }}
+    >
+      {title}
+    </p>
+
+    {/* Image Preview */}
+    <div
+      style={{
+        position: 'absolute',
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, calc(-50% - 14px))',
+        width: '246px',
+        height: '68px',
+        backgroundColor: 'white',
+        borderRadius: '4px',
+        overflow: 'hidden',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      {imageUrl ? (
+        <img
+          src={normalizeImageUrl(imageUrl)}
+          alt=""
+          style={{ maxWidth: '204px', maxHeight: '57px', objectFit: 'contain' }}
+        />
+      ) : (
+        <p style={{ color: '#a2a2a2', fontSize: '12px', fontFamily: '"Poppins", sans-serif' }}>
+          No image
+        </p>
+      )}
+    </div>
+
+    {/* Select Image Button */}
+    <button
+      onClick={onSelect}
+      style={{
+        position: 'absolute',
+        bottom: '17px',
+        left: '50%',
+        transform: 'translateX(calc(-50% - 22.5px))',
+        width: '201px',
+        height: '32px',
+        background: 'linear-gradient(90deg, rgba(56,189,248,0.06) 0%, rgba(30,144,255,0.06) 100%)',
+        border: 'none',
+        borderRadius: '4px',
+        cursor: 'pointer',
+        fontFamily: '"Poppins", sans-serif',
+        fontWeight: 500,
+        fontSize: '12px',
+      }}
+    >
+      <span
+        style={{
+          background: 'linear-gradient(90deg, #38bdf8 0%, #1e90ff 100%)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+        }}
+      >
+        Select Image
+      </span>
+    </button>
+
+    {/* Delete Button */}
+    {imageUrl && (
+      <button
+        onClick={onRemove}
+        style={{
+          position: 'absolute',
+          bottom: '17px',
+          right: '12px',
+          width: '32px',
+          height: '32px',
+          backgroundColor: 'rgba(218,0,0,0.1)',
+          border: 'none',
+          borderRadius: '4px',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <Trash2 size={20} color="#da0000" />
+      </button>
+    )}
+  </div>
+);
+
+// Figma-styled Input Field
+const FigmaInput: React.FC<{
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  type?: string;
+  flex?: boolean;
+}> = ({ label, value, onChange, placeholder, type = 'text', flex = false }) => (
+  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', ...(flex ? { flex: 1, minWidth: 0 } : {}) }}>
+    <p
+      style={{
+        fontFamily: '"Lato", sans-serif',
+        fontWeight: 700,
+        fontSize: '15px',
+        color: 'black',
+        margin: 0,
+      }}
+    >
+      {label}
+    </p>
+    <div
+      style={{
+        backgroundColor: '#f9f9f9',
+        borderRadius: '8px',
+        padding: '10px 12px',
+        height: '48px',
+        display: 'flex',
+        alignItems: 'center',
+      }}
+    >
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        style={{
+          border: 'none',
+          background: 'transparent',
+          outline: 'none',
+          width: '100%',
+          fontFamily: '"Poppins", sans-serif',
+          fontSize: '16px',
+          color: value ? 'black' : '#a2a2a2',
+        }}
+      />
+    </div>
+  </div>
+);
+
+// Figma-styled Select Field
+const FigmaSelect: React.FC<{
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: { value: string; label: string }[];
+  width?: string;
+}> = ({ label, value, onChange, options, width }) => (
+  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: width || 'auto' }}>
+    <p
+      style={{
+        fontFamily: '"Lato", sans-serif',
+        fontWeight: 700,
+        fontSize: '15px',
+        color: 'black',
+        margin: 0,
+      }}
+    >
+      {label}
+    </p>
+    <div
+      style={{
+        backgroundColor: '#f9f9f9',
+        borderRadius: '8px',
+        padding: '10px 12px',
+        height: '48px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        cursor: 'pointer',
+      }}
+    >
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        style={{
+          border: 'none',
+          background: 'transparent',
+          outline: 'none',
+          width: '100%',
+          fontFamily: '"Poppins", sans-serif',
+          fontSize: '16px',
+          color: 'black',
+          cursor: 'pointer',
+          appearance: 'none',
+        }}
+      >
+        {options.map((opt) => (
+          <option key={opt.value} value={opt.value}>
+            {opt.label}
+          </option>
+        ))}
+      </select>
+      <ChevronDown size={24} color="#666" />
+    </div>
+  </div>
+);
+
+// Figma-styled Section Header
+const SectionHeader: React.FC<{ title: string }> = ({ title }) => (
+  <p
+    style={{
+      fontFamily: '"Lato", sans-serif',
+      fontWeight: 700,
+      fontSize: '22px',
+      color: 'black',
+      letterSpacing: '0.11px',
+      margin: 0,
+    }}
+  >
+    {title}
+  </p>
+);
+
+// Figma-styled Rich Text Editor (Simplified)
+const RichTextEditor: React.FC<{
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+}> = ({ label, value, onChange, placeholder }) => (
+  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%' }}>
+    <SectionHeader title={label} />
+    {/* Toolbar */}
+    <div
+      style={{
+        backgroundColor: '#f9f9f9',
+        borderRadius: '8px',
+        padding: '9px 13px',
+        display: 'flex',
+        gap: '20px',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+      }}
+    >
+      <span style={{ fontFamily: '"Lato", sans-serif', fontWeight: 600, fontSize: '14px', color: '#4f4d4d' }}>Normal</span>
+      <span style={{ fontFamily: '"Lato", sans-serif', fontWeight: 800, fontSize: '14px', color: '#4f4d4d' }}>B</span>
+      <span style={{ fontFamily: '"Crimson Text", serif', fontWeight: 600, fontSize: '15px', color: '#4f4d4d', fontStyle: 'italic' }}>I</span>
+      <span style={{ fontFamily: '"Lato", sans-serif', fontWeight: 600, fontSize: '14px', color: '#4f4d4d', textDecoration: 'underline' }}>U</span>
+      <span style={{ fontFamily: '"Lato", sans-serif', fontWeight: 600, fontSize: '14px', color: '#4f4d4d', textDecoration: 'underline' }}>A</span>
+    </div>
+    {/* Text Area */}
+    <div
+      style={{
+        backgroundColor: '#f9f9f9',
+        borderRadius: '8px',
+        height: '175px',
+        overflow: 'hidden',
+      }}
+    >
+      <textarea
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        style={{
+          width: '100%',
+          height: '100%',
+          border: 'none',
+          background: 'transparent',
+          outline: 'none',
+          resize: 'none',
+          padding: '13px',
+          fontFamily: '"Lato", sans-serif',
+          fontSize: '14px',
+          color: value ? 'black' : '#a2a2a2',
+        }}
+      />
+    </div>
+  </div>
+);
+
+// Figma-styled Checkbox
+const FigmaCheckbox: React.FC<{
+  label: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+}> = ({ label, checked, onChange }) => (
+  <div
+    style={{ display: 'flex', gap: '8px', alignItems: 'center', cursor: 'pointer' }}
+    onClick={() => onChange(!checked)}
+  >
+    <div
+      style={{
+        width: '26px',
+        height: '26px',
+        border: '1.5px solid rgba(12,32,52,0.77)',
+        borderRadius: '4px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: checked ? '#38bdf8' : 'transparent',
+      }}
+    >
+      {checked && (
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M3 8L6.5 11.5L13 5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      )}
+    </div>
+    <p
+      style={{
+        fontFamily: '"Poppins", sans-serif',
+        fontSize: '12px',
+        color: '#1d1a1a',
+        margin: 0,
+      }}
+    >
+      {label}
+    </p>
+  </div>
+);
+
+// Footer Link Card
+const FooterLinkCard: React.FC<{
+  title: string;
+  description: string;
+  links: FooterLink[];
+  onAddLink: () => void;
+  onRemoveLink: (index: number) => void;
+  onUpdateLink: (index: number, key: keyof FooterLink, value: string) => void;
+}> = ({ title, description, links, onAddLink, onRemoveLink, onUpdateLink }) => (
+  <div
+    style={{
+      backgroundColor: '#f9f9f9',
+      borderRadius: '8px',
+      padding: '12px',
+      height: '74px',
+      position: 'relative',
+      width: '536px',
+    }}
+  >
+    <p style={{ fontFamily: '"Poppins", sans-serif', fontWeight: 500, fontSize: '12px', color: 'black', margin: 0 }}>
+      {title}
+    </p>
+    <p style={{ fontFamily: '"Poppins", sans-serif', fontSize: '8px', color: '#b9b9b9', marginTop: '6px' }}>
+      {description}
+    </p>
+    <p style={{ fontFamily: '"Poppins", sans-serif', fontSize: '8px', color: '#b9b9b9', marginTop: '6px' }}>
+      {links.length === 0 ? 'No links yet.' : `${links.length} link(s)`}
+    </p>
+    <button
+      onClick={onAddLink}
+      style={{
+        position: 'absolute',
+        top: '12px',
+        right: '12px',
+        width: '86px',
+        height: '26px',
+        background: 'linear-gradient(90deg, #38bdf8 0%, #1e90ff 100%)',
+        border: 'none',
+        borderRadius: '4px',
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '4px',
+      }}
+    >
+      <Plus size={16} color="white" />
+      <span style={{ fontFamily: '"Poppins", sans-serif', fontWeight: 600, fontSize: '12px', color: 'white' }}>
+        Add Link
+      </span>
+    </button>
+  </div>
+);
 
 export const WebsiteInfoTab: React.FC<WebsiteInfoTabProps> = ({
   websiteConfiguration,
@@ -32,6 +427,14 @@ export const WebsiteInfoTab: React.FC<WebsiteInfoTabProps> = ({
   const faviconInputRef = useRef<HTMLInputElement>(null);
   const headerLogoInputRef = useRef<HTMLInputElement>(null);
   const footerLogoInputRef = useRef<HTMLInputElement>(null);
+
+  // Social login state
+  const [socialLogins, setSocialLogins] = useState<{ type: string; clientId: string }[]>([
+    { type: 'Google', clientId: '' }
+  ]);
+
+  // Offer state
+  const [offers, setOffers] = useState<{ type: string; discount: string }[]>([]);
 
   const handleImageUpload = async (
     event: React.ChangeEvent<HTMLInputElement>,
@@ -90,32 +493,6 @@ export const WebsiteInfoTab: React.FC<WebsiteInfoTabProps> = ({
     }
   };
 
-  const addContactItem = (field: 'addresses' | 'emails' | 'phones'): void => {
-    setWebsiteConfiguration((prev) => ({
-      ...prev,
-      [field]: [...prev[field], '']
-    }));
-  };
-
-  const updateContactItem = (
-    field: 'addresses' | 'emails' | 'phones',
-    index: number,
-    value: string
-  ): void => {
-    setWebsiteConfiguration((prev) => {
-      const updated = [...prev[field]];
-      updated[index] = value;
-      return { ...prev, [field]: updated };
-    });
-  };
-
-  const removeContactItem = (field: 'addresses' | 'emails' | 'phones', index: number): void => {
-    setWebsiteConfiguration((prev) => ({
-      ...prev,
-      [field]: prev[field].filter((_, i) => i !== index)
-    }));
-  };
-
   const addSocialLink = (): void => {
     setWebsiteConfiguration((prev) => ({
       ...prev,
@@ -171,184 +548,416 @@ export const WebsiteInfoTab: React.FC<WebsiteInfoTabProps> = ({
     }));
   };
 
-  const logoConfigs = [
-    { r: logoInputRef, l: logo, t: 'logo' as const, n: 'Primary Store Logo (Fallback)' },
-    { r: headerLogoInputRef, l: websiteConfiguration.headerLogo, t: 'headerLogo' as const, n: 'Header Logo Override' },
-    { r: footerLogoInputRef, l: websiteConfiguration.footerLogo, t: 'footerLogo' as const, n: 'Footer Logo Override' }
-  ];
-
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-      <div className="space-y-6">
-        {logoConfigs.map(x => (
-          <div key={x.n} className="bg-white border-2 border-dashed border-gray-300 rounded-xl p-6 text-center">
-            <div className="flex flex-col items-center gap-3">
-              <ImageIcon size={32} className="text-gray-400" />
-              <p className="text-sm font-bold text-gray-700">{x.n}</p>
-              {x.l ? (
-                <img src={normalizeImageUrl(x.l)} alt="" className="h-12 max-w-[200px] object-contain my-2 border rounded p-1 bg-gray-50" />
-              ) : (
-                <p className="text-xs text-gray-400">No logo uploaded</p>
-              )}
-              <div className="flex gap-2">
-                <button onClick={() => x.r.current?.click()} className="text-xs bg-green-600 text-white px-3 py-1.5 rounded font-bold">Select Image</button>
-                {x.l && <button onClick={() => handleRemoveImage(x.t)} className="text-xs bg-red-500 text-white px-3 py-1.5 rounded font-bold">Remove</button>}
-              </div>
-              <input type="file" ref={x.r} onChange={e => handleImageUpload(e, x.t)} className="hidden" accept="image/*" />
-            </div>
-          </div>
-        ))}
-        
-        {/* Favicon */}
-        <div className="bg-white border-2 border-dashed border-gray-300 rounded-xl p-6 text-center">
-          <div className="flex flex-col items-center gap-3">
-            <Globe size={32} className="text-gray-400" />
-            <p className="text-sm font-bold text-gray-700">Favicon (32x32px)</p>
-            {websiteConfiguration.favicon && <img src={websiteConfiguration.favicon} alt="Favicon" className="w-8 h-8 object-contain my-2" />}
-            <div className="flex gap-2">
-              <button onClick={() => faviconInputRef.current?.click()} className="text-xs bg-green-600 text-white px-3 py-1.5 rounded font-bold">Select Image</button>
-              {websiteConfiguration.favicon && <button onClick={() => handleRemoveImage('favicon')} className="text-xs bg-red-500 text-white px-3 py-1.5 rounded font-bold">Remove</button>}
-            </div>
-            <input type="file" ref={faviconInputRef} onChange={e => handleImageUpload(e, 'favicon')} className="hidden" accept="image/*" />
-          </div>
-        </div>
-        
-        {/* Text Fields */}
-        <div className="space-y-3">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Website Name*</label>
-            <input type="text" className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-1 focus:ring-green-500" value={websiteConfiguration.websiteName} onChange={e => setWebsiteConfiguration(p => ({ ...p, websiteName: e.target.value }))} />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Short Description</label>
-            <input type="text" className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-1 focus:ring-green-500" value={websiteConfiguration.shortDescription} onChange={e => setWebsiteConfiguration(p => ({ ...p, shortDescription: e.target.value }))} />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Whatsapp Number</label>
-            <input type="text" className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-1 focus:ring-green-500" value={websiteConfiguration.whatsappNumber} onChange={e => setWebsiteConfiguration(p => ({ ...p, whatsappNumber: e.target.value }))} />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Admin Notice Text</label>
-            <input type="text" className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-1 focus:ring-green-500" placeholder="e.g., Easy return policy..." value={websiteConfiguration.adminNoticeText || ''} onChange={e => setWebsiteConfiguration(p => ({ ...p, adminNoticeText: e.target.value }))} />
-            <p className="text-xs text-gray-500 mt-1">Scrolling ticker at top of store header.</p>
-          </div>
-          <div className="pt-3 border-t mt-3">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Custom Domain</label>
-            <input type="text" className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-1 focus:ring-green-500" placeholder="e.g., mystore.com" value={websiteConfiguration.customDomain || ""} onChange={e => setWebsiteConfiguration(p => ({ ...p, customDomain: e.target.value.toLowerCase().trim() }))} />
-            <p className="text-xs text-gray-500 mt-1">Your custom domain for the storefront. Configure DNS A record to point to 159.198.47.126</p>
-          </div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '40px' }}>
+      {/* Logo Upload Section */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          <LogoUploadCard
+            title="Primary Store Logo (Fallback)"
+            imageUrl={logo}
+            onSelect={() => logoInputRef.current?.click()}
+            onRemove={() => handleRemoveImage('logo')}
+          />
+          <LogoUploadCard
+            title="Header Logo Override"
+            imageUrl={websiteConfiguration.headerLogo}
+            onSelect={() => headerLogoInputRef.current?.click()}
+            onRemove={() => handleRemoveImage('headerLogo')}
+          />
+          <LogoUploadCard
+            title="Footer Logo Override"
+            imageUrl={websiteConfiguration.footerLogo}
+            onSelect={() => footerLogoInputRef.current?.click()}
+            onRemove={() => handleRemoveImage('footerLogo')}
+          />
+          <LogoUploadCard
+            title="Favicon (32x32 px)"
+            imageUrl={websiteConfiguration.favicon}
+            onSelect={() => faviconInputRef.current?.click()}
+            onRemove={() => handleRemoveImage('favicon')}
+          />
+          <input type="file" ref={logoInputRef} onChange={(e) => handleImageUpload(e, 'logo')} className="hidden" accept="image/*" style={{ display: 'none' }} />
+          <input type="file" ref={headerLogoInputRef} onChange={(e) => handleImageUpload(e, 'headerLogo')} className="hidden" accept="image/*" style={{ display: 'none' }} />
+          <input type="file" ref={footerLogoInputRef} onChange={(e) => handleImageUpload(e, 'footerLogo')} className="hidden" accept="image/*" style={{ display: 'none' }} />
+          <input type="file" ref={faviconInputRef} onChange={(e) => handleImageUpload(e, 'favicon')} className="hidden" accept="image/*" style={{ display: 'none' }} />
         </div>
       </div>
-      
-      <div className="space-y-6">
-        {/* Contact Items (addresses, emails, phones) */}
-        {(['addresses', 'emails', 'phones'] as const).map(f => (
-          <div key={f} className="space-y-2">
-            <ActionButton onClick={() => addContactItem(f)} variant="bg-green-600 text-white w-full flex items-center justify-center gap-2">
-              <Plus size={16} />Add New {f.slice(0, -1)}
-            </ActionButton>
-            {websiteConfiguration[f].map((v, i) => (
-              <div key={i} className="flex gap-2">
-                <input type="text" value={v} onChange={e => updateContactItem(f, i, e.target.value)} className="flex-1 px-3 py-2 border rounded-lg text-sm" />
-                <button onClick={() => removeContactItem(f, i)} className="bg-red-500 text-white p-2 rounded-lg">
-                  <Trash2 size={16} />
-                </button>
-              </div>
-            ))}
+
+      {/* Input Fields Section */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        {/* Row 1: Announcement & Email */}
+        <div style={{ display: 'flex', gap: '16px' }}>
+          <FigmaInput
+            label="Announcement"
+            value={websiteConfiguration.adminNoticeText || ''}
+            onChange={(v) => setWebsiteConfiguration((p) => ({ ...p, adminNoticeText: v }))}
+            placeholder="Text"
+            flex
+          />
+          <div style={{ width: '304px' }}>
+            <FigmaInput
+              label="Email"
+              value={websiteConfiguration.emails?.[0] || ''}
+              onChange={(v) => setWebsiteConfiguration((p) => ({ ...p, emails: [v, ...(p.emails?.slice(1) || [])] }))}
+              placeholder="xyz@gmail.com"
+              type="email"
+            />
           </div>
-        ))}
-        
-        {/* Social Links */}
-        <div className="space-y-2">
-          <ActionButton onClick={addSocialLink} variant="bg-green-600 text-white w-full flex items-center justify-center gap-2">
-            <Plus size={16} />Add Social Link
-          </ActionButton>
-          {websiteConfiguration.socialLinks.map((l, i) => (
-            <div key={l.id} className="bg-gray-50 border p-3 rounded-lg space-y-2 relative">
-              <div className="flex gap-2">
-                <select value={l.platform} onChange={e => updateSocialLink(i, 'platform', e.target.value)} className="w-1/3 text-sm border rounded px-2 py-1">
-                  {SOCIAL_PLATFORM_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
-                </select>
-                <input type="text" value={l.url} onChange={e => updateSocialLink(i, 'url', e.target.value)} className="flex-1 text-sm border rounded px-2 py-1" placeholder="URL" />
-              </div>
-              <button onClick={() => removeSocialLink(i)} className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full shadow">
-                <Trash2 size={12} />
-              </button>
-            </div>
-          ))}
         </div>
-        
+
+        {/* Row 2: Branding Text & Address */}
+        <div style={{ display: 'flex', gap: '16px' }}>
+          <FigmaInput
+            label="Branding Text"
+            value={websiteConfiguration.brandingText || ''}
+            onChange={(v) => setWebsiteConfiguration((p) => ({ ...p, brandingText: v }))}
+            placeholder="Your Brand Text"
+            flex
+          />
+          <FigmaInput
+            label="Address"
+            value={websiteConfiguration.addresses?.[0] || ''}
+            onChange={(v) => setWebsiteConfiguration((p) => ({ ...p, addresses: [v, ...(p.addresses?.slice(1) || [])] }))}
+            placeholder="Your Address"
+            flex
+          />
+        </div>
+
+        {/* Row 3: Facebook & Massager */}
+        <div style={{ display: 'flex', gap: '16px' }}>
+          <FigmaInput
+            label="Facebook"
+            value={websiteConfiguration.socialLinks?.find((l) => l.platform === 'Facebook')?.url || ''}
+            onChange={(v) => {
+              const idx = websiteConfiguration.socialLinks?.findIndex((l) => l.platform === 'Facebook');
+              if (idx !== undefined && idx >= 0) {
+                updateSocialLink(idx, 'url', v);
+              } else {
+                setWebsiteConfiguration((p) => ({
+                  ...p,
+                  socialLinks: [...(p.socialLinks || []), { id: Date.now().toString(), platform: 'Facebook', url: v }]
+                }));
+              }
+            }}
+            placeholder="Facebook link"
+            flex
+          />
+          <FigmaInput
+            label="Massager"
+            value={websiteConfiguration.socialLinks?.find((l) => l.platform === 'Messenger')?.url || ''}
+            onChange={(v) => {
+              const idx = websiteConfiguration.socialLinks?.findIndex((l) => l.platform === 'Messenger');
+              if (idx !== undefined && idx >= 0) {
+                updateSocialLink(idx, 'url', v);
+              } else {
+                setWebsiteConfiguration((p) => ({
+                  ...p,
+                  socialLinks: [...(p.socialLinks || []), { id: Date.now().toString(), platform: 'Messenger', url: v }]
+                }));
+              }
+            }}
+            placeholder="Massager Link"
+            flex
+          />
+        </div>
+
+        {/* Row 4: Instagram & TikTok */}
+        <div style={{ display: 'flex', gap: '16px' }}>
+          <FigmaInput
+            label="Instagram"
+            value={websiteConfiguration.socialLinks?.find((l) => l.platform === 'Instagram')?.url || ''}
+            onChange={(v) => {
+              const idx = websiteConfiguration.socialLinks?.findIndex((l) => l.platform === 'Instagram');
+              if (idx !== undefined && idx >= 0) {
+                updateSocialLink(idx, 'url', v);
+              } else {
+                setWebsiteConfiguration((p) => ({
+                  ...p,
+                  socialLinks: [...(p.socialLinks || []), { id: Date.now().toString(), platform: 'Instagram', url: v }]
+                }));
+              }
+            }}
+            placeholder="Instagram Link"
+            flex
+          />
+          <FigmaInput
+            label="TikTok"
+            value={websiteConfiguration.socialLinks?.find((l) => l.platform === 'TikTok')?.url || ''}
+            onChange={(v) => {
+              const idx = websiteConfiguration.socialLinks?.findIndex((l) => l.platform === 'TikTok');
+              if (idx !== undefined && idx >= 0) {
+                updateSocialLink(idx, 'url', v);
+              } else {
+                setWebsiteConfiguration((p) => ({
+                  ...p,
+                  socialLinks: [...(p.socialLinks || []), { id: Date.now().toString(), platform: 'TikTok', url: v }]
+                }));
+              }
+            }}
+            placeholder="TikTok Text"
+            flex
+          />
+        </div>
+
+        {/* Row 5: Social Link & Add Button */}
+        <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-end' }}>
+          <div style={{ width: '547px' }}>
+            <FigmaInput
+              label="Social Link"
+              value=""
+              onChange={() => {}}
+              placeholder="Social Link"
+            />
+          </div>
+          <button
+            onClick={addSocialLink}
+            style={{
+              flex: 1,
+              height: '48px',
+              background: 'linear-gradient(180deg, #ff6a00 0%, #ff9f1c 100%)',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '4px',
+            }}
+          >
+            <Plus size={24} color="white" />
+            <span style={{ fontFamily: '"Poppins", sans-serif', fontWeight: 600, fontSize: '16px', color: 'white' }}>
+              Add New Link
+            </span>
+          </button>
+        </div>
+      </div>
+
+      {/* Country Settings */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        <SectionHeader title="Country Settings" />
+        <div style={{ display: 'flex', gap: '16px' }}>
+          <FigmaSelect
+            label="Shop Country"
+            value={websiteConfiguration.shopCountry || 'BD'}
+            onChange={(v) => setWebsiteConfiguration((p) => ({ ...p, shopCountry: v }))}
+            options={[
+              { value: 'BD', label: 'Bangladesh (BD)' },
+              { value: 'IN', label: 'India (IN)' },
+              { value: 'US', label: 'United States (US)' },
+              { value: 'UK', label: 'United Kingdom (UK)' },
+            ]}
+            width="425px"
+          />
+          <FigmaSelect
+            label="Shop Currency"
+            value={websiteConfiguration.shopCurrency || 'BDT'}
+            onChange={(v) => setWebsiteConfiguration((p) => ({ ...p, shopCurrency: v }))}
+            options={[
+              { value: 'BDT', label: 'Taka-BDT (৳)' },
+              { value: 'INR', label: 'Rupee-INR (₹)' },
+              { value: 'USD', label: 'Dollar-USD ($)' },
+              { value: 'GBP', label: 'Pound-GBP (£)' },
+            ]}
+            width="auto"
+          />
+        </div>
+      </div>
+
+      {/* Social Login */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        <SectionHeader title="Social Login" />
+        <div style={{ display: 'flex', gap: '16px' }}>
+          <FigmaSelect
+            label="Login Type"
+            value={socialLogins[0]?.type || 'Google'}
+            onChange={(v) => setSocialLogins([{ ...socialLogins[0], type: v }])}
+            options={[
+              { value: 'Google', label: 'Google' },
+              { value: 'Facebook', label: 'Facebook' },
+            ]}
+            width="426px"
+          />
+          <FigmaInput
+            label="Auth/Client ID"
+            value={socialLogins[0]?.clientId || ''}
+            onChange={(v) => setSocialLogins([{ ...socialLogins[0], clientId: v }])}
+            placeholder="531559968835-9dne3cs01s1knffdctpgvu955qfft588.apps.googleusercontent.com"
+            flex
+          />
+        </div>
+        <button
+          onClick={() => setSocialLogins([...socialLogins, { type: 'Google', clientId: '' }])}
+          style={{
+            width: '132px',
+            height: '48px',
+            background: 'linear-gradient(180deg, #ff6a00 0%, #ff9f1c 100%)',
+            border: 'none',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '4px',
+          }}
+        >
+          <Plus size={24} color="white" />
+          <span style={{ fontFamily: '"Poppins", sans-serif', fontWeight: 600, fontSize: '16px', color: 'white' }}>
+            Add New
+          </span>
+        </button>
+      </div>
+
+      {/* Offer */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        <SectionHeader title="Offer" />
+        <div style={{ display: 'flex', gap: '16px' }}>
+          <FigmaSelect
+            label="Offer Type"
+            value={offers[0]?.type || 'Registration'}
+            onChange={(v) => setOffers([{ ...offers[0], type: v }])}
+            options={[
+              { value: 'Registration', label: 'Registration' },
+              { value: 'First Purchase', label: 'First Purchase' },
+              { value: 'Referral', label: 'Referral' },
+            ]}
+            width="426px"
+          />
+          <FigmaInput
+            label="Discount"
+            value={offers[0]?.discount || ''}
+            onChange={(v) => setOffers([{ ...offers[0], discount: v }])}
+            placeholder="Ex: 1000 or 20%"
+            flex
+          />
+        </div>
+        <button
+          onClick={() => setOffers([...offers, { type: 'Registration', discount: '' }])}
+          style={{
+            width: '132px',
+            height: '48px',
+            background: 'linear-gradient(180deg, #ff6a00 0%, #ff9f1c 100%)',
+            border: 'none',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '4px',
+          }}
+        >
+          <Plus size={24} color="white" />
+          <span style={{ fontFamily: '"Poppins", sans-serif', fontWeight: 600, fontSize: '16px', color: 'white' }}>
+            Add New
+          </span>
+        </button>
+      </div>
+
+      {/* Rich Text Editors */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        <RichTextEditor
+          label="About us"
+          value={websiteConfiguration.aboutUs || ''}
+          onChange={(v) => setWebsiteConfiguration((p) => ({ ...p, aboutUs: v }))}
+          placeholder="About your brand"
+        />
+        <RichTextEditor
+          label="Privacy Policy"
+          value={websiteConfiguration.privacyPolicy || ''}
+          onChange={(v) => setWebsiteConfiguration((p) => ({ ...p, privacyPolicy: v }))}
+          placeholder="Shop Privacy And Policy"
+        />
+        <RichTextEditor
+          label="Terms and Condition"
+          value={websiteConfiguration.termsAndConditions || ''}
+          onChange={(v) => setWebsiteConfiguration((p) => ({ ...p, termsAndConditions: v }))}
+          placeholder="Shop Terms And Conditions"
+        />
+        <RichTextEditor
+          label="Return and Cancellation Policy"
+          value={websiteConfiguration.returnPolicy || ''}
+          onChange={(v) => setWebsiteConfiguration((p) => ({ ...p, returnPolicy: v }))}
+          placeholder="Return and Cancellation Policy"
+        />
+      </div>
+
+      {/* Footer Section */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '24px' }}>
         {/* Footer Links */}
-        <div className="space-y-4">
-          {FOOTER_LINK_SECTIONS.map(s => (
-            <div key={s.field} className="border rounded-xl p-4 space-y-3 bg-white/60">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <div>
-                  <p className="text-sm font-semibold text-gray-800">{s.title}</p>
-                  <p className="text-xs text-gray-500">{s.helper}</p>
-                </div>
-                <button onClick={() => addFooterLink(s.field)} className="text-xs bg-green-600 text-white px-3 py-1.5 rounded font-bold flex items-center gap-1 self-start">
-                  <Plus size={14} />Add Link
-                </button>
-              </div>
-              {((websiteConfiguration[s.field] as FooterLink[]) || []).length === 0 && <p className="text-xs text-gray-400">No links yet.</p>}
-              {((websiteConfiguration[s.field] as FooterLink[]) || []).map((l, i) => (
-                <div key={l.id} className="grid grid-cols-1 md:grid-cols-[1fr,1fr,auto] gap-2">
-                  <input type="text" value={l.label} onChange={e => updateFooterLink(s.field, i, 'label', e.target.value)} className="px-3 py-2 border rounded-lg text-sm" placeholder="Label" />
-                  <input type="text" value={l.url} onChange={e => updateFooterLink(s.field, i, 'url', e.target.value)} className="px-3 py-2 border rounded-lg text-sm" placeholder="https://" />
-                  <button onClick={() => removeFooterLink(s.field, i)} className="bg-red-500 text-white px-3 py-2 rounded-lg text-sm font-bold">Remove</button>
-                </div>
-              ))}
-            </div>
-          ))}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
+          <FooterLinkCard
+            title="Footer Quick Links"
+            description="Shown in the Quick Links column of Footer 2"
+            links={(websiteConfiguration.footerQuickLinks as FooterLink[]) || []}
+            onAddLink={() => addFooterLink('footerQuickLinks')}
+            onRemoveLink={(i) => removeFooterLink('footerQuickLinks', i)}
+            onUpdateLink={(i, k, v) => updateFooterLink('footerQuickLinks', i, k, v)}
+          />
+          <FooterLinkCard
+            title="Footer Useful Links"
+            description="Shown in the useful Links column of Footer 3"
+            links={(websiteConfiguration.footerUsefulLinks as FooterLink[]) || []}
+            onAddLink={() => addFooterLink('footerUsefulLinks')}
+            onRemoveLink={(i) => removeFooterLink('footerUsefulLinks', i)}
+            onUpdateLink={(i, k, v) => updateFooterLink('footerUsefulLinks', i, k, v)}
+          />
         </div>
-        
-        {/* Toggles */}
-        <div className="space-y-3 pt-4 border-t">
-          {[
-            { k: 'showMobileHeaderCategory', l: 'isShowMobileHeaderCategoryMenu' },
-            { k: 'showNewsSlider', l: 'Is Show News Slider' },
-            { k: 'hideCopyright', l: 'Hide Copyright Section' },
-            { k: 'hideCopyrightText', l: 'Hide Copyright Text' },
-            { k: 'showPoweredBy', l: 'Powered by SystemNext IT' }
-          ].map(x => (
-            <label key={x.k} className="flex items-center gap-3 cursor-pointer">
-              <input 
-                type="checkbox" 
-                className="w-5 h-5 text-green-600 rounded" 
-                checked={websiteConfiguration[x.k as keyof WebsiteConfig] as boolean} 
-                onChange={e => setWebsiteConfiguration(p => ({ ...p, [x.k]: e.target.checked }))} 
-              />
-              <span className="text-sm font-medium">{x.l}</span>
-            </label>
-          ))}
-          
-          {websiteConfiguration.showNewsSlider && (
-            <div className="ml-8 border rounded p-2 text-sm bg-gray-50">
-              <p className="text-xs text-gray-500 mb-1">Header Slider Text</p>
-              <textarea className="w-full bg-transparent outline-none resize-none" rows={2} value={websiteConfiguration.headerSliderText} onChange={e => setWebsiteConfiguration(p => ({ ...p, headerSliderText: e.target.value }))} />
-            </div>
-          )}
-          
-          <div className="flex items-center justify-between gap-3 rounded-xl border border-sky-100 bg-sky-50/70 px-4 py-3">
-            <div>
-              <p className="text-sm font-semibold text-gray-800">Flash Sale Counter</p>
-              <p className="text-xs text-gray-500">Show countdown pill beside Flash Sales.</p>
-            </div>
-            <button 
-              type="button" 
-              onClick={() => setWebsiteConfiguration(p => ({ ...p, showFlashSaleCounter: !p.showFlashSaleCounter }))} 
-              className={`relative inline-flex items-center rounded-full border px-1 py-0.5 text-xs font-bold ${websiteConfiguration.showFlashSaleCounter ? 'bg-emerald-500/10 text-emerald-700 border-emerald-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}
-            >
-              <span className={`px-3 py-1 rounded-full ${websiteConfiguration.showFlashSaleCounter ? 'bg-white shadow' : 'opacity-50'}`}>
-                {websiteConfiguration.showFlashSaleCounter ? 'On' : 'Off'}
-              </span>
-            </button>
+
+        {/* Footer Section Settings */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <p style={{ fontFamily: '"Poppins", sans-serif', fontWeight: 500, fontSize: '14px', color: 'black', margin: 0 }}>
+            Footer Section Settings
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <FigmaCheckbox
+              label="Is show new slider"
+              checked={websiteConfiguration.showNewsSlider || false}
+              onChange={(v) => setWebsiteConfiguration((p) => ({ ...p, showNewsSlider: v }))}
+            />
+            <FigmaCheckbox
+              label="Hide copyright section"
+              checked={websiteConfiguration.hideCopyright || false}
+              onChange={(v) => setWebsiteConfiguration((p) => ({ ...p, hideCopyright: v }))}
+            />
+            <FigmaCheckbox
+              label="Hide copyright text"
+              checked={websiteConfiguration.hideCopyrightText || false}
+              onChange={(v) => setWebsiteConfiguration((p) => ({ ...p, hideCopyrightText: v }))}
+            />
+            <FigmaCheckbox
+              label="Powered by System Next IT"
+              checked={websiteConfiguration.showPoweredBy || false}
+              onChange={(v) => setWebsiteConfiguration((p) => ({ ...p, showPoweredBy: v }))}
+            />
           </div>
-          
-          <div className="pt-2">
-            <label className="block text-xs text-gray-500 mb-1">Branding Text</label>
-            <input type="text" className="w-full px-3 py-2 border rounded text-sm" value={websiteConfiguration.brandingText} onChange={e => setWebsiteConfiguration(p => ({ ...p, brandingText: e.target.value }))} />
+        </div>
+
+        {/* Product Settings */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <p style={{ fontFamily: '"Poppins", sans-serif', fontWeight: 500, fontSize: '14px', color: 'black', margin: 0 }}>
+            Product Settings
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <FigmaCheckbox
+              label="Show Product Sold Count"
+              checked={websiteConfiguration.showProductSoldCount || false}
+              onChange={(v) => setWebsiteConfiguration((p) => ({ ...p, showProductSoldCount: v }))}
+            />
+            <FigmaCheckbox
+              label="Allow Product Image Downloads"
+              checked={websiteConfiguration.allowProductImageDownloads || false}
+              onChange={(v) => setWebsiteConfiguration((p) => ({ ...p, allowProductImageDownloads: v }))}
+            />
+            <FigmaCheckbox
+              label="Show Email Field for Place Order"
+              checked={websiteConfiguration.showEmailFieldForOrder || false}
+              onChange={(v) => setWebsiteConfiguration((p) => ({ ...p, showEmailFieldForOrder: v }))}
+            />
+            <FigmaCheckbox
+              label="Enable Promo Code for Place Order"
+              checked={websiteConfiguration.enablePromoCode || false}
+              onChange={(v) => setWebsiteConfiguration((p) => ({ ...p, enablePromoCode: v }))}
+            />
           </div>
         </div>
       </div>

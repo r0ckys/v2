@@ -83,7 +83,7 @@ router.post('/:tenantId/track', async (req: Request, res: Response) => {
 router.get('/:tenantId/stats', async (req: Request, res: Response) => {
   try {
     const { tenantId } = req.params;
-    const { period = '7d' } = req.query;
+    const { period = '7d', startDate: customStart, endDate: customEnd, month, year } = req.query;
     
     const db = await getDatabase();
     const visitorsCollection = db.collection<VisitorDoc>('visitors');
@@ -92,22 +92,39 @@ router.get('/:tenantId/stats', async (req: Request, res: Response) => {
     // Calculate date range
     const now = new Date();
     let startDate = new Date();
+    let endDate = new Date();
     
-    switch (period) {
-      case '24h':
-        startDate.setHours(startDate.getHours() - 24);
-        break;
-      case '7d':
-        startDate.setDate(startDate.getDate() - 7);
-        break;
-      case '30d':
-        startDate.setDate(startDate.getDate() - 30);
-        break;
-      case 'all':
-        startDate = new Date(0);
-        break;
-      default:
-        startDate.setDate(startDate.getDate() - 7);
+    // Handle custom date range
+    if (customStart && customEnd) {
+      startDate = new Date(customStart as string);
+      endDate = new Date(customEnd as string);
+      endDate.setHours(23, 59, 59, 999);
+    } else if (month && year) {
+      // Handle month/year selection
+      const monthNum = parseInt(month as string) - 1; // 0-indexed
+      const yearNum = parseInt(year as string);
+      startDate = new Date(yearNum, monthNum, 1);
+      endDate = new Date(yearNum, monthNum + 1, 0, 23, 59, 59, 999);
+    } else {
+      switch (period) {
+        case 'day':
+        case '24h':
+          startDate.setHours(startDate.getHours() - 24);
+          break;
+        case 'month':
+        case '30d':
+          startDate.setDate(startDate.getDate() - 30);
+          break;
+        case 'year':
+        case '365d':
+          startDate.setFullYear(startDate.getFullYear() - 1);
+          break;
+        case 'all':
+          startDate = new Date(0);
+          break;
+        default:
+          startDate.setDate(startDate.getDate() - 7);
+      }
     }
     
     // Total unique visitors
@@ -200,6 +217,51 @@ router.get('/:tenantId/stats', async (req: Request, res: Response) => {
         }
       }
     ]).toArray() as { _id: string | null; count: number }[];
+
+    // Daily device breakdown for chart (last 7 days or custom period)
+    const dailyDeviceStats = await visitorsCollection.aggregate([
+      {
+        $match: {
+          tenantId,
+          lastVisit: { $gte: startDate }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            date: { $dateToString: { format: '%Y-%m-%d', date: '$lastVisit' } },
+            device: { $ifNull: ['$device', 'Desktop'] }
+          },
+          count: { $sum: 1 }
+        }
+      },
+      {
+        $group: {
+          _id: '$_id.date',
+          devices: {
+            $push: {
+              device: '$_id.device',
+              count: '$count'
+            }
+          }
+        }
+      },
+      { $sort: { _id: 1 } }
+    ]).toArray();
+
+    // Transform daily device stats into chart format
+    const chartData = dailyDeviceStats.map((day: any) => {
+      const mobileCount = day.devices.find((d: any) => d.device?.toLowerCase() === 'mobile')?.count || 0;
+      const tabletCount = day.devices.find((d: any) => d.device?.toLowerCase() === 'tablet')?.count || 0;
+      const desktopCount = day.devices.find((d: any) => d.device?.toLowerCase() === 'desktop' || !d.device)?.count || 0;
+      
+      return {
+        date: day._id,
+        mobile: mobileCount,
+        tablet: tabletCount,
+        desktop: desktopCount
+      };
+    });
     
     res.json({
       totalVisitors,
@@ -208,7 +270,8 @@ router.get('/:tenantId/stats', async (req: Request, res: Response) => {
       totalPageViews,
       dailyStats,
       topPages,
-      devices: devices.map(d => ({ device: d._id || 'Unknown', count: d.count }))
+      devices: devices.map(d => ({ device: d._id || 'Unknown', count: d.count })),
+      chartData
     });
   } catch (error) {
     console.error('Error getting visitor stats:', error);

@@ -436,253 +436,554 @@ const AdminControl: React.FC<AdminControlProps> = ({
   };
 
   // ========== HELPERS ==========
-  const getRoleLabel = (r?: User['role']) => ({ super_admin: 'Super Admin', tenant_admin: 'Tenant Admin', admin: 'Admin', staff: 'Staff' }[r || ''] || r || 'Unknown');
+  const getRoleLabel = (r?: User['role']) => ({ super_admin: 'Owner', tenant_admin: 'Manager', admin: 'Admin', staff: 'Staff' }[r || ''] || r || 'Unknown');
   const getRoleColor = (r?: User['role']) => ({ super_admin: 'text-purple-300 bg-purple-500/20', tenant_admin: 'text-blue-300 bg-blue-500/20', admin: 'text-emerald-300 bg-emerald-500/20', staff: 'text-amber-300 bg-amber-500/20' }[r || ''] || 'text-slate-300 bg-white/10');
 
+  // Figma Design Styles
+  const figmaStyles = {
+    container: {
+      background: '#f9f9f9',
+      minHeight: '100vh',
+      padding: '20px',
+    },
+    mainCard: {
+      background: 'white',
+      borderRadius: '8px',
+      padding: '20px',
+      display: 'flex',
+      flexDirection: 'column' as const,
+      gap: '20px',
+    },
+    headerRow: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      flexWrap: 'wrap' as const,
+      gap: '16px',
+    },
+    title: {
+      fontFamily: "'Lato', sans-serif",
+      fontWeight: 700,
+      fontSize: '22px',
+      color: '#023337',
+      letterSpacing: '0.11px',
+      margin: 0,
+    },
+    controlsRow: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '24px',
+      flexWrap: 'wrap' as const,
+    },
+    searchBox: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px',
+      background: '#f9f9f9',
+      borderRadius: '8px',
+      padding: '8px 12px',
+      width: '292px',
+      height: '34px',
+    },
+    searchInput: {
+      border: 'none',
+      background: 'transparent',
+      outline: 'none',
+      fontFamily: "'Poppins', sans-serif",
+      fontSize: '12px',
+      color: '#7b7b7b',
+      flex: 1,
+    },
+    searchButton: {
+      fontFamily: "'Poppins', sans-serif",
+      fontSize: '12px',
+      color: 'black',
+      background: 'transparent',
+      border: 'none',
+      cursor: 'pointer',
+    },
+    filterDropdown: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: '8px',
+      background: '#f9f9f9',
+      borderRadius: '8px',
+      padding: '8px 12px',
+      fontFamily: "'Poppins', sans-serif",
+      fontSize: '12px',
+      color: 'black',
+      border: 'none',
+      cursor: 'pointer',
+    },
+    addRoleButton: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: '4px',
+      background: 'linear-gradient(to right, #38bdf8, #1e90ff)',
+      borderRadius: '8px',
+      padding: '6px 16px 6px 12px',
+      height: '48px',
+      width: '142px',
+      border: 'none',
+      cursor: 'pointer',
+    },
+    addRoleText: {
+      fontFamily: "'Lato', sans-serif",
+      fontWeight: 700,
+      fontSize: '15px',
+      color: 'white',
+      letterSpacing: '-0.3px',
+    },
+    tableHeader: {
+      display: 'grid',
+      gridTemplateColumns: '50px 60px 80px 150px 120px 100px 120px 140px 80px 80px',
+      alignItems: 'center',
+      height: '48px',
+      background: 'linear-gradient(to right, #e0f7fa, #b2ebf2)',
+      borderRadius: '4px 4px 0 0',
+      padding: '0 16px',
+    },
+    tableHeaderCell: {
+      fontFamily: "'Poppins', sans-serif",
+      fontWeight: 500,
+      fontSize: '16px',
+      color: 'black',
+    },
+    tableRow: {
+      display: 'grid',
+      gridTemplateColumns: '50px 60px 80px 150px 120px 100px 120px 140px 80px 80px',
+      alignItems: 'center',
+      height: '68px',
+      borderBottom: '0.5px solid #b9b9b9',
+      padding: '0 16px',
+    },
+    checkbox: {
+      width: '20px',
+      height: '20px',
+      background: 'white',
+      border: '1.5px solid #eaf8e7',
+      borderRadius: '4px',
+      cursor: 'pointer',
+    },
+    cellText: {
+      fontFamily: "'Poppins', sans-serif",
+      fontWeight: 400,
+      fontSize: '12px',
+      color: '#1d1a1a',
+    },
+    avatarContainer: {
+      width: '40px',
+      height: '40px',
+      borderRadius: '8px',
+      background: 'linear-gradient(to right, #38bdf8, #1e90ff)',
+      overflow: 'hidden',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    statusBadge: {
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '2px 9px',
+      borderRadius: '30px',
+      background: '#c1ffbc',
+      fontFamily: "'Poppins', sans-serif",
+      fontWeight: 500,
+      fontSize: '12px',
+      color: '#085e00',
+    },
+    statusBadgeInactive: {
+      background: '#ffeeba',
+      color: '#856404',
+    },
+    actionButton: {
+      width: '24px',
+      height: '24px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      cursor: 'pointer',
+      background: 'transparent',
+      border: 'none',
+      padding: 0,
+    },
+    paginationContainer: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginTop: '20px',
+    },
+    paginationButton: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '4px',
+      padding: '10px 12px 10px 8px',
+      background: 'white',
+      border: '1px solid #eee',
+      borderRadius: '8px',
+      fontFamily: "'Lato', sans-serif",
+      fontWeight: 500,
+      fontSize: '15px',
+      color: '#afafaf',
+      cursor: 'pointer',
+    },
+    paginationButtonActive: {
+      boxShadow: '0px 1px 3px 0px rgba(0,0,0,0.2)',
+      color: 'black',
+    },
+    pageNumber: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      width: '36px',
+      height: '36px',
+      borderRadius: '4px',
+      fontFamily: "'Lato', sans-serif",
+      fontWeight: 700,
+      fontSize: '15px',
+      cursor: 'pointer',
+      border: 'none',
+    },
+    pageNumberActive: {
+      background: '#dff5ff',
+      color: '#1e90ff',
+    },
+    pageNumberInactive: {
+      background: 'white',
+      border: '1px solid #d1d5db',
+      color: '#023337',
+    },
+  };
+
   return (
-    <div className="p-3 sm:p-4 md:p-6 space-y-4 md:space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
-        <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
-            <Shield className="text-emerald-400 w-5 h-5 sm:w-6 sm:h-6" /> Admin Control
-          </h2>
-          <p className="text-slate-400 text-xs sm:text-sm mt-1">Manage users, roles & permissions</p>
+    <div style={figmaStyles.container}>
+      <div style={figmaStyles.mainCard}>
+        {/* Header Row */}
+        <div style={figmaStyles.headerRow}>
+          <h2 style={figmaStyles.title}>Admin Control</h2>
+          
+          {/* Tabs */}
+          <div style={{ display: 'flex', gap: '4px', background: '#f0f0f0', padding: '4px', borderRadius: '8px' }}>
+            {(['users', 'roles', 'reviews', 'customers'] as const).map((t) => (
+              <button
+                key={t}
+                onClick={() => setTab(t)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '8px 16px',
+                  borderRadius: '6px',
+                  fontFamily: "'Poppins', sans-serif",
+                  fontWeight: 500,
+                  fontSize: '13px',
+                  transition: 'all 0.2s',
+                  border: 'none',
+                  cursor: 'pointer',
+                  background: tab === t ? 'linear-gradient(to right, #38bdf8, #1e90ff)' : 'transparent',
+                  color: tab === t ? 'white' : '#666',
+                }}
+              >
+                {t === 'users' && <Users size={14} />}
+                {t === 'roles' && <Key size={14} />}
+                {t === 'reviews' && <MessageCircle size={14} />}
+                {t === 'customers' && <UserCheck size={14} />}
+                {t.charAt(0).toUpperCase() + t.slice(1)}
+              </button>
+            ))}
+          </div>
         </div>
         
-        {/* Show Create Role button only for roles tab (users tab has its own Add button) */}
-        {tab === 'roles' && canModifyRoles && (
-          <button 
-            onClick={() => openRoleModal()}
-            className="flex items-center justify-center gap-2 px-4 py-2.5 sm:py-3 bg-gradient-to-r from-[#38BDF8] to-[#1E90FF] text-white rounded-xl font-medium transition hover:from-[#2BAEE8] hover:to-[#1A7FE8] min-h-[44px] text-sm sm:text-base"
-          >
-            <Plus size={18} /> Create Role
-          </button>
-        )}
-      </div>
-
-      {/* Tabs */}
-      <div className="overflow-x-auto -mx-6 px-6 sm:mx-0 sm:px-0">
-        <div className="flex gap-1 bg-white/5 p-1 rounded-xl w-fit min-w-min">
-          <button onClick={() => setTab('users')} className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition flex items-center gap-1.5 sm:gap-2 whitespace-nowrap min-h-[44px] ${tab === 'users' ? 'bg-emerald-500 text-white' : 'text-slate-400 hover:text-white'}`}>
-            <Users size={16} className="flex-shrink-0" /> <span className="hidden xs:inline">Users</span>
-          </button>
-          <button onClick={() => setTab('roles')} className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition flex items-center gap-1.5 sm:gap-2 whitespace-nowrap min-h-[44px] ${tab === 'roles' ? 'bg-emerald-500 text-white' : 'text-slate-400 hover:text-white'}`}>
-            <Key size={16} className="flex-shrink-0" /> <span className="hidden xs:inline">Roles</span>
-          </button>
-          <button onClick={() => setTab('reviews')} className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition flex items-center gap-1.5 sm:gap-2 whitespace-nowrap min-h-[44px] ${tab === 'reviews' ? 'bg-emerald-500 text-white' : 'text-slate-400 hover:text-white'}`}>
-            <MessageCircle size={16} className="flex-shrink-0" /> <span className="hidden xs:inline">Reviews</span>
-          </button>
-          <button onClick={() => setTab('customers')} className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition flex items-center gap-1.5 sm:gap-2 whitespace-nowrap min-h-[44px] ${tab === 'customers' ? 'bg-emerald-500 text-white' : 'text-slate-400 hover:text-white'}`}>
-            <UserCheck size={16} className="flex-shrink-0" /> <span className="hidden xs:inline">Customers</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Users Tab */}
-      {tab === 'users' && (
-        <div className="space-y-4">
-          {/* Header with Search, Filters, and Add Button */}
-          <div className="flex flex-col gap-3 bg-white rounded-xl p-3 sm:p-4 shadow-sm">
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-              <div className="relative flex-1">
-                <Search size={16} className="absolute left-3 top-3 text-gray-400" />
-                <input 
-                  type="text" 
-                  placeholder="Search Category" 
-                  value={search} 
-                  onChange={e => { setSearch(e.target.value); setUserCurrentPage(1); }}
-                  className="w-full pl-9 pr-4 py-2.5 bg-white border border-gray-200 rounded-lg text-gray-800 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 min-h-[44px]"
-                />
-              </div>
-              <button className="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition min-h-[44px]">
-                Search
+        {/* Users Tab Content */}
+        {tab === 'users' && (
+          <>
+        {/* Controls Row */}
+        <div style={figmaStyles.headerRow}>
+          <div style={figmaStyles.controlsRow}>
+            {/* Search Box */}
+            <div style={figmaStyles.searchBox}>
+              <Search size={20} color="#7b7b7b" />
+              <input
+                type="text"
+                placeholder="Search Category"
+                value={search}
+                onChange={e => { setSearch(e.target.value); setUserCurrentPage(1); }}
+                style={figmaStyles.searchInput}
+              />
+              <button style={figmaStyles.searchButton}>Search</button>
+            </div>
+            
+            {/* Status Filter */}
+            <select
+              value={userStatusFilter}
+              onChange={(e) => { setUserStatusFilter(e.target.value as any); setUserCurrentPage(1); }}
+              style={figmaStyles.filterDropdown}
+            >
+              <option value="all">All Status</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+            
+            {/* Items Per Page */}
+            <select
+              value={userItemsPerPage}
+              onChange={(e) => { setUserItemsPerPage(Number(e.target.value)); setUserCurrentPage(1); }}
+              style={figmaStyles.filterDropdown}
+            >
+              <option value={10}>10 Admin</option>
+              <option value={25}>25 Admin</option>
+              <option value={50}>50 Admin</option>
+            </select>
+            
+            {/* Add Role Button */}
+            {canModifyRoles && (
+              <button
+                onClick={() => openRoleModal()}
+                style={figmaStyles.addRoleButton}
+              >
+                <Plus size={24} color="white" />
+                <span style={figmaStyles.addRoleText}>Add Role</span>
               </button>
-            </div>
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-              <select
-                value={userStatusFilter}
-                onChange={(e) => { setUserStatusFilter(e.target.value as any); setUserCurrentPage(1); }}
-                className="border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-green-500 bg-white text-gray-700 min-h-[44px]"
-              >
-                <option value="all">All Status</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
-              <select
-                value={userItemsPerPage}
-                onChange={(e) => { setUserItemsPerPage(Number(e.target.value)); setUserCurrentPage(1); }}
-                className="border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-green-500 bg-white text-gray-700 min-h-[44px]"
-              >
-                <option value={10}>10 Admin</option>
-                <option value={25}>25 Admin</option>
-                <option value={50}>50 Admin</option>
-                <option value={100}>100 Admin</option>
-              </select>
-              {canModifyUsers && (
-                <button 
-                  onClick={() => openUserModal()}
-                  className="flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-[#38BDF8] to-[#1E90FF] text-white rounded-lg font-medium transition hover:from-[#2BAEE8] hover:to-[#1A7FE8] min-h-[44px] text-sm sm:text-base sm:flex-1 md:flex-initial"
-                >
-                  <Plus size={18} /> Add Admin
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Users Table */}
-          <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left">
-                <thead className="bg-[#E0F7FA] text-gray-700 font-semibold text-xs uppercase border-b">
-                  <tr>
-                    <th className="px-3 sm:px-4 py-3 w-10 hidden sm:table-cell">
-                      <input type="checkbox" className="rounded" />
-                    </th>
-                    <th className="px-3 sm:px-4 py-3 hidden md:table-cell">SL</th>
-                    <th className="px-3 sm:px-4 py-3 hidden sm:table-cell">Picture</th>
-                    <th className="px-3 sm:px-4 py-3">Name</th>
-                    <th className="px-3 sm:px-4 py-3 hidden lg:table-cell">Username</th>
-                    <th className="px-3 sm:px-4 py-3">Role</th>
-                    <th className="px-3 sm:px-4 py-3 hidden xl:table-cell">Last Login</th>
-                    <th className="px-3 sm:px-4 py-3 hidden xl:table-cell">Registration At</th>
-                    <th className="px-3 sm:px-4 py-3">Status</th>
-                    <th className="px-3 sm:px-4 py-3 text-right">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {paginatedUsers.map((user, index) => {
-                    const rowNumber = (userCurrentPage - 1) * userItemsPerPage + index + 1;
-                    const userId = user._id || user.id || user.email;
-                    return (
-                      <tr key={userId} className="hover:bg-gray-50 group">
-                        <td className="px-3 sm:px-4 py-3 hidden sm:table-cell">
-                          <input type="checkbox" className="rounded" />
-                        </td>
-                        <td className="px-3 sm:px-4 py-3 font-medium text-gray-800 hidden md:table-cell">{rowNumber}</td>
-                        <td className="px-3 sm:px-4 py-3 hidden sm:table-cell">
-                          <div className="w-10 h-10 rounded-lg bg-gray-100 overflow-hidden flex items-center justify-center">
-                            {user.avatar ? (
-                              <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
-                            ) : (
-                              <span className="text-gray-500 font-bold text-sm">{user.name?.charAt(0).toUpperCase()}</span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-3 sm:px-4 py-3 font-medium text-gray-800">{user.name}</td>
-                        <td className="px-3 sm:px-4 py-3 text-gray-600 hidden lg:table-cell">{user.email?.split('@')[0] || '-'}</td>
-                        <td className="px-3 sm:px-4 py-3 text-gray-600">
-                          <span className="text-xs sm:text-sm">{getRoleLabel(user.role)}</span>
-                        </td>
-                        <td className="px-3 sm:px-4 py-3 text-gray-500 hidden xl:table-cell">{user.lastLogin ? new Date(user.lastLogin).toLocaleDateString('en-GB') : '-'}</td>
-                        <td className="px-3 sm:px-4 py-3 text-gray-500 hidden xl:table-cell">{user.createdAt ? new Date(user.createdAt).toLocaleDateString('en-GB') : '-'}</td>
-                        <td className="px-3 sm:px-4 py-3">
-                          <span className={`px-2 sm:px-2.5 py-1 rounded-full text-xs font-bold ${user.isActive !== false ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                            {user.isActive !== false ? 'Publish' : 'Inactive'}
-                          </span>
-                        </td>
-                        <td className="px-3 sm:px-4 py-3 text-right relative">
-                          <button
-                            onClick={() => setUserActionMenu(userActionMenu === userId ? null : userId)}
-                            className="p-2 hover:bg-gray-100 rounded-lg transition text-gray-500 hover:text-gray-700 min-w-[44px] min-h-[44px] flex items-center justify-center"
-                          >
-                            <MoreVertical size={18} />
-                          </button>
-                          {userActionMenu === userId && (
-                            <div className="absolute right-0 top-full mt-1 bg-white border rounded-lg shadow-lg z-20 min-w-[140px]">
-                              {onUpdateUser && canChangeUserRole(user) && (
-                                <button
-                                  onClick={() => { openUserModal(user); setUserActionMenu(null); }}
-                                  className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 flex items-center gap-2 text-blue-600 min-h-[44px]"
-                                >
-                                  <Edit size={14} /> Edit
-                                </button>
-                              )}
-                              {onDeleteUser && canDeleteSpecificUser(user) && (
-                                <button
-                                  onClick={() => { deleteUser(user); setUserActionMenu(null); }}
-                                  className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 flex items-center gap-2 text-red-600 min-h-[44px]"
-                                >
-                                  <Trash2 size={14} /> Delete
-                                </button>
-                              )}
-                            </div>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                  {paginatedUsers.length === 0 && (
-                    <tr>
-                      <td colSpan={10} className="px-4 py-12 text-center text-gray-400">
-                        <Users size={32} className="mx-auto mb-2 opacity-50" />
-                        No users found.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Pagination */}
-            {filteredUsers.length > 0 && (
-              <div className="flex flex-col sm:flex-row items-center justify-between px-3 sm:px-4 py-3 border-t bg-gray-50 gap-3">
-                <button
-                  onClick={() => setUserCurrentPage(prev => Math.max(1, prev - 1))}
-                  disabled={userCurrentPage === 1}
-                  className="w-full sm:w-auto px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-1 min-h-[44px]"
-                >
-                  <ChevronLeft size={16} /> Previous
-                </button>
-                <div className="flex items-center gap-1 overflow-x-auto">
-                  {Array.from({ length: Math.min(5, userTotalPages) }, (_, i) => {
-                    let pageNum;
-                    if (userTotalPages <= 5) {
-                      pageNum = i + 1;
-                    } else if (userCurrentPage <= 3) {
-                      pageNum = i + 1;
-                    } else if (userCurrentPage >= userTotalPages - 2) {
-                      pageNum = userTotalPages - 4 + i;
-                    } else {
-                      pageNum = userCurrentPage - 2 + i;
-                    }
-                    return (
-                      <button
-                        key={pageNum}
-                        onClick={() => setUserCurrentPage(pageNum)}
-                        className={`min-w-[44px] min-h-[44px] text-sm font-medium rounded-lg transition ${userCurrentPage === pageNum
-                          ? 'bg-teal-500 text-white'
-                          : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
-                        }`}
-                      >
-                        {pageNum}
-                      </button>
-                    );
-                  })}
-                  {userTotalPages > 5 && userCurrentPage < userTotalPages - 2 && (
-                    <>
-                      <span className="px-2 text-gray-400">.....</span>
-                      <button
-                        onClick={() => setUserCurrentPage(userTotalPages)}
-                        className="min-w-[44px] min-h-[44px] text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition"
-                      >
-                        {userTotalPages}
-                      </button>
-                    </>
-                  )}
-                </div>
-                <button
-                  onClick={() => setUserCurrentPage(prev => Math.min(userTotalPages, prev + 1))}
-                  disabled={userCurrentPage === userTotalPages || userTotalPages === 0}
-                  className="w-full sm:w-auto px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-1 min-h-[44px]"
-                >
-                  Next <ChevronRight size={16} />
-                </button>
-              </div>
             )}
           </div>
         </div>
-      )}
+
+        {/* Table */}
+        <div style={{ background: 'white', overflow: 'hidden' }}>
+          {/* Desktop Table */}
+          <div className="hidden md:block">
+            {/* Table Header */}
+            <div style={figmaStyles.tableHeader}>
+              <div><input type="checkbox" style={figmaStyles.checkbox} /></div>
+              <div style={figmaStyles.tableHeaderCell}>SL</div>
+              <div style={figmaStyles.tableHeaderCell}>Picture</div>
+              <div style={figmaStyles.tableHeaderCell}>Name</div>
+              <div style={figmaStyles.tableHeaderCell}>Username</div>
+              <div style={figmaStyles.tableHeaderCell}>Role</div>
+              <div style={figmaStyles.tableHeaderCell}>Last Login</div>
+              <div style={figmaStyles.tableHeaderCell}>Registration At</div>
+              <div style={figmaStyles.tableHeaderCell}>Status</div>
+              <div style={figmaStyles.tableHeaderCell}>Action</div>
+            </div>
+            
+            {/* Table Rows */}
+            {paginatedUsers.map((user, index) => {
+              const rowNumber = (userCurrentPage - 1) * userItemsPerPage + index + 1;
+              const userId = user._id || user.id || user.email;
+              return (
+                <div key={userId} style={figmaStyles.tableRow}>
+                  <div><input type="checkbox" style={figmaStyles.checkbox} /></div>
+                  <div style={{ ...figmaStyles.cellText, textAlign: 'center' }}>{rowNumber}</div>
+                  <div>
+                    <div style={figmaStyles.avatarContainer}>
+                      {user.avatar ? (
+                        <img src={user.avatar} alt={user.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        <span style={{ color: 'white', fontWeight: 700, fontSize: '14px' }}>
+                          {user.name?.charAt(0).toUpperCase()}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div style={figmaStyles.cellText}>{user.name}</div>
+                  <div style={figmaStyles.cellText}>{user.email?.split('@')[0] || '-'}</div>
+                  <div style={figmaStyles.cellText}>{getRoleLabel(user.role)}</div>
+                  <div style={figmaStyles.cellText}>
+                    {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString('en-GB') : '-'}
+                  </div>
+                  <div style={figmaStyles.cellText}>
+                    {user.createdAt ? new Date(user.createdAt).toLocaleDateString('en-GB') : '-'}
+                  </div>
+                  <div>
+                    <span style={{
+                      ...figmaStyles.statusBadge,
+                      ...(user.isActive === false ? figmaStyles.statusBadgeInactive : {}),
+                    }}>
+                      {user.isActive !== false ? 'Publish' : 'Inactive'}
+                    </span>
+                  </div>
+                  <div style={{ position: 'relative' }}>
+                    <button
+                      onClick={() => setUserActionMenu(userActionMenu === userId ? null : userId)}
+                      style={figmaStyles.actionButton}
+                    >
+                      <MoreVertical size={20} color="#666" />
+                    </button>
+                    {userActionMenu === userId && (
+                      <div style={{
+                        position: 'absolute',
+                        right: 0,
+                        top: '100%',
+                        background: 'white',
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                        minWidth: '120px',
+                        zIndex: 10,
+                        overflow: 'hidden',
+                      }}>
+                        {onUpdateUser && canChangeUserRole(user) && (
+                          <button
+                            onClick={() => { openUserModal(user); setUserActionMenu(null); }}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              padding: '10px 14px',
+                              fontFamily: "'Poppins', sans-serif",
+                              fontSize: '14px',
+                              color: '#1e90ff',
+                              background: 'transparent',
+                              border: 'none',
+                              width: '100%',
+                              textAlign: 'left',
+                              cursor: 'pointer',
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f5'}
+                            onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                          >
+                            <Edit size={16} /> Edit
+                          </button>
+                        )}
+                        {onDeleteUser && canDeleteSpecificUser(user) && (
+                          <button
+                            onClick={() => { deleteUser(user); setUserActionMenu(null); }}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              padding: '10px 14px',
+                              fontFamily: "'Poppins', sans-serif",
+                              fontSize: '14px',
+                              color: '#dc2626',
+                              background: 'transparent',
+                              border: 'none',
+                              width: '100%',
+                              textAlign: 'left',
+                              cursor: 'pointer',
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.background = '#fef2f2'}
+                            onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                          >
+                            <Trash2 size={16} /> Delete
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+            
+            {paginatedUsers.length === 0 && (
+              <div style={{ padding: '48px', textAlign: 'center', color: '#777' }}>
+                <Users size={32} style={{ margin: '0 auto 8px', opacity: 0.5 }} />
+                No users found.
+              </div>
+            )}
+          </div>
+
+          {/* Mobile Card View */}
+          <div className="md:hidden">
+            {paginatedUsers.map((user, index) => {
+              const rowNumber = (userCurrentPage - 1) * userItemsPerPage + index + 1;
+              const userId = user._id || user.id || user.email;
+              return (
+                <div key={userId} style={{ padding: '16px', borderBottom: '1px solid #eee', display: 'flex', gap: '12px' }}>
+                  <div style={figmaStyles.avatarContainer}>
+                    {user.avatar ? (
+                      <img src={user.avatar} alt={user.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <span style={{ color: 'white', fontWeight: 700 }}>{user.name?.charAt(0).toUpperCase()}</span>
+                    )}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <span style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 500, fontSize: '14px', color: '#1d1a1a' }}>{user.name}</span>
+                      <span style={{
+                        ...figmaStyles.statusBadge,
+                        ...(user.isActive === false ? figmaStyles.statusBadgeInactive : {}),
+                      }}>
+                        {user.isActive !== false ? 'Publish' : 'Inactive'}
+                      </span>
+                    </div>
+                    <p style={{ fontFamily: "'Poppins', sans-serif", fontSize: '12px', color: '#777', marginTop: '4px' }}>{user.email}</p>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
+                      <span style={{ fontFamily: "'Poppins', sans-serif", fontSize: '12px', color: '#777' }}>{getRoleLabel(user.role)}</span>
+                      <button
+                        onClick={() => setUserActionMenu(userActionMenu === userId ? null : userId)}
+                        style={figmaStyles.actionButton}
+                      >
+                        <MoreVertical size={20} color="#666" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Pagination */}
+        {filteredUsers.length > 0 && (
+          <div style={figmaStyles.paginationContainer}>
+            <button
+              onClick={() => setUserCurrentPage(prev => Math.max(1, prev - 1))}
+              disabled={userCurrentPage === 1}
+              style={{
+                ...figmaStyles.paginationButton,
+                opacity: userCurrentPage === 1 ? 0.5 : 1,
+              }}
+            >
+              <ChevronLeft size={20} color="#afafaf" />
+              Previous
+            </button>
+            
+            <div style={{ display: 'flex', gap: '12px' }}>
+              {Array.from({ length: Math.min(5, userTotalPages) }, (_, i) => {
+                let pageNum;
+                if (userTotalPages <= 5) {
+                  pageNum = i + 1;
+                } else if (userCurrentPage <= 3) {
+                  pageNum = i + 1;
+                } else if (userCurrentPage >= userTotalPages - 2) {
+                  pageNum = userTotalPages - 4 + i;
+                } else {
+                  pageNum = userCurrentPage - 2 + i;
+                }
+                return (
+                  <button
+                    key={pageNum}
+                    onClick={() => setUserCurrentPage(pageNum)}
+                    style={{
+                      ...figmaStyles.pageNumber,
+                      ...(userCurrentPage === pageNum ? figmaStyles.pageNumberActive : figmaStyles.pageNumberInactive),
+                    }}
+                  >
+                    {pageNum}
+                  </button>
+                );
+              })}
+            </div>
+            
+            <button
+              onClick={() => setUserCurrentPage(prev => Math.min(userTotalPages, prev + 1))}
+              disabled={userCurrentPage === userTotalPages || userTotalPages === 0}
+              style={{
+                ...figmaStyles.paginationButton,
+                ...figmaStyles.paginationButtonActive,
+                opacity: userCurrentPage === userTotalPages ? 0.5 : 1,
+              }}
+            >
+              Next
+              <ChevronRight size={20} color="black" />
+            </button>
+          </div>
+        )}
+          </>
+        )}
 
       {/* Roles Tab */}
       {tab === 'roles' && (
@@ -955,6 +1256,7 @@ const AdminControl: React.FC<AdminControlProps> = ({
           </div>
         </div>
       )}
+      </div>
 
       {/* User Modal */}
       {userModal && (

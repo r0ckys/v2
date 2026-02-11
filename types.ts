@@ -124,6 +124,11 @@ export interface Popup {
 }
 
 export interface Order {
+  createdAt: string | number | Date;
+  createdAt: any;
+  items: any;
+  items(items: boolean): unknown;
+  items: boolean;
   weight: number;
   pathaoArea: number;
   pathaoZone: number;

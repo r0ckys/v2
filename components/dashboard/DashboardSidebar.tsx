@@ -70,11 +70,19 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
   className = ''
 }) => {
   const handleItemClick = (itemId: string) => {
-    onNavigate?.(itemId);
+    // Map catalog to catalog_categories for proper section routing
+    if (itemId === 'catalog') {
+      onNavigate?.('catalog_categories');
+    } else {
+      onNavigate?.(itemId);
+    }
   };
 
   const renderMenuItem = (item: SidebarItem) => {
-    const isActive = activeItem === item.id;
+    // For catalog, check if activeItem starts with 'catalog_'
+    const isActive = item.id === 'catalog' 
+      ? activeItem.startsWith('catalog_') 
+      : activeItem === item.id;
     
     return (
       <button

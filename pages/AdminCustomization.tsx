@@ -1,18 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MetricsSkeleton } from '../components/SkeletonLoaders';
 import {
   Save,
-  Image as ImageIcon,
-  Layout,
-  Palette,
-  Globe,
-  Eye,
-  Layers,
   Loader2,
-  CheckCircle2,
-  MessageCircle,
-  CalendarDays,
-  Settings
+  CheckCircle2
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { ThemeConfig, WebsiteConfig, Product } from '../types';
@@ -28,14 +18,9 @@ import {
   ColorKey,
   DEFAULT_COLORS,
   DEFAULT_WEBSITE_CONFIG,
-  TabButton,
-  CarouselTab,
-  CampaignTab,
-  PopupTab,
-  WebsiteInfoTab,
-  ChatSettingsTab,
   ThemeViewTab,
-  ThemeColorsTab
+  ThemeColorsTab,
+  CustomThemeSections
 } from '../components/AdminCustomization';
 
 // ============================================================================
@@ -56,7 +41,7 @@ const AdminCustomization: React.FC<AdminCustomizationProps> = ({
   // ---------------------------------------------------------------------------
   // Tab State
   // ---------------------------------------------------------------------------
-  const [activeTab, setActiveTab] = useState(initialTab);
+  const [activeTab, setActiveTab] = useState(initialTab === 'theme_view' || initialTab === 'theme_colors' ? initialTab : 'theme_view');
 
   // ---------------------------------------------------------------------------
   // Website Configuration State
@@ -323,210 +308,160 @@ const AdminCustomization: React.FC<AdminCustomizationProps> = ({
   // ---------------------------------------------------------------------------
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6">
-      {/* Header - Modern design matching AdminOrders */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
-        <div className="min-w-0 flex-1">
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <Settings className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-500 flex-shrink-0" />
-            <span className="truncate">Customization</span>
-          </h1>
-          <p className="text-gray-500 text-xs sm:text-sm mt-1 truncate">Manage website appearance, carousel, campaigns and popups</p>
-        </div>
-        <button
-          onClick={handleSaveChanges}
-          disabled={isSaving}
-          className={`flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg font-bold transition-all shadow-lg min-w-[140px] sm:min-w-[160px] justify-center text-sm sm:text-base w-full sm:w-auto ${
-            isSaved
-              ? 'bg-emerald-500 text-white'
-              : isSaving
-              ? 'bg-green-500 text-white cursor-wait'
-              : 'bg-green-600 text-white hover:from-[#2BAEE8] hover:to-[#1A7FE8]'
-          }`}
+    <div style={{ minHeight: '100vh', backgroundColor: '#f9f9f9', padding: '20px' }}>
+      {/* Main Container */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        {/* Header Card */}
+        <div
+          style={{
+            backgroundColor: 'white',
+            borderRadius: '8px',
+            padding: '20px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '20px',
+          }}
         >
-          {isSaved ? (
-            <>
-              <CheckCircle2 size={18} className="animate-bounce" />
-              Saved!
-            </>
-          ) : isSaving ? (
-            <>
-              <Loader2 size={18} className="animate-spin" />
-              Saving...
-            </>
-          ) : (
-            <>
-              <Save size={18} />
-              Save Changes
-            </>
-          )}
-        </button>
-      </div>
-
-      {/* Quick Stats Cards */}
-      {isLoading ? (
-        <MetricsSkeleton count={4} />
-      ) : (
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-          {/* Carousel Items */}
-          <div className="bg-white rounded-xl border border-gray-100 p-3 sm:p-5 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between">
-              <div className="min-w-0 flex-1">
-                <p className="text-xs sm:text-sm text-gray-500 font-medium truncate">Carousel Items</p>
-                <p className="mt-1 text-xl sm:text-3xl font-bold text-gray-900">{websiteConfiguration.carouselItems?.length || 0}</p>
-              </div>
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-50 rounded-full flex items-center justify-center flex-shrink-0 ml-2">
-                <ImageIcon size={20} className="text-blue-500 sm:hidden" />
-                <ImageIcon size={24} className="text-blue-500 hidden sm:block" />
-              </div>
-            </div>
-            <button
-              onClick={() => setActiveTab('carousel')}
-              className="mt-2 sm:mt-3 flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-700"
+          {/* Title Row */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h1
+              style={{
+                fontFamily: '"Lato", sans-serif',
+                fontWeight: 700,
+                fontSize: '22px',
+                color: '#023337',
+                letterSpacing: '0.11px',
+                margin: 0,
+              }}
             >
-              <Eye size={14} />
-              Manage
+              Customization
+            </h1>
+            <button
+              onClick={handleSaveChanges}
+              disabled={isSaving}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '10px 24px',
+                borderRadius: '8px',
+                border: 'none',
+                fontFamily: '"Lato", sans-serif',
+                fontWeight: 700,
+                fontSize: '15px',
+                cursor: isSaving ? 'wait' : 'pointer',
+                transition: 'all 0.2s ease',
+                ...(isSaved
+                  ? { backgroundColor: '#22c55e', color: 'white' }
+                  : isSaving
+                  ? { backgroundColor: '#4ade80', color: 'white' }
+                  : { backgroundColor: '#22c55e', color: 'white' }),
+              }}
+            >
+              {isSaved ? (
+                <>
+                  <CheckCircle2 size={18} />
+                  Saved!
+                </>
+              ) : isSaving ? (
+                <>
+                  <Loader2 size={18} className="animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save size={18} />
+                  Save Changes
+                </>
+              )}
             </button>
           </div>
 
-          {/* Active Campaigns */}
-          <div className="bg-white rounded-xl border border-gray-100 p-3 sm:p-5 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between">
-              <div className="min-w-0 flex-1">
-                <p className="text-xs sm:text-sm text-gray-500 font-medium truncate">Active Campaigns</p>
-                <p className="mt-1 text-xl sm:text-3xl font-bold text-gray-900">
-                  {websiteConfiguration.campaigns?.filter(c => c.status === 'Publish').length || 0}
-                </p>
-              </div>
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-emerald-50 rounded-full flex items-center justify-center flex-shrink-0 ml-2">
-                <CalendarDays size={20} className="text-emerald-500 sm:hidden" />
-                <CalendarDays size={24} className="text-emerald-500 hidden sm:block" />
-              </div>
-            </div>
-            <button
-              onClick={() => setActiveTab('campaigns')}
-              className="mt-2 sm:mt-3 flex items-center gap-1 text-xs font-medium text-emerald-600 hover:text-emerald-700"
-            >
-              <Eye size={14} />
-              Manage
-            </button>
-          </div>
-
-          {/* Active Popups */}
-          <div className="bg-white rounded-xl border border-gray-100 p-3 sm:p-5 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between">
-              <div className="min-w-0 flex-1">
-                <p className="text-xs sm:text-sm text-gray-500 font-medium truncate">Active Popups</p>
-                <p className="mt-1 text-xl sm:text-3xl font-bold text-gray-900">
-                  {websiteConfiguration.popups?.filter(p => p.status === 'Publish').length || 0}
-                </p>
-              </div>
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-purple-50 rounded-full flex items-center justify-center flex-shrink-0 ml-2">
-                <Layers size={20} className="text-purple-500 sm:hidden" />
-                <Layers size={24} className="text-purple-500 hidden sm:block" />
-              </div>
-            </div>
-            <button
-              onClick={() => setActiveTab('popup')}
-              className="mt-2 sm:mt-3 flex items-center gap-1 text-xs font-medium text-purple-600 hover:text-purple-700"
-            >
-              <Eye size={14} />
-              Manage
-            </button>
-          </div>
-
-          {/* Theme Sections */}
-          <div className="bg-white rounded-xl border border-gray-100 p-3 sm:p-5 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between">
-              <div className="min-w-0 flex-1">
-                <p className="text-xs sm:text-sm text-gray-500 font-medium truncate">Theme Sections</p>
-                <p className="mt-1 text-xl sm:text-3xl font-bold text-gray-900">8</p>
-                <p className="mt-1 text-xs text-gray-400 hidden sm:block">Customizable areas</p>
-              </div>
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-orange-50 rounded-full flex items-center justify-center flex-shrink-0 ml-2">
-                <Palette size={20} className="text-orange-500 sm:hidden" />
-                <Palette size={24} className="text-orange-500 hidden sm:block" />
-              </div>
-            </div>
+          {/* Tab Navigation - Figma Style */}
+          <div style={{ display: 'flex', gap: '16px' }}>
+            {/* Ready made theme Tab */}
             <button
               onClick={() => setActiveTab('theme_view')}
-              className="mt-2 sm:mt-3 flex items-center gap-1 text-xs font-medium text-orange-600 hover:text-orange-700"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '12px 22px',
+                backgroundColor: 'white',
+                border: 'none',
+                borderBottom: activeTab === 'theme_view' ? '2px solid #38bdf8' : '2px solid transparent',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+              }}
             >
-              <Eye size={14} />
-              Customize
+              {/* Grid Icon */}
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" style={{ opacity: activeTab === 'theme_view' ? 1 : 0.5 }}>
+                <rect x="3" y="3" width="7" height="7" rx="1" stroke={activeTab === 'theme_view' ? '#38bdf8' : '#333'} strokeWidth="1.5" />
+                <rect x="14" y="3" width="7" height="7" rx="1" stroke={activeTab === 'theme_view' ? '#38bdf8' : '#333'} strokeWidth="1.5" />
+                <rect x="3" y="14" width="7" height="7" rx="1" stroke={activeTab === 'theme_view' ? '#38bdf8' : '#333'} strokeWidth="1.5" />
+                <rect x="14" y="14" width="7" height="7" rx="1" stroke={activeTab === 'theme_view' ? '#38bdf8' : '#333'} strokeWidth="1.5" />
+              </svg>
+              <span
+                style={{
+                  fontFamily: '"Poppins", sans-serif',
+                  fontWeight: 500,
+                  fontSize: '16px',
+                  ...(activeTab === 'theme_view'
+                    ? {
+                        background: 'linear-gradient(90deg, #38bdf8 0%, #1e90ff 100%)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                      }
+                    : { color: 'black' }),
+                }}
+              >
+                Ready made theme
+              </span>
+            </button>
+
+            {/* Custom Theme Tab */}
+            <button
+              onClick={() => setActiveTab('theme_colors')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '12px 22px',
+                backgroundColor: 'white',
+                border: 'none',
+                borderBottom: activeTab === 'theme_colors' ? '2px solid #38bdf8' : '2px solid transparent',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              {/* Category Icon */}
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" style={{ opacity: activeTab === 'theme_colors' ? 1 : 0.5 }}>
+                <circle cx="8" cy="8" r="4" stroke={activeTab === 'theme_colors' ? '#38bdf8' : '#333'} strokeWidth="1.5" />
+                <circle cx="16" cy="8" r="4" stroke={activeTab === 'theme_colors' ? '#38bdf8' : '#333'} strokeWidth="1.5" />
+                <circle cx="8" cy="16" r="4" stroke={activeTab === 'theme_colors' ? '#38bdf8' : '#333'} strokeWidth="1.5" />
+                <rect x="12" y="12" width="8" height="8" rx="1" stroke={activeTab === 'theme_colors' ? '#38bdf8' : '#333'} strokeWidth="1.5" />
+              </svg>
+              <span
+                style={{
+                  fontFamily: '"Poppins", sans-serif',
+                  fontWeight: 500,
+                  fontSize: '16px',
+                  ...(activeTab === 'theme_colors'
+                    ? {
+                        background: 'linear-gradient(90deg, #38bdf8 0%, #1e90ff 100%)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                      }
+                    : { color: 'black' }),
+                }}
+              >
+                Custom Theme
+              </span>
             </button>
           </div>
         </div>
-      )}
 
-      {/* Tab Navigation */}
-      <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1 overflow-x-auto scrollbar-hide -mx-3 px-3 sm:mx-0 sm:px-1">
-        <TabButton id="carousel" label="Carousel" icon={<ImageIcon size={16} />} activeTab={activeTab} onTabChange={setActiveTab} />
-        <TabButton id="campaigns" label="Campaigns" icon={<CalendarDays size={16} />} activeTab={activeTab} onTabChange={setActiveTab} />
-        <TabButton id="popup" label="Popups" icon={<Layers size={16} />} activeTab={activeTab} onTabChange={setActiveTab} />
-        <TabButton id="website_info" label="Website" icon={<Globe size={16} />} activeTab={activeTab} onTabChange={setActiveTab} />
-        <TabButton id="chat_settings" label="Chat" icon={<MessageCircle size={16} />} activeTab={activeTab} onTabChange={setActiveTab} />
-        <TabButton id="theme_view" label="Theme" icon={<Layout size={16} />} activeTab={activeTab} onTabChange={setActiveTab} />
-        <TabButton id="theme_colors" label="Colors" icon={<Palette size={16} />} activeTab={activeTab} onTabChange={setActiveTab} />
-      </div>
-
-      {/* Tab Content */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-3 sm:p-4 md:p-6 min-h-[400px] sm:min-h-[500px]">
-        {activeTab === 'carousel' && (
-          <CarouselTab
-            websiteConfiguration={websiteConfiguration}
-            setWebsiteConfiguration={setWebsiteConfiguration}
-            tenantId={tenantId}
-            onUpdateWebsiteConfig={onUpdateWebsiteConfig}
-            isSavingRef={isSavingRef}
-            hasUnsavedChangesRef={hasUnsavedChangesRef}
-            prevWebsiteConfigRef={prevWebsiteConfigRef}
-            lastSaveTimestampRef={lastSaveTimestampRef}
-          />
-        )}
-
-        {activeTab === 'campaigns' && (
-          <CampaignTab
-            websiteConfiguration={websiteConfiguration}
-            setWebsiteConfiguration={setWebsiteConfiguration}
-            tenantId={tenantId}
-            products={products}
-            onUpdateWebsiteConfig={onUpdateWebsiteConfig}
-            hasUnsavedChangesRef={hasUnsavedChangesRef}
-            prevWebsiteConfigRef={prevWebsiteConfigRef}
-            lastSaveTimestampRef={lastSaveTimestampRef}
-          />
-        )}
-
-        {activeTab === 'popup' && (
-          <PopupTab
-            websiteConfiguration={websiteConfiguration}
-            setWebsiteConfiguration={setWebsiteConfiguration}
-            tenantId={tenantId}
-            onUpdateWebsiteConfig={onUpdateWebsiteConfig}
-            hasUnsavedChangesRef={hasUnsavedChangesRef}
-            prevWebsiteConfigRef={prevWebsiteConfigRef}
-            lastSaveTimestampRef={lastSaveTimestampRef}
-          />
-        )}
-
-        {activeTab === 'website_info' && (
-          <WebsiteInfoTab
-            websiteConfiguration={websiteConfiguration}
-            setWebsiteConfiguration={setWebsiteConfiguration}
-            logo={logo}
-            onUpdateLogo={onUpdateLogo}
-            tenantId={tenantId}
-          />
-        )}
-
-        {activeTab === 'chat_settings' && (
-          <ChatSettingsTab
-            websiteConfiguration={websiteConfiguration}
-            setWebsiteConfiguration={setWebsiteConfiguration}
-          />
-        )}
-
+        {/* Tab Content */}
         {activeTab === 'theme_view' && (
           <ThemeViewTab
             websiteConfiguration={websiteConfiguration}
@@ -535,12 +470,28 @@ const AdminCustomization: React.FC<AdminCustomizationProps> = ({
         )}
 
         {activeTab === 'theme_colors' && (
-          <ThemeColorsTab
-            websiteConfiguration={websiteConfiguration}
-            setWebsiteConfiguration={setWebsiteConfiguration}
-            themeColors={themeColors}
-            setThemeColors={setThemeColors}
-          />
+          <>
+            {/* Theme Colors Card */}
+            <ThemeColorsTab
+              websiteConfiguration={websiteConfiguration}
+              setWebsiteConfiguration={setWebsiteConfiguration}
+              themeColors={themeColors}
+              setThemeColors={setThemeColors}
+            />
+            {/* Section-by-Section Style Selection */}
+            <div
+              style={{
+                backgroundColor: 'white',
+                borderRadius: '8px',
+                padding: '20px',
+              }}
+            >
+              <CustomThemeSections
+                websiteConfiguration={websiteConfiguration}
+                setWebsiteConfiguration={setWebsiteConfiguration}
+              />
+            </div>
+          </>
         )}
       </div>
     </div>

@@ -7,7 +7,8 @@ import {
   X,
   Upload,
   Layers,
-  FolderOpen
+  FolderOpen,
+  MoreVertical
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Popup, WebsiteConfig, PopupFilterStatus, ImageUploadType } from './types';
@@ -15,6 +16,251 @@ import { normalizeImageUrl } from '../../utils/imageUrlHelper';
 import { convertFileToWebP } from '../../services/imageUtils';
 import { ActionButton } from './shared/TabButton';
 import { GalleryPicker } from '../GalleryPicker';
+
+// ========== Figma Design Styles ==========
+const styles = {
+  container: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    gap: '17px',
+    width: '100%',
+  },
+  header: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  headerLeft: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    gap: '4px',
+  },
+  headerTitle: {
+    fontFamily: "'Lato', sans-serif",
+    fontWeight: 700,
+    fontSize: '22px',
+    color: '#023337',
+    letterSpacing: '0.11px',
+    margin: 0,
+  },
+  headerSubtitle: {
+    fontFamily: "'Poppins', sans-serif",
+    fontWeight: 400,
+    fontSize: '16px',
+    color: '#777',
+    margin: 0,
+  },
+  createButton: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '4px',
+    height: '48px',
+    padding: '6px 16px 6px 12px',
+    background: 'linear-gradient(to right, #38bdf8, #1e90ff)',
+    borderRadius: '8px',
+    border: 'none',
+    cursor: 'pointer',
+  },
+  createButtonText: {
+    fontFamily: "'Lato', sans-serif",
+    fontWeight: 700,
+    fontSize: '15px',
+    color: 'white',
+    letterSpacing: '-0.3px',
+  },
+  tableContainer: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    width: '100%',
+    background: 'white',
+    borderRadius: '8px',
+    overflow: 'hidden',
+  },
+  tableHeader: {
+    display: 'grid',
+    gridTemplateColumns: '50px 80px 1fr 1fr 100px 80px',
+    alignItems: 'center',
+    height: '48px',
+    background: '#f5f5f5',
+    padding: '0 16px',
+  },
+  tableHeaderCell: {
+    fontFamily: "'Poppins', sans-serif",
+    fontWeight: 500,
+    fontSize: '16px',
+    color: 'black',
+  },
+  tableRow: {
+    display: 'grid',
+    gridTemplateColumns: '50px 80px 1fr 1fr 100px 80px',
+    alignItems: 'center',
+    height: '68px',
+    borderBottom: '0.5px solid #b9b9b9',
+    padding: '0 16px',
+  },
+  checkbox: {
+    width: '20px',
+    height: '20px',
+    background: 'white',
+    border: '1.5px solid #eaf8e7',
+    borderRadius: '4px',
+    cursor: 'pointer',
+  },
+  slNumber: {
+    fontFamily: "'Poppins', sans-serif",
+    fontWeight: 400,
+    fontSize: '12px',
+    color: '#1d1a1a',
+    textAlign: 'center' as const,
+  },
+  productCell: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+  },
+  productImage: {
+    width: '40px',
+    height: '40px',
+    borderRadius: '8px',
+    background: 'linear-gradient(to right, #38bdf8, #1e90ff)',
+    objectFit: 'cover' as const,
+    overflow: 'hidden',
+  },
+  productName: {
+    fontFamily: "'Poppins', sans-serif",
+    fontWeight: 400,
+    fontSize: '12px',
+    color: '#1d1a1a',
+    maxWidth: '150px',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap' as const,
+  },
+  urlText: {
+    fontFamily: "'Poppins', sans-serif",
+    fontWeight: 400,
+    fontSize: '12px',
+    color: '#1d1a1a',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap' as const,
+  },
+  statusBadge: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '2px 9px',
+    borderRadius: '30px',
+    fontFamily: "'Poppins', sans-serif",
+    fontWeight: 500,
+    fontSize: '12px',
+    cursor: 'pointer',
+    border: 'none',
+  },
+  statusPublish: {
+    background: '#c1ffbc',
+    color: '#085e00',
+  },
+  statusDraft: {
+    background: '#ffeeba',
+    color: '#856404',
+  },
+  actionButton: {
+    width: '24px',
+    height: '24px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    background: 'transparent',
+    border: 'none',
+    padding: 0,
+  },
+  dropdownMenu: {
+    position: 'absolute' as const,
+    right: '0',
+    top: '100%',
+    background: 'white',
+    borderRadius: '8px',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+    minWidth: '120px',
+    zIndex: 10,
+    overflow: 'hidden',
+  },
+  dropdownItem: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    padding: '10px 14px',
+    fontFamily: "'Poppins', sans-serif",
+    fontSize: '14px',
+    color: '#333',
+    cursor: 'pointer',
+    background: 'transparent',
+    border: 'none',
+    width: '100%',
+    textAlign: 'left' as const,
+  },
+  emptyState: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '48px 16px',
+    fontFamily: "'Poppins', sans-serif",
+    fontSize: '14px',
+    color: '#777',
+  },
+  // Mobile Card Styles
+  mobileCard: {
+    display: 'flex',
+    gap: '12px',
+    padding: '16px',
+    borderBottom: '1px solid #eee',
+  },
+  mobileCardImage: {
+    width: '60px',
+    height: '60px',
+    borderRadius: '8px',
+    objectFit: 'cover' as const,
+    flexShrink: 0,
+  },
+  mobileCardContent: {
+    flex: 1,
+    minWidth: 0,
+  },
+  mobileCardHeader: {
+    display: 'flex',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: '8px',
+  },
+  mobileCardName: {
+    fontFamily: "'Poppins', sans-serif",
+    fontWeight: 500,
+    fontSize: '14px',
+    color: '#1d1a1a',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap' as const,
+  },
+  mobileCardUrl: {
+    fontFamily: "'Poppins', sans-serif",
+    fontSize: '12px',
+    color: '#777',
+    marginTop: '4px',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap' as const,
+  },
+  mobileCardFooter: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: '8px',
+  },
+};
 
 interface PopupTabProps {
   websiteConfiguration: WebsiteConfig;
@@ -47,6 +293,8 @@ export const PopupTab: React.FC<PopupTabProps> = ({
     priority: 0,
     status: 'Draft'
   });
+  const [openMenuId, setOpenMenuId] = useState<number | null>(null);
+  const [selectedPopups, setSelectedPopups] = useState<Set<number>>(new Set());
 
   // Gallery Picker State
   const [isGalleryPickerOpen, setIsGalleryPickerOpen] = useState(false);
@@ -236,199 +484,545 @@ export const PopupTab: React.FC<PopupTabProps> = ({
       popup.name.toLowerCase().includes(popupSearchQuery.toLowerCase())
   );
 
+  const toggleSelectPopup = (popupId: number) => {
+    const newSelected = new Set(selectedPopups);
+    if (newSelected.has(popupId)) {
+      newSelected.delete(popupId);
+    } else {
+      newSelected.add(popupId);
+    }
+    setSelectedPopups(newSelected);
+  };
+
+  const truncateText = (text: string, maxLength: number) => {
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength) + '...';
+  };
+
   return (
     <>
-      <div className="space-y-4 sm:space-y-6">
-        <div className="flex flex-col gap-3 sm:gap-4">
-          {/* Status Filters */}
-          <div className="flex bg-gray-100 rounded-lg p-1 overflow-x-auto scrollbar-hide -mx-3 px-3 sm:mx-0 sm:px-1">
-            {['All', 'Publish', 'Draft'].map(s => (
-              <button 
-                key={s} 
-                onClick={() => setPopupFilterStatus(s as PopupFilterStatus)} 
-                className={`px-3 sm:px-4 py-1.5 rounded-md text-xs sm:text-sm font-medium transition whitespace-nowrap ${popupFilterStatus === s ? 'bg-white text-green-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-              >
-                {s === 'All' ? 'All Data' : s}
-                {s === 'All' && <span className="ml-1 text-xs bg-gray-200 px-1.5 rounded-full">{(websiteConfiguration.popups || []).length}</span>}
-              </button>
-            ))}
+      <div style={styles.container}>
+        {/* Header Section */}
+        <div style={styles.header}>
+          <div style={styles.headerLeft}>
+            <p style={styles.headerTitle}>Popup</p>
+            <p style={styles.headerSubtitle}>Create unlimited Popup</p>
           </div>
-          
-          {/* Search and Add */}
-          <div className="flex flex-col sm:flex-row gap-3 w-full">
-            <div className="relative flex-1">
-              <input 
-                type="text" 
-                placeholder="Search" 
-                className="w-full pl-10 pr-4 py-2 bg-white border rounded-lg text-sm focus:ring-1 focus:ring-green-500" 
-                value={popupSearchQuery} 
-                onChange={e => setPopupSearchQuery(e.target.value)}
-              />
-              <Search className="absolute left-3 top-2.5 text-gray-400" size={16} />
-            </div>
-            <ActionButton 
-              onClick={() => openPopupModal()} 
-              variant="bg-green-600 text-white hover:from-[#2BAEE8] hover:to-[#1A7FE8] flex items-center gap-2 justify-center w-full sm:w-auto"
-            >
-              <Plus size={16} /><span className="hidden xs:inline">Add</span> Popup
-            </ActionButton>
-          </div>
+          <button
+            style={styles.createButton}
+            onClick={() => openPopupModal()}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.opacity = '0.9';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.opacity = '1';
+            }}
+          >
+            <Plus size={24} color="white" />
+            <span style={styles.createButtonText}>Create Popup</span>
+          </button>
         </div>
-        
-        {/* Popup Table - Desktop / Cards - Mobile */}
-        <div className="overflow-hidden border rounded-lg shadow-sm">
+
+        {/* Table Section */}
+        <div style={styles.tableContainer}>
           {/* Desktop Table */}
-          <div className="hidden md:block overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Image</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Name</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">URL</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Priority</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Status</th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {filteredPopups.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="px-4 py-12 text-center text-gray-400">No popups found</td>
-                  </tr>
-                ) : filteredPopups.map(p => (
-                  <tr key={p.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3">
-                      <img src={p.image} alt={p.name} className="h-12 w-16 object-cover rounded border" />
-                    </td>
-                    <td className="px-4 py-3 text-sm font-medium text-gray-800">{p.name}</td>
-                    <td className="px-4 py-3 text-sm text-gray-500 truncate max-w-xs">{p.url || '-'}</td>
-                    <td className="px-4 py-3 text-sm text-gray-800">{p.priority || 0}</td>
-                    <td className="px-4 py-3">
-                      <button 
-                        onClick={() => handleTogglePopupStatus(p)} 
-                        className={`px-3 py-1 rounded-full text-xs font-semibold ${p.status === 'Publish' ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'}`}
-                      >
-                        {p.status}
-                      </button>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button onClick={() => openPopupModal(p)} className="p-1.5 hover:bg-blue-50 rounded text-blue-600">
-                          <Edit size={16} />
+          <div className="hidden md:block">
+            {/* Table Header */}
+            <div style={styles.tableHeader}>
+              <div style={styles.tableHeaderCell}>SL</div>
+              <div style={styles.tableHeaderCell}></div>
+              <div style={styles.tableHeaderCell}>Name</div>
+              <div style={styles.tableHeaderCell}>URL</div>
+              <div style={styles.tableHeaderCell}>Status</div>
+              <div style={styles.tableHeaderCell}>Action</div>
+            </div>
+            
+            {/* Table Body */}
+            {filteredPopups.length === 0 ? (
+              <div style={styles.emptyState}>No popups found</div>
+            ) : (
+              filteredPopups.map((popup, index) => (
+                <div key={popup.id} style={styles.tableRow}>
+                  {/* Checkbox + SL */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <input
+                      type="checkbox"
+                      checked={selectedPopups.has(popup.id)}
+                      onChange={() => toggleSelectPopup(popup.id)}
+                      style={styles.checkbox}
+                    />
+                  </div>
+                  <div style={styles.slNumber}>{index + 1}</div>
+
+                  {/* Name with Image */}
+                  <div style={styles.productCell}>
+                    <div style={styles.productImage}>
+                      <img
+                        src={normalizeImageUrl(popup.image)}
+                        alt={popup.name}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px' }}
+                      />
+                    </div>
+                    <span style={styles.productName} title={popup.name}>
+                      {truncateText(popup.name, 25)}
+                    </span>
+                  </div>
+
+                  {/* URL */}
+                  <div style={styles.urlText} title={popup.url || '-'}>
+                    {truncateText(popup.url || '-', 40)}
+                  </div>
+
+                  {/* Status Badge */}
+                  <div>
+                    <button
+                      onClick={() => handleTogglePopupStatus(popup)}
+                      style={{
+                        ...styles.statusBadge,
+                        ...(popup.status === 'Publish' ? styles.statusPublish : styles.statusDraft),
+                      }}
+                    >
+                      {popup.status}
+                    </button>
+                  </div>
+
+                  {/* Action Menu */}
+                  <div style={{ position: 'relative' }}>
+                    <button
+                      style={styles.actionButton}
+                      onClick={() => setOpenMenuId(openMenuId === popup.id ? null : popup.id)}
+                    >
+                      <MoreVertical size={20} color="#666" />
+                    </button>
+                    {openMenuId === popup.id && (
+                      <div style={styles.dropdownMenu}>
+                        <button
+                          style={{ ...styles.dropdownItem }}
+                          onClick={() => {
+                            openPopupModal(popup);
+                            setOpenMenuId(null);
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = '#f5f5f5';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'transparent';
+                          }}
+                        >
+                          <Edit size={16} color="#1e90ff" />
+                          Edit
                         </button>
-                        <button onClick={() => handleDeletePopup(p.id)} className="p-1.5 hover:bg-red-50 rounded text-red-600">
-                          <Trash2 size={16} />
+                        <button
+                          style={{ ...styles.dropdownItem, color: '#dc2626' }}
+                          onClick={() => {
+                            handleDeletePopup(popup.id);
+                            setOpenMenuId(null);
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = '#fef2f2';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'transparent';
+                          }}
+                        >
+                          <Trash2 size={16} color="#dc2626" />
+                          Delete
                         </button>
                       </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
           </div>
-          
+
           {/* Mobile Card View */}
-          <div className="md:hidden divide-y divide-gray-100">
+          <div className="md:hidden">
             {filteredPopups.length === 0 ? (
-              <div className="px-4 py-12 text-center text-gray-400">No popups found</div>
-            ) : filteredPopups.map(p => (
-              <div key={p.id} className="p-4 hover:bg-gray-50">
-                <div className="flex gap-3">
-                  <img src={p.image} alt={p.name} className="h-16 w-20 object-cover rounded border flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <h4 className="font-medium text-gray-800 truncate">{p.name}</h4>
-                      <button 
-                        onClick={() => handleTogglePopupStatus(p)} 
-                        className={`px-2 py-0.5 rounded-full text-xs font-semibold flex-shrink-0 ${p.status === 'Publish' ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'}`}
+              <div style={styles.emptyState}>No popups found</div>
+            ) : (
+              filteredPopups.map((popup, index) => (
+                <div key={popup.id} style={styles.mobileCard}>
+                  <img
+                    src={normalizeImageUrl(popup.image)}
+                    alt={popup.name}
+                    style={styles.mobileCardImage}
+                  />
+                  <div style={styles.mobileCardContent}>
+                    <div style={styles.mobileCardHeader}>
+                      <span style={styles.mobileCardName}>{popup.name}</span>
+                      <button
+                        onClick={() => handleTogglePopupStatus(popup)}
+                        style={{
+                          ...styles.statusBadge,
+                          ...(popup.status === 'Publish' ? styles.statusPublish : styles.statusDraft),
+                        }}
                       >
-                        {p.status}
+                        {popup.status}
                       </button>
                     </div>
-                    <p className="text-xs text-gray-500 truncate mt-1">{p.url || 'No URL'}</p>
-                    <div className="flex items-center justify-between mt-2">
-                      <span className="text-xs text-gray-400">Priority: {p.priority || 0}</span>
-                      <div className="flex gap-2">
-                        <button onClick={() => openPopupModal(p)} className="p-1.5 hover:bg-blue-50 rounded text-blue-600">
-                          <Edit size={16} />
+                    <p style={styles.mobileCardUrl}>{popup.url || 'No URL'}</p>
+                    <div style={styles.mobileCardFooter}>
+                      <span style={{ fontFamily: "'Poppins', sans-serif", fontSize: '12px', color: '#777' }}>
+                        #{index + 1}
+                      </span>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button
+                          onClick={() => openPopupModal(popup)}
+                          style={{ ...styles.actionButton, background: '#eff6ff', borderRadius: '6px', padding: '6px' }}
+                        >
+                          <Edit size={16} color="#1e90ff" />
                         </button>
-                        <button onClick={() => handleDeletePopup(p.id)} className="p-1.5 hover:bg-red-50 rounded text-red-600">
-                          <Trash2 size={16} />
+                        <button
+                          onClick={() => handleDeletePopup(popup.id)}
+                          style={{ ...styles.actionButton, background: '#fef2f2', borderRadius: '6px', padding: '6px' }}
+                        >
+                          <Trash2 size={16} color="#dc2626" />
                         </button>
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
       </div>
 
       {/* Popup Modal */}
       {isPopupModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden">
-            <div className="p-4 border-b bg-gray-50 flex justify-between items-center">
-              <h3 className="font-bold text-gray-800">{editingPopup ? 'Edit Popup' : 'Add New Popup'}</h3>
-              <button onClick={() => setIsPopupModalOpen(false)}>
-                <X size={20} className="text-gray-500" />
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 100,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: 'rgba(0, 0, 0, 0.5)',
+          backdropFilter: 'blur(4px)',
+          padding: '16px',
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '12px',
+            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
+            width: '100%',
+            maxWidth: '500px',
+            overflow: 'hidden',
+          }}>
+            {/* Modal Header */}
+            <div style={{
+              padding: '16px 20px',
+              borderBottom: '1px solid #eee',
+              background: '#f9f9f9',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}>
+              <h3 style={{
+                fontFamily: "'Lato', sans-serif",
+                fontWeight: 700,
+                fontSize: '18px',
+                color: '#023337',
+                margin: 0,
+              }}>
+                {editingPopup ? 'Edit Popup' : 'Add New Popup'}
+              </h3>
+              <button
+                onClick={() => setIsPopupModalOpen(false)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '4px',
+                }}
+              >
+                <X size={20} color="#666" />
               </button>
             </div>
-            <form onSubmit={handleSavePopup} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Popup Image*</label>
-                <input type="file" ref={popupImageInputRef} onChange={handleImageUpload} className="hidden" accept="image/*" />
-                <div className="flex gap-2">
-                  <div onClick={() => popupImageInputRef.current?.click()} className="flex-1 border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:bg-gray-50">
+
+            {/* Modal Form */}
+            <form onSubmit={handleSavePopup} style={{ padding: '24px' }}>
+              {/* Image Upload Section */}
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{
+                  display: 'block',
+                  fontFamily: "'Poppins', sans-serif",
+                  fontWeight: 500,
+                  fontSize: '14px',
+                  color: '#333',
+                  marginBottom: '8px',
+                }}>
+                  Popup Image*
+                </label>
+                <input
+                  type="file"
+                  ref={popupImageInputRef}
+                  onChange={handleImageUpload}
+                  style={{ display: 'none' }}
+                  accept="image/*"
+                />
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <div
+                    onClick={() => popupImageInputRef.current?.click()}
+                    style={{
+                      flex: 1,
+                      border: '2px dashed #d1d5db',
+                      borderRadius: '8px',
+                      padding: '16px',
+                      textAlign: 'center',
+                      cursor: 'pointer',
+                      background: '#f9f9f9',
+                      transition: 'border-color 0.2s',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = '#38bdf8';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = '#d1d5db';
+                    }}
+                  >
                     {popupFormData.image ? (
-                      <img src={normalizeImageUrl(popupFormData.image)} alt="" className="h-28 mx-auto object-contain" />
+                      <img
+                        src={normalizeImageUrl(popupFormData.image)}
+                        alt=""
+                        style={{ height: '100px', margin: '0 auto', objectFit: 'contain', borderRadius: '8px' }}
+                      />
                     ) : (
-                      <div className="text-gray-400">
-                        <Upload size={32} className="mx-auto mb-2" />
-                        <p className="text-sm">Upload</p>
+                      <div style={{ color: '#9ca3af' }}>
+                        <Upload size={32} style={{ margin: '0 auto 8px' }} />
+                        <p style={{ fontFamily: "'Poppins', sans-serif", fontSize: '14px' }}>Upload</p>
                       </div>
                     )}
                   </div>
-                  <button type="button" onClick={() => setIsGalleryPickerOpen(true)} className="w-24 border-2 border-dashed border-indigo-300 rounded-lg flex flex-col items-center justify-center text-indigo-600 hover:bg-indigo-50 transition">
-                    <FolderOpen size={24} className="mb-1" />
-                    <span className="text-xs font-medium">Gallery</span>
+                  <button
+                    type="button"
+                    onClick={() => setIsGalleryPickerOpen(true)}
+                    style={{
+                      width: '100px',
+                      border: '2px dashed #38bdf8',
+                      borderRadius: '8px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#1e90ff',
+                      cursor: 'pointer',
+                      background: '#f0f9ff',
+                      transition: 'background 0.2s',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = '#e0f2fe';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = '#f0f9ff';
+                    }}
+                  >
+                    <FolderOpen size={24} style={{ marginBottom: '4px' }} />
+                    <span style={{ fontFamily: "'Poppins', sans-serif", fontSize: '12px', fontWeight: 500 }}>Gallery</span>
                   </button>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+
+              {/* Name and Priority Row */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Name*</label>
-                  <input type="text" className="w-full px-3 py-2 border rounded-lg text-sm" value={popupFormData.name} onChange={e => setPopupFormData({ ...popupFormData, name: e.target.value })} required />
+                  <label style={{
+                    display: 'block',
+                    fontFamily: "'Poppins', sans-serif",
+                    fontWeight: 500,
+                    fontSize: '14px',
+                    color: '#333',
+                    marginBottom: '8px',
+                  }}>
+                    Name*
+                  </label>
+                  <input
+                    type="text"
+                    value={popupFormData.name}
+                    onChange={e => setPopupFormData({ ...popupFormData, name: e.target.value })}
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '10px 14px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '8px',
+                      fontFamily: "'Poppins', sans-serif",
+                      fontSize: '14px',
+                      background: '#f9f9f9',
+                      outline: 'none',
+                    }}
+                  />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
-                  <input type="number" className="w-full px-3 py-2 border rounded-lg text-sm" value={popupFormData.priority} onChange={e => setPopupFormData({ ...popupFormData, priority: Number(e.target.value) })} />
+                  <label style={{
+                    display: 'block',
+                    fontFamily: "'Poppins', sans-serif",
+                    fontWeight: 500,
+                    fontSize: '14px',
+                    color: '#333',
+                    marginBottom: '8px',
+                  }}>
+                    Priority
+                  </label>
+                  <input
+                    type="number"
+                    value={popupFormData.priority}
+                    onChange={e => setPopupFormData({ ...popupFormData, priority: Number(e.target.value) })}
+                    style={{
+                      width: '100%',
+                      padding: '10px 14px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '8px',
+                      fontFamily: "'Poppins', sans-serif",
+                      fontSize: '14px',
+                      background: '#f9f9f9',
+                      outline: 'none',
+                    }}
+                  />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+
+              {/* URL and URL Type Row */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">URL</label>
-                  <input type="text" className="w-full px-3 py-2 border rounded-lg text-sm" value={popupFormData.url} onChange={e => setPopupFormData({ ...popupFormData, url: e.target.value })} />
+                  <label style={{
+                    display: 'block',
+                    fontFamily: "'Poppins', sans-serif",
+                    fontWeight: 500,
+                    fontSize: '14px',
+                    color: '#333',
+                    marginBottom: '8px',
+                  }}>
+                    URL
+                  </label>
+                  <input
+                    type="text"
+                    value={popupFormData.url}
+                    onChange={e => setPopupFormData({ ...popupFormData, url: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '10px 14px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '8px',
+                      fontFamily: "'Poppins', sans-serif",
+                      fontSize: '14px',
+                      background: '#f9f9f9',
+                      outline: 'none',
+                    }}
+                  />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">URL Type</label>
-                  <select className="w-full px-3 py-2 border rounded-lg text-sm" value={popupFormData.urlType} onChange={e => setPopupFormData({ ...popupFormData, urlType: e.target.value as any })}>
+                  <label style={{
+                    display: 'block',
+                    fontFamily: "'Poppins', sans-serif",
+                    fontWeight: 500,
+                    fontSize: '14px',
+                    color: '#333',
+                    marginBottom: '8px',
+                  }}>
+                    URL Type
+                  </label>
+                  <select
+                    value={popupFormData.urlType}
+                    onChange={e => setPopupFormData({ ...popupFormData, urlType: e.target.value as any })}
+                    style={{
+                      width: '100%',
+                      padding: '10px 14px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '8px',
+                      fontFamily: "'Poppins', sans-serif",
+                      fontSize: '14px',
+                      background: '#f9f9f9',
+                      outline: 'none',
+                      cursor: 'pointer',
+                    }}
+                  >
                     <option value="Internal">Internal</option>
                     <option value="External">External</option>
                   </select>
                 </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                <select className="w-full px-3 py-2 border rounded-lg text-sm" value={popupFormData.status} onChange={e => setPopupFormData({ ...popupFormData, status: e.target.value as any })}>
+
+              {/* Status */}
+              <div style={{ marginBottom: '24px' }}>
+                <label style={{
+                  display: 'block',
+                  fontFamily: "'Poppins', sans-serif",
+                  fontWeight: 500,
+                  fontSize: '14px',
+                  color: '#333',
+                  marginBottom: '8px',
+                }}>
+                  Status
+                </label>
+                <select
+                  value={popupFormData.status}
+                  onChange={e => setPopupFormData({ ...popupFormData, status: e.target.value as any })}
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '8px',
+                    fontFamily: "'Poppins', sans-serif",
+                    fontSize: '14px',
+                    background: '#f9f9f9',
+                    outline: 'none',
+                    cursor: 'pointer',
+                  }}
+                >
                   <option value="Publish">Publish</option>
                   <option value="Draft">Draft</option>
                 </select>
               </div>
-              <div className="pt-4 flex justify-end gap-3">
-                <button type="button" onClick={() => setIsPopupModalOpen(false)} className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-50">Cancel</button>
-                <button type="submit" className="px-4 py-2 bg-gradient-to-r from-[#38BDF8] to-[#1E90FF] text-white rounded-lg text-sm font-bold hover:from-[#2BAEE8] hover:to-[#1A7FE8]">Save Popup</button>
+
+              {/* Action Buttons */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsPopupModalOpen(false)}
+                  style={{
+                    padding: '10px 20px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '8px',
+                    fontFamily: "'Poppins', sans-serif",
+                    fontSize: '14px',
+                    background: 'white',
+                    cursor: 'pointer',
+                    transition: 'background 0.2s',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = '#f9f9f9';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'white';
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  style={{
+                    padding: '10px 20px',
+                    background: 'linear-gradient(to right, #38bdf8, #1e90ff)',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontFamily: "'Lato', sans-serif",
+                    fontWeight: 700,
+                    fontSize: '14px',
+                    color: 'white',
+                    cursor: 'pointer',
+                    transition: 'opacity 0.2s',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.opacity = '0.9';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.opacity = '1';
+                  }}
+                >
+                  Save Popup
+                </button>
               </div>
             </form>
           </div>

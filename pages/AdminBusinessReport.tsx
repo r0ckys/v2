@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { BarChart3, Receipt, History, Loader2, DollarSign, TrendingUp, TrendingDown, Calendar, ShoppingCart, Package, Users, FileText, BookOpen, StickyNote } from 'lucide-react';
 import AdminExpenses from './AdminExpenses';
 import AdminIncome from './AdminIncome';
-import AdminDueBook from './AdminDueBook';
 import AdminPurchase from './AdminPurchase';
 
 interface AdminBusinessReportProps {
@@ -73,13 +72,19 @@ const AdminBusinessReport: React.FC<AdminBusinessReportProps> = ({
   const renderContent = () => {
     switch (activeTab) {
       case 'expense':
-        return <AdminExpenses tenantId={tenantId} />;
+        return <AdminExpenses />;
       case 'income':
-        return <AdminIncome tenantId={tenantId} />;
+        return <AdminIncome />;
       case 'purchase':
         return <AdminPurchase tenantId={tenantId} />;
       case 'due':
-        return <AdminDueBook tenantId={tenantId} />;
+        return (
+          <div className="bg-white rounded-xl p-8 text-center">
+            <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-700">Due Book Coming Soon</h3>
+            <p className="text-gray-500 mt-2">This feature is under development</p>
+          </div>
+        );
       case 'note':
         return (
           <div className="bg-white rounded-xl p-8 text-center">
