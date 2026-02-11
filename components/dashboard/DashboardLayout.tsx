@@ -1,0 +1,117 @@
+import React, { useState, useEffect } from 'react';
+import { DashboardSidebar } from './DashboardSidebar';
+import FigmaDashboardHeader from './FigmaDashboardHeader';
+import { SidebarProps, DashboardHeaderProps } from './types';
+import { Menu, X } from 'lucide-react';
+
+interface DashboardLayoutProps {
+  children: React.ReactNode;
+  sidebarProps?: Partial<SidebarProps>;
+  headerProps?: DashboardHeaderProps;
+  className?: string;
+}
+
+export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
+  children,
+  sidebarProps = {},
+  headerProps = {},
+  className = ""
+}) => {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Close sidebar on window resize to desktop
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) {
+        setSidebarOpen(false);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Close sidebar when clicking outside
+  const handleOverlayClick = () => {
+    setSidebarOpen(false);
+  };
+
+  return (
+    <div className={`flex min-h-screen bg-[#F8FAFC] ${className}`}>
+      {/* Mobile Overlay */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={handleOverlayClick}
+        />
+      )}
+
+      {/* Sidebar - Hidden on mobile, slide-in drawer */}
+      <div className={`
+        fixed lg:relative inset-y-0 left-0 z-50
+        transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0
+        transition-transform duration-300 ease-in-out
+        flex-shrink-0 w-[250px] bg-white shadow-lg lg:shadow-sm border-r border-gray-100
+      `}>
+        <div className="sticky top-0 h-screen overflow-y-auto">
+          {/* Logo + Close Button (mobile) */}
+          <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-gray-100 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-gradient-to-br from-orange-400 to-orange-500 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-sm">S</span>
+              </div>
+              <span className="text-lg font-semibold text-gray-900 font-['Poppins']">
+                System Next IT
+              </span>
+            </div>
+            {/* Close button - only on mobile */}
+            <button 
+              onClick={() => setSidebarOpen(false)}
+              className="lg:hidden p-2 -mr-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          <DashboardSidebar
+            {...sidebarProps}
+            className="p-3 sm:p-4"
+            onNavigate={(item) => {
+              sidebarProps.onNavigate?.(item);
+              // Close sidebar on mobile after navigation
+              if (window.innerWidth < 1024) {
+                setSidebarOpen(false);
+              }
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+        {/* Header with burger menu */}
+        <div className="flex-shrink-0 flex items-center">
+          {/* Burger Menu Button - only on mobile */}
+          <button 
+            onClick={() => setSidebarOpen(true)}
+            className="lg:hidden p-2 sm:p-3 m-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <Menu className="w-5 h-5 sm:w-6 sm:h-6" />
+          </button>
+          <div className="flex-1">
+            <FigmaDashboardHeader
+              {...headerProps}
+            />
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto overflow-x-hidden">
+          <div className="space-y-4 sm:space-y-6">
+            {children}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default DashboardLayout;

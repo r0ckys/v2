@@ -1,0 +1,30 @@
+models:
+  - name: "DeepSeek Coder 6.7B"
+    provider: ollama
+    model: deepseek-coder:6.7b-base
+    apiBase: http://127.0.0.1:11434
+    roles:
+      - chat
+      - edit
+      - apply
+      - autocomplete
+
+embeddingsProvider:
+  provider: ollama
+  model: nomic-embed-text:latest
+  apiBase: http://127.0.0.1:11434
+
+tabAutocompleteOptions:
+  useCopyBuffer: true
+  maxPromptTokens: 400
+
+contextProviders:
+  - name: codebase
+    params:
+      ignore:
+        - "node_modules/**"
+        - ".git/**"
+        - "dist/**"
+        - "*.log"
+
+mcpServers: []
