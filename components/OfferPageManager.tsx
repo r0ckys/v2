@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import {
   Plus, Search, Filter, Eye, Edit2, Trash2, Copy, ExternalLink,
   MoreVertical, Calendar, ShoppingCart, TrendingUp, FileText,
-  CheckCircle, Clock, Archive, X, AlertTriangle, ChevronDown, ChevronLeft, ChevronRight
+  CheckCircle, Clock, Archive, X, AlertTriangle, ChevronDown, ChevronLeft, ChevronRight,
+  Monitor, Smartphone
 } from 'lucide-react';
 import { getOfferPages, deleteOfferPage, updateOfferPage, OfferPageResponse } from '../services/DataService';
 import { isAuthenticated } from '../services/authService';
@@ -42,6 +43,32 @@ export const OfferPageManager: React.FC<OfferPageManagerProps> = ({
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+
+  // Helper function to build proper URL with subdomain
+  const buildUrl = (slug: string) => {
+    const protocol = window.location.protocol;
+    const host = window.location.host;
+    
+    // Check if localhost
+    if (host.includes('localhost')) {
+      // For localhost: subdomain.localhost:port
+      const port = host.split(':')[1] || '3000';
+      const baseUrl = tenantSubdomain 
+        ? `${protocol}//${tenantSubdomain}.localhost:${port}`
+        : window.location.origin;
+      return `${baseUrl}/${slug}`;
+    }
+    
+    // For production: subdomain.maindomain.com
+    const hostParts = host.split('.');
+    const mainDomain = hostParts.length >= 2 
+      ? hostParts.slice(-2).join('.') 
+      : host;
+    const baseUrl = tenantSubdomain 
+      ? `${protocol}//${tenantSubdomain}.${mainDomain}`
+      : window.location.origin;
+    return `${baseUrl}/${slug}`;
+  };
 
   const fetchPages = async () => {
     if (!tenantId) {
@@ -110,13 +137,7 @@ export const OfferPageManager: React.FC<OfferPageManagerProps> = ({
   };
 
   const copyUrl = (slug: string) => {
-    const protocol = window.location.protocol;
-    const host = window.location.host;
-    const mainDomain = host.split('.').slice(-2).join('.');
-    const baseUrl = tenantSubdomain 
-      ? `${protocol}//${tenantSubdomain}.${mainDomain}`
-      : window.location.origin;
-    const url = `${baseUrl}/${slug}`;
+    const url = buildUrl(slug);
     navigator.clipboard.writeText(url);
     alert('URL copied!');
   };
@@ -140,88 +161,83 @@ export const OfferPageManager: React.FC<OfferPageManagerProps> = ({
   };
 
   return (
-    <div className="flex flex-col lg:flex-row h-full bg-gray-50">
+    <div className="flex flex-col lg:flex-row h-full bg-[#f9f9f9]">
       {/* Left Section - Table */}
-      <div className="flex-1 p-3 sm:p-4 lg:p-6 overflow-auto">
+      <div className="flex-1 p-3 sm:p-4 lg:p-5 overflow-auto">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Landing Page</h1>
-            <p className="text-gray-500 mt-1 text-sm">Create unlimited landing Page</p>
+            <h1 className="text-xl sm:text-[22px] font-bold text-[#023337] tracking-[0.11px] font-['Lato',sans-serif]">Landing Page</h1>
+            <p className="text-[#777] mt-1 text-base font-['Poppins',sans-serif]">Create unlimited landing Page</p>
           </div>
           <div className="flex flex-col xs:flex-row items-stretch xs:items-center gap-2 sm:gap-3">
-            <button className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 border border-orange-400 text-orange-500 rounded-lg hover:bg-orange-50 transition-colors text-sm">
+            <button className="flex items-center justify-center gap-1 px-3 sm:px-4 py-2.5 border border-[#ff6a00] text-black rounded-lg hover:bg-orange-50 transition-colors text-[15px] font-bold font-['Lato',sans-serif] tracking-[-0.3px]">
               Version 1
-              <ChevronDown size={16} />
+              <ChevronDown size={18} />
             </button>
             <button
               onClick={onCreateNew}
-              className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition-colors text-sm"
+              className="flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2.5 bg-gradient-to-r from-[#38bdf8] to-[#1e90ff] text-white rounded-lg hover:opacity-90 transition-opacity text-[15px] font-bold font-['Lato',sans-serif] tracking-[-0.3px]"
             >
-              <Plus size={18} />
+              <Plus size={20} />
               <span className="hidden xs:inline">Create</span> Landing Page
             </button>
           </div>
         </div>
 
         {/* Search and Filters */}
-        <div className="flex flex-col gap-3 mb-4">
-          {/* Search Row */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
-            <div className="relative flex-1 max-w-full sm:max-w-xs">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-              <input
-                type="text"
-                placeholder="Search Category"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-sm"
-              />
-            </div>
-            <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm font-medium">
-              Search
-            </button>
+        <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 sm:gap-4 mb-4">
+          {/* Search */}
+          <div className="relative flex-1 max-w-full sm:max-w-[240px]">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+            <input
+              type="text"
+              placeholder="Search Category"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 bg-[#f2f2f2] border-0 rounded-lg focus:ring-2 focus:ring-[#38bdf8] text-xs font-['Poppins',sans-serif] text-[#7b7b7b] placeholder:text-[#7b7b7b]"
+            />
           </div>
           
-          {/* Filters Row */}
-          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-            <div className="flex items-center gap-2 text-gray-500 text-sm">
-              <Filter size={16} />
-              <span className="hidden xs:inline">Filter:</span>
-            </div>
-            <select
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              className="flex-1 min-w-[100px] max-w-[150px] px-2 sm:px-3 py-2 border border-gray-200 rounded-lg text-xs sm:text-sm focus:ring-2 focus:ring-teal-500"
-            >
-              <option value="all">All Category</option>
-            </select>
-            <select
-              value={versionFilter}
-              onChange={(e) => setVersionFilter(e.target.value)}
-              className="flex-1 min-w-[100px] max-w-[150px] px-2 sm:px-3 py-2 border border-gray-200 rounded-lg text-xs sm:text-sm focus:ring-2 focus:ring-teal-500"
-            >
-              <option value="all">All Version</option>
-              <option value="v1">V-1</option>
-              <option value="v2">V-2</option>
-            </select>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="flex-1 min-w-[100px] max-w-[150px] px-2 sm:px-3 py-2 border border-gray-200 rounded-lg text-xs sm:text-sm focus:ring-2 focus:ring-teal-500"
-            >
-              <option value="all">All Status</option>
-              <option value="published">Published</option>
-              <option value="draft">Draft</option>
-            </select>
+          {/* Filter Label */}
+          <div className="flex items-center gap-2 text-black text-xs font-['Poppins',sans-serif]">
+            <Filter size={18} />
+            <span>Filter:</span>
           </div>
+          
+          {/* Filter Dropdowns */}
+          <select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            className="min-w-[100px] px-2 py-2 bg-[#f2f2f2] border-0 rounded-lg text-xs font-['Poppins',sans-serif] focus:ring-2 focus:ring-[#38bdf8] cursor-pointer"
+          >
+            <option value="all">All Category</option>
+          </select>
+          <select
+            value={versionFilter}
+            onChange={(e) => setVersionFilter(e.target.value)}
+            className="min-w-[100px] px-2 py-2 bg-[#f2f2f2] border-0 rounded-lg text-xs font-['Poppins',sans-serif] focus:ring-2 focus:ring-[#38bdf8] cursor-pointer"
+          >
+            <option value="all">All Version</option>
+            <option value="v1">V-1</option>
+            <option value="v2">V-2</option>
+          </select>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="min-w-[100px] px-2 py-2 bg-[#f2f2f2] border-0 rounded-lg text-xs font-['Poppins',sans-serif] focus:ring-2 focus:ring-[#38bdf8] cursor-pointer"
+          >
+            <option value="all">All Status</option>
+            <option value="published">Published</option>
+            <option value="draft">Draft</option>
+          </select>
         </div>
 
         {/* Table */}
-        <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+        <div className="bg-white rounded-lg overflow-hidden">
           {isLoading ? (
             <div className="p-8 text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600 mx-auto"></div>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#38bdf8] mx-auto"></div>
               <p className="mt-2 text-gray-500">Loading...</p>
             </div>
           ) : filteredPages.length === 0 ? (
@@ -231,7 +247,7 @@ export const OfferPageManager: React.FC<OfferPageManagerProps> = ({
               <p className="mt-1 text-sm text-gray-500">Get started by creating a new landing page.</p>
               <button
                 onClick={onCreateNew}
-                className="mt-4 px-4 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600"
+                className="mt-4 px-4 py-2 bg-gradient-to-r from-[#38bdf8] to-[#1e90ff] text-white rounded-lg hover:opacity-90"
               >
                 Create First Page
               </button>
@@ -241,93 +257,91 @@ export const OfferPageManager: React.FC<OfferPageManagerProps> = ({
               {/* Desktop Table View */}
               <div className="hidden md:block overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-teal-50 border-b border-teal-100">
+                  <thead className="bg-gradient-to-r from-[rgba(56,189,248,0.15)] to-[rgba(30,144,255,0.15)]">
                     <tr>
                       <th className="px-4 py-3 text-left">
                         <input
                           type="checkbox"
                           checked={selectedPages.length === paginatedPages.length && paginatedPages.length > 0}
                           onChange={handleSelectAll}
-                          className="w-4 h-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500"
+                          className="w-5 h-5 rounded border-[#eaf8e7] border-[1.5px] bg-white focus:ring-[#38bdf8]"
                         />
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">SL</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Product</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Landing Page URL</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Version</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Status</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Action</th>
+                      <th className="px-4 py-3 text-left text-base font-medium text-black font-['Poppins',sans-serif]">SL</th>
+                      <th className="px-4 py-3 text-left text-base font-medium text-black font-['Poppins',sans-serif]">Product</th>
+                      <th className="px-4 py-3 text-left text-base font-medium text-black font-['Poppins',sans-serif]">Landing Page URL</th>
+                      <th className="px-4 py-3 text-left text-base font-medium text-black font-['Poppins',sans-serif]">Version</th>
+                      <th className="px-4 py-3 text-left text-base font-medium text-black font-['Poppins',sans-serif]">Status</th>
+                      <th className="px-4 py-3 text-left text-base font-medium text-black font-['Poppins',sans-serif]">Action</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100">
+                  <tbody className="divide-y divide-[#b9b9b9]/50">
                     {paginatedPages.map((page, index) => (
                       <tr 
                         key={page._id} 
-                        className={`hover:bg-gray-50 cursor-pointer ${previewPage?._id === page._id ? 'bg-teal-50/50' : ''}`}
+                        className={`hover:bg-gray-50 cursor-pointer ${previewPage?._id === page._id ? 'bg-[rgba(56,189,248,0.08)]' : ''}`}
                         onClick={() => handleRowClick(page)}
                       >
-                        <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                        <td className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
                           <input
                             type="checkbox"
                             checked={selectedPages.includes(page._id)}
                             onChange={() => handleSelectPage(page._id)}
-                            className="w-4 h-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500"
+                            className="w-5 h-5 rounded border-[#eaf8e7] border-[1.5px] bg-white focus:ring-[#38bdf8]"
                           />
                         </td>
-                        <td className="px-4 py-3 text-sm text-gray-600">
+                        <td className="px-4 py-3.5 text-xs text-[#1d1a1a] font-['Poppins',sans-serif] text-center w-[50px]">
                           {startIndex + index + 1}
                         </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-3">
+                        <td className="px-4 py-3.5">
+                          <div className="flex items-center gap-2">
                             {page.imageUrl ? (
                               <img
                                 src={page.imageUrl}
                                 alt={page.productTitle}
-                                className="w-10 h-10 object-cover rounded-lg border"
+                                className="w-10 h-10 object-cover rounded-lg bg-gradient-to-r from-[#38bdf8] to-[#1e90ff]"
                               />
                             ) : (
-                              <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-                                <FileText size={16} className="text-gray-400" />
+                              <div className="w-10 h-10 bg-gradient-to-r from-[#38bdf8] to-[#1e90ff] rounded-lg flex items-center justify-center">
+                                <FileText size={16} className="text-white" />
                               </div>
                             )}
-                            <div>
-                              <p className="font-medium text-gray-900 text-sm line-clamp-2 max-w-[150px]">
-                                {page.productTitle}
-                              </p>
-                            </div>
+                            <p className="text-xs text-[#1d1a1a] font-['Poppins',sans-serif] line-clamp-2 max-w-[120px]">
+                              {page.productTitle}
+                            </p>
                           </div>
                         </td>
-                        <td className="px-4 py-3">
-                          <p className="text-sm text-gray-600 truncate max-w-[180px]">
-                            {page.urlSlug}
+                        <td className="px-4 py-3.5">
+                          <p className="text-xs text-[#1d1a1a] font-['Poppins',sans-serif] truncate max-w-[160px]">
+                            offer/{page.urlSlug}
                           </p>
                         </td>
-                        <td className="px-4 py-3">
-                          <span className="px-3 py-1 bg-teal-100 text-teal-700 rounded text-xs font-medium">
+                        <td className="px-4 py-3.5">
+                          <span className="inline-flex items-center justify-center px-3 py-0.5 rounded-full text-xs font-medium bg-gradient-to-r from-[rgba(56,189,248,0.2)] to-[rgba(30,144,255,0.2)] text-transparent bg-clip-text font-['Poppins',sans-serif]" style={{ backgroundImage: 'linear-gradient(to right, #38bdf8, #1e90ff)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                             V-1
                           </span>
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3.5">
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               handleTogglePublish(page);
                             }}
-                            className={`px-3 py-1 rounded text-xs font-medium ${
+                            className={`px-3 py-0.5 rounded-full text-xs font-medium font-['Poppins',sans-serif] ${
                               page.status === 'published'
-                                ? 'bg-teal-500 text-white hover:bg-teal-600'
+                                ? 'bg-[#c1ffbc] text-[#085e00]'
                                 : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
                             }`}
                           >
                             {page.status === 'published' ? 'Publish' : 'Draft'}
                           </button>
                         </td>
-                        <td className="px-4 py-3 relative" onClick={(e) => e.stopPropagation()}>
+                        <td className="px-4 py-3.5 relative" onClick={(e) => e.stopPropagation()}>
                           <button
                             onClick={() => setActionMenuOpen(actionMenuOpen === page._id ? null : page._id)}
                             className="p-1 hover:bg-gray-100 rounded"
                           >
-                            <MoreVertical size={18} className="text-gray-500" />
+                            <MoreVertical size={20} className="text-gray-500" />
                           </button>
                           
                           {actionMenuOpen === page._id && (
@@ -361,13 +375,7 @@ export const OfferPageManager: React.FC<OfferPageManagerProps> = ({
                               </button>
                               <button
                                 onClick={() => {
-                                  (() => {
-                                    const protocol = window.location.protocol;
-                                    const host = window.location.host;
-                                    const mainDomain = host.split('.').slice(-2).join('.');
-                                    const baseUrl = tenantSubdomain ? `${protocol}//${tenantSubdomain}.${mainDomain}` : window.location.origin;
-                                    window.open(`${baseUrl}/${page.urlSlug}`, '_blank');
-                                  })();
+                                  window.open(buildUrl(page.urlSlug), '_blank');
                                   setActionMenuOpen(null);
                                 }}
                                 className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2"
@@ -394,11 +402,11 @@ export const OfferPageManager: React.FC<OfferPageManagerProps> = ({
               </div>
 
               {/* Mobile Card View */}
-              <div className="md:hidden divide-y divide-gray-100">
+              <div className="md:hidden divide-y divide-[#b9b9b9]/50">
                 {paginatedPages.map((page, index) => (
                   <div
                     key={page._id}
-                    className={`p-4 hover:bg-gray-50 ${previewPage?._id === page._id ? 'bg-teal-50/50' : ''}`}
+                    className={`p-4 hover:bg-gray-50 ${previewPage?._id === page._id ? 'bg-[rgba(56,189,248,0.08)]' : ''}`}
                     onClick={() => handleRowClick(page)}
                   >
                     <div className="flex gap-3">
@@ -406,33 +414,33 @@ export const OfferPageManager: React.FC<OfferPageManagerProps> = ({
                         <img
                           src={page.imageUrl}
                           alt={page.productTitle}
-                          className="w-16 h-16 object-cover rounded-lg border flex-shrink-0"
+                          className="w-14 h-14 object-cover rounded-lg flex-shrink-0 bg-gradient-to-r from-[#38bdf8] to-[#1e90ff]"
                         />
                       ) : (
-                        <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                          <FileText size={20} className="text-gray-400" />
+                        <div className="w-14 h-14 bg-gradient-to-r from-[#38bdf8] to-[#1e90ff] rounded-lg flex items-center justify-center flex-shrink-0">
+                          <FileText size={18} className="text-white" />
                         </div>
                       )}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2">
-                          <h4 className="font-medium text-gray-900 text-sm line-clamp-2">{page.productTitle}</h4>
+                          <h4 className="font-medium text-[#1d1a1a] text-xs line-clamp-2 font-['Poppins',sans-serif]">{page.productTitle}</h4>
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               handleTogglePublish(page);
                             }}
-                            className={`px-2 py-0.5 rounded text-xs font-medium flex-shrink-0 ${
+                            className={`px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0 font-['Poppins',sans-serif] ${
                               page.status === 'published'
-                                ? 'bg-teal-500 text-white'
+                                ? 'bg-[#c1ffbc] text-[#085e00]'
                                 : 'bg-gray-200 text-gray-600'
                             }`}
                           >
                             {page.status === 'published' ? 'Publish' : 'Draft'}
                           </button>
                         </div>
-                        <p className="text-xs text-gray-500 truncate mt-1">{page.urlSlug}</p>
+                        <p className="text-xs text-[#1d1a1a] truncate mt-1 font-['Poppins',sans-serif]">offer/{page.urlSlug}</p>
                         <div className="flex items-center justify-between mt-2">
-                          <span className="px-2 py-0.5 bg-teal-100 text-teal-700 rounded text-xs font-medium">V-1</span>
+                          <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-gradient-to-r from-[rgba(56,189,248,0.2)] to-[rgba(30,144,255,0.2)]" style={{ backgroundImage: 'linear-gradient(to right, #38bdf8, #1e90ff)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>V-1</span>
                           <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                             <button
                               onClick={() => onPreview(page)}
@@ -442,7 +450,7 @@ export const OfferPageManager: React.FC<OfferPageManagerProps> = ({
                             </button>
                             <button
                               onClick={() => onEdit(page)}
-                              className="p-1.5 hover:bg-gray-100 rounded text-blue-600"
+                              className="p-1.5 hover:bg-gray-100 rounded text-[#38bdf8]"
                             >
                               <Edit2 size={16} />
                             </button>
@@ -461,8 +469,8 @@ export const OfferPageManager: React.FC<OfferPageManagerProps> = ({
               </div>
 
               {/* Pagination */}
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t bg-gray-50">
-                <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-600">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-[#b9b9b9]/30 bg-gray-50">
+                <div className="flex items-center gap-2 text-xs text-gray-600 font-['Poppins',sans-serif]">
                   <span>Show</span>
                   <select
                     value={pageSize}
@@ -470,7 +478,7 @@ export const OfferPageManager: React.FC<OfferPageManagerProps> = ({
                       setPageSize(Number(e.target.value));
                       setCurrentPage(1);
                     }}
-                    className="px-2 py-1 border rounded text-sm"
+                    className="px-2 py-1 bg-[#f2f2f2] border-0 rounded text-xs"
                   >
                     <option value={10}>10</option>
                     <option value={25}>25</option>
@@ -480,7 +488,7 @@ export const OfferPageManager: React.FC<OfferPageManagerProps> = ({
                 </div>
                 
                 <div className="flex flex-col xs:flex-row items-center gap-2">
-                  <span className="text-xs sm:text-sm text-gray-600">
+                  <span className="text-xs text-gray-600 font-['Poppins',sans-serif]">
                     Showing {startIndex + 1}-{Math.min(startIndex + pageSize, filteredPages.length)} of {filteredPages.length}
                   </span>
                   <div className="flex items-center gap-1">
@@ -497,9 +505,9 @@ export const OfferPageManager: React.FC<OfferPageManagerProps> = ({
                         <button
                           key={pageNum}
                           onClick={() => setCurrentPage(pageNum)}
-                          className={`w-8 h-8 rounded text-sm ${
+                          className={`w-8 h-8 rounded text-xs ${
                             currentPage === pageNum
-                              ? 'bg-teal-500 text-white'
+                              ? 'bg-gradient-to-r from-[#38bdf8] to-[#1e90ff] text-white'
                               : 'hover:bg-gray-200 text-gray-600'
                           }`}
                         >
@@ -523,39 +531,32 @@ export const OfferPageManager: React.FC<OfferPageManagerProps> = ({
       </div>
 
       {/* Right Section - Preview (Hidden on mobile, shown on lg+) */}
-      <div className="hidden lg:flex w-[380px] border-l bg-white p-6 flex-col">
+      <div className="hidden lg:flex w-[420px] bg-white rounded-lg p-4 flex-col m-2 ml-0">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">Preview</h2>
-          {previewPage && (
-            <button
-              onClick={() => {
-                const protocol = window.location.protocol;
-                const host = window.location.host;
-                const mainDomain = host.split('.').slice(-2).join('.');
-                const baseUrl = tenantSubdomain ? `${protocol}//${tenantSubdomain}.${mainDomain}` : window.location.origin;
-                window.open(`${baseUrl}/${previewPage.urlSlug}`, '_blank');
-              }}
-              className="p-2 hover:bg-gray-100 rounded"
-              title="Open in new tab"
-            >
-              <ExternalLink size={18} className="text-gray-500" />
-            </button>
-          )}
+          <h2 className="text-xl font-bold text-[#023337] font-['Lato',sans-serif] tracking-[0.1px]">Preview</h2>
+          <div className="flex items-center gap-2">
+            {previewPage && (
+              <button
+                onClick={() => window.open(buildUrl(previewPage.urlSlug), '_blank')}
+                className="p-2 hover:bg-gray-100 rounded"
+                title="Open in new tab"
+              >
+                <div className="flex items-center gap-1">
+                  <Monitor size={16} className="text-gray-500" />
+                  <Smartphone size={14} className="text-gray-500" />
+                </div>
+              </button>
+            )}
+          </div>
         </div>
         
         {previewPage ? (
-          <div className="flex-1 overflow-hidden rounded-lg border bg-gray-100">
+          <div className="flex-1 overflow-hidden rounded-lg bg-gray-100">
             <div className="w-full h-full overflow-auto">
-              <div className="transform scale-[0.4] origin-top-left w-[250%]">
+              <div className="transform scale-[0.38] origin-top-left w-[263%]">
                 <iframe
-                  src={(() => {
-                    const protocol = window.location.protocol;
-                    const host = window.location.host;
-                    const mainDomain = host.split('.').slice(-2).join('.');
-                    const baseUrl = tenantSubdomain ? `${protocol}//${tenantSubdomain}.${mainDomain}` : window.location.origin;
-                    return `${baseUrl}/${previewPage.urlSlug}`;
-                  })()}
-                  className="w-full h-[1500px] border-0"
+                  src={buildUrl(previewPage.urlSlug)}
+                  className="w-full h-[1800px] border-0"
                   title="Preview"
                 />
               </div>
@@ -565,7 +566,7 @@ export const OfferPageManager: React.FC<OfferPageManagerProps> = ({
           <div className="flex-1 flex items-center justify-center bg-gray-100 rounded-lg">
             <div className="text-center text-gray-400">
               <Eye size={48} className="mx-auto mb-2 opacity-50" />
-              <p>Select a page to preview</p>
+              <p className="font-['Poppins',sans-serif]">Select a page to preview</p>
             </div>
           </div>
         )}
@@ -574,21 +575,21 @@ export const OfferPageManager: React.FC<OfferPageManagerProps> = ({
       {/* Delete Confirmation Modal */}
       {deleteModal.open && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-xl">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
             <div className="flex items-center gap-3 mb-4">
               <div className="p-2 bg-red-100 rounded-full">
                 <AlertTriangle className="text-red-600" size={24} />
               </div>
-              <h3 className="text-lg font-semibold">Delete Landing Page</h3>
+              <h3 className="text-lg font-bold text-[#023337] font-['Lato',sans-serif]">Delete Landing Page</h3>
             </div>
-            <p className="text-gray-600 mb-6">
+            <p className="text-gray-600 mb-6 font-['Poppins',sans-serif] text-sm">
               Are you sure you want to delete "<strong>{deleteModal.page?.productTitle}</strong>"? 
               This action cannot be undone.
             </p>
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => setDeleteModal({ open: false, page: null })}
-                className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+                className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg font-['Poppins',sans-serif] text-sm"
                 disabled={isDeleting}
               >
                 Cancel
@@ -596,7 +597,7 @@ export const OfferPageManager: React.FC<OfferPageManagerProps> = ({
               <button
                 onClick={handleDelete}
                 disabled={isDeleting}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 font-['Poppins',sans-serif] text-sm"
               >
                 {isDeleting ? 'Deleting...' : 'Delete'}
               </button>

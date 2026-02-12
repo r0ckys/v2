@@ -26,7 +26,8 @@ const offerPageSchema = z.object({
   productId: z.number().optional(),
   productTitle: z.string().min(1, 'Product title is required'),
   searchQuery: z.string().optional(),
-  imageUrl: z.string().url('Invalid image URL'),
+  imageUrl: z.string().min(1, 'Image URL is required'),
+  productImages: z.array(z.string()).optional().default([]),
   offerEndDate: z.string().transform(str => new Date(str)),
   description: z.string().min(1, 'Description is required'),
   productOfferInfo: z.string().optional().default(''),
@@ -36,6 +37,26 @@ const offerPageSchema = z.object({
     text: z.string()
   })).optional().default([]),
   whyBuySection: z.string().optional().default(''),
+  // New dynamic sections
+  faqs: z.array(z.object({
+    id: z.string().default(() => crypto.randomUUID()),
+    question: z.string(),
+    answer: z.string()
+  })).optional().default([]),
+  faqHeadline: z.string().optional().default(''),
+  reviews: z.array(z.object({
+    id: z.string().default(() => crypto.randomUUID()),
+    name: z.string(),
+    quote: z.string(),
+    rating: z.number().min(1).max(5),
+    image: z.string().optional()
+  })).optional().default([]),
+  reviewHeadline: z.string().optional().default(''),
+  videoLink: z.string().optional().default(''),
+  price: z.number().optional(),
+  originalPrice: z.number().optional(),
+  backgroundColor: z.string().optional().default('#FFFFFF'),
+  textColor: z.string().optional().default('#000000'),
   urlSlug: z.string().min(1, 'URL slug is required'),
   status: z.enum(['draft', 'published']).optional().default('draft')
 });

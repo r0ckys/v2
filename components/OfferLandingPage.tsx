@@ -18,7 +18,12 @@ import {
   Sparkles,
   BadgeCheck,
   Package,
-  HeartHandshake
+  HeartHandshake,
+  HelpCircle,
+  MessageSquare,
+  Play,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 
 // Language translations
@@ -62,7 +67,10 @@ const translations = {
     enterName: 'Please enter your name',
     enterValidPhone: 'Please enter a valid phone number',
     enterAddress: 'Please enter your delivery address',
-    orderFailed: 'Failed to submit order. Please try again.'
+    orderFailed: 'Failed to submit order. Please try again.',
+    faq: 'Frequently Asked Questions',
+    customerReviews: 'Customer Reviews',
+    watchVideo: 'Watch Product Video'
   },
   Bangla: {
     specialOffer: 'বিশেষ অফার',
@@ -103,7 +111,10 @@ const translations = {
     enterName: 'আপনার নাম লিখুন',
     enterValidPhone: 'সঠিক মোবাইল নম্বর লিখুন',
     enterAddress: 'ডেলিভারি ঠিকানা লিখুন',
-    orderFailed: 'অর্ডার জমা দিতে ব্যর্থ হয়েছে। আবার চেষ্টা করুন।'
+    orderFailed: 'অর্ডার জমা দিতে ব্যর্থ হয়েছে। আবার চেষ্টা করুন।',
+    faq: 'সচরাচর জিজ্ঞাসা',
+    customerReviews: 'কাস্টমার রিভিউ',
+    watchVideo: 'পণ্যের ভিডিও দেখুন'
   }
 };
 
@@ -115,18 +126,41 @@ interface OfferPageBenefit {
   icon?: string;
 }
 
+interface OfferPageFAQ {
+  id: string;
+  question: string;
+  answer: string;
+}
+
+interface OfferPageReview {
+  id: string;
+  name: string;
+  quote: string;
+  rating: number;
+  image?: string;
+}
+
 interface OfferPageData {
   _id: string;
   productTitle: string;
   productId?: string;
   searchQuery?: string;
   imageUrl: string;
+  productImages?: string[];
   offerEndDate: string;
   description: string;
   productOfferInfo: string;
   paymentSectionTitle: string;
   benefits: OfferPageBenefit[];
   whyBuySection: string;
+  // New dynamic sections
+  faqs?: OfferPageFAQ[];
+  faqHeadline?: string;
+  reviews?: OfferPageReview[];
+  reviewHeadline?: string;
+  videoLink?: string;
+  backgroundColor?: string;
+  textColor?: string;
   urlSlug: string;
   status: 'draft' | 'published' | 'archived';
   views?: number;
@@ -219,6 +253,42 @@ const CountdownTimer: React.FC<{ endDate: string; lang: Language }> = ({ endDate
         </p>
       )}
     </div>
+  );
+};
+
+// FAQ Section with accordion
+const FAQSection: React.FC<{ faqs: OfferPageFAQ[]; headline: string }> = ({ faqs, headline }) => {
+  const [openIndex, setOpenIndex] = useState<number | null>(0);
+
+  return (
+    <section className="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-sm border border-gray-100">
+      <h2 className="text-base sm:text-xl lg:text-2xl font-bold text-gray-900 mb-3 sm:mb-6 flex items-center gap-2">
+        <div className="p-1.5 sm:p-2 bg-indigo-100 rounded-lg"><HelpCircle className="text-indigo-600" size={18} /></div>
+        {headline}
+      </h2>
+      <div className="space-y-2 sm:space-y-3">
+        {faqs.map((faq, index) => (
+          <div key={faq.id || index} className="border border-gray-200 rounded-xl overflow-hidden">
+            <button
+              onClick={() => setOpenIndex(openIndex === index ? null : index)}
+              className="w-full flex items-center justify-between p-3 sm:p-4 text-left bg-gray-50 hover:bg-gray-100 transition-colors"
+            >
+              <span className="font-medium text-gray-900 text-sm sm:text-base pr-4">{faq.question}</span>
+              {openIndex === index ? (
+                <ChevronUp className="text-gray-500 flex-shrink-0" size={18} />
+              ) : (
+                <ChevronDown className="text-gray-500 flex-shrink-0" size={18} />
+              )}
+            </button>
+            {openIndex === index && (
+              <div className="p-3 sm:p-4 bg-white border-t border-gray-100">
+                <p className="text-gray-600 text-xs sm:text-sm leading-relaxed">{faq.answer}</p>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </section>
   );
 };
 
@@ -515,6 +585,69 @@ export const OfferLandingPage: React.FC<OfferLandingPageProps> = ({ offerPage, o
                   {t.whyChooseUs}
                 </h2>
                 <div className="prose prose-sm sm:prose-base max-w-none" dangerouslySetInnerHTML={{ __html: offerPage.whyBuySection }} />
+              </section>
+            )}
+
+            {/* Video Section */}
+            {offerPage.videoLink && (
+              <section className="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-sm border border-gray-100">
+                <h2 className="text-base sm:text-xl lg:text-2xl font-bold text-gray-900 mb-3 sm:mb-4 flex items-center gap-2">
+                  <div className="p-1.5 sm:p-2 bg-red-100 rounded-lg"><Play className="text-red-600" size={18} /></div>
+                  {t.watchVideo}
+                </h2>
+                <div className="aspect-video rounded-xl overflow-hidden bg-gray-100">
+                  <iframe
+                    src={offerPage.videoLink.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/')}
+                    title="Product Video"
+                    className="w-full h-full"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
+                </div>
+              </section>
+            )}
+
+            {/* FAQ Section */}
+            {offerPage.faqs && offerPage.faqs.length > 0 && (
+              <FAQSection 
+                faqs={offerPage.faqs} 
+                headline={offerPage.faqHeadline || t.faq}
+              />
+            )}
+
+            {/* Reviews Section */}
+            {offerPage.reviews && offerPage.reviews.length > 0 && (
+              <section className="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-sm border border-gray-100">
+                <h2 className="text-base sm:text-xl lg:text-2xl font-bold text-gray-900 mb-3 sm:mb-6 flex items-center gap-2">
+                  <div className="p-1.5 sm:p-2 bg-amber-100 rounded-lg"><MessageSquare className="text-amber-600" size={18} /></div>
+                  {offerPage.reviewHeadline || t.customerReviews}
+                </h2>
+                <div className="space-y-3 sm:space-y-4">
+                  {offerPage.reviews.map((review, index) => (
+                    <div key={review.id || index} className="bg-gradient-to-r from-gray-50 to-slate-50 rounded-xl p-3 sm:p-4 border border-gray-100">
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center flex-shrink-0 text-white font-bold text-sm sm:text-base">
+                          {review.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between flex-wrap gap-2">
+                            <h4 className="font-semibold text-gray-900 text-sm sm:text-base">{review.name}</h4>
+                            <div className="flex gap-0.5">
+                              {[...Array(5)].map((_, i) => (
+                                <Star 
+                                  key={i} 
+                                  size={14} 
+                                  className={i < review.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'} 
+                                />
+                              ))}
+                            </div>
+                          </div>
+                          <p className="text-gray-600 text-xs sm:text-sm mt-1.5 leading-relaxed">{review.quote}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </section>
             )}
 

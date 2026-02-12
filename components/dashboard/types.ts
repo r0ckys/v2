@@ -89,3 +89,10 @@ export interface BestSellingProductsProps {
 export interface TopProductsProps {
   products: Product[];
 }
+
+export interface SidebarProps {
+  activeItem?: string;
+  onNavigate?: (item: string) => void;
+  onLogoutClick?: () => void;
+  className?: string;
+}

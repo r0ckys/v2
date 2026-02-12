@@ -1661,20 +1661,49 @@ async getPaymentMethods(tenantId?: string): Promise<PaymentMethod[]> {
 
 export const DataService = new DataServiceImpl();
 
-export interface OfferPageData {
-  title: string;
-  slug: string;
-  content: unknown;
-  status: 'draft' | 'published';
-  template?: string;
+export interface OfferPageBenefit {
+  id: string;
+  text: string;
 }
 
-export interface OfferPageResponse {
-  data: OfferPageData & { _id: string; tenantId: string; views: number; orders: number; createdAt: string; updatedAt: string };
+export interface OfferPageData {
+  productId?: number;
+  productTitle: string;
+  searchQuery?: string;
+  imageUrl: string;
+  offerEndDate: string;
+  description: string;
+  productOfferInfo?: string;
+  paymentSectionTitle?: string;
+  benefits?: OfferPageBenefit[];
+  whyBuySection?: string;
+  urlSlug: string;
+  status: 'draft' | 'published';
+  // Dynamic sections
+  faqHeadline?: string;
+  faqs?: { id: string; question: string; answer: string }[];
+  reviewHeadline?: string;
+  reviews?: { id: string; name: string; quote: string; rating: number; image?: string }[];
+  videoLink?: string;
+  productImages?: string[];
+  backgroundColor?: string;
+  textColor?: string;
+  price?: number;
+  originalPrice?: number;
+}
+
+export interface OfferPageResponse extends OfferPageData {
+  _id: string;
+  tenantId: string;
+  views: number;
+  orders: number;
+  createdAt?: string;
+  updatedAt?: string;
+  publishedAt?: string;
 }
 
 export interface OfferPagesListResponse {
-  data: (OfferPageData & { _id: string; tenantId: string; views: number; orders: number })[];
+  data: OfferPageResponse[];
   pagination: { page: number; limit: number; total: number; pages: number };
 }
 
@@ -1759,6 +1788,7 @@ export const createOfferPage = async (tenantId: string, data: OfferPageData): Pr
   
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
+    console.error('[createOfferPage] Validation error details:', errorData);
     throw new Error(errorData.error || `Failed to create offer page: ${response.statusText}`);
   }
   

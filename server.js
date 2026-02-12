@@ -85,9 +85,20 @@ async function createServer() {
   // Security headers middleware
   app.use((req, res, next) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
     res.setHeader('X-XSS-Protection', '1; mode=block');
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    
+    // Allow iframe embedding from same origin and subdomains (for preview feature)
+    const host = req.headers.host || '';
+    if (host.includes('localhost')) {
+      // For localhost development: allow any localhost subdomain
+      res.setHeader('Content-Security-Policy', "frame-ancestors 'self' http://*.localhost:3000 http://localhost:3000");
+    } else {
+      // For production: allow same origin and subdomains
+      const baseDomain = host.split('.').slice(-2).join('.');
+      res.setHeader('Content-Security-Policy', `frame-ancestors 'self' https://*.${baseDomain} https://${baseDomain}`);
+    }
+    // Remove X-Frame-Options as we're using CSP frame-ancestors instead
     next();
   });
 

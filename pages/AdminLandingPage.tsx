@@ -3,7 +3,8 @@ import { useTenant } from '../hooks/useTenant';
 import { OfferPageManager } from '../components/OfferPageManager';
 import { OfferPageBuilder } from '../components/OfferPageBuilder';
 import { OfferLandingPage } from '../components/OfferLandingPage';
-import { DataService, OfferPageResponse } from '../services/DataService';
+import { CreateLandingPageForm, LandingPageFormData } from '../components/CreateLandingPageForm';
+import { DataService, OfferPageResponse, createOfferPage } from '../services/DataService';
 import { Product } from '../types';
 import { ArrowLeft, X } from 'lucide-react';
 
@@ -66,6 +67,68 @@ const AdminLandingPage: React.FC<AdminLandingPageProps> = ({ tenantSubdomain: pr
     setRefreshKey(prev => prev + 1);
   };
 
+  const handleCreateLandingPage = async (data: LandingPageFormData) => {
+    try {
+      // Validate required fields
+      if (!data.productTitle || !data.productTitle.trim()) {
+        throw new Error('Product title is required');
+      }
+      if (!data.imageUrl || !data.imageUrl.trim()) {
+        throw new Error('Main image is required');
+      }
+      if (!data.description || !data.description.trim()) {
+        throw new Error('Description is required');
+      }
+
+      // Generate URL slug if not provided
+      const urlSlug = data.urlSlug?.trim() || 
+        data.productTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + '-' + Date.now().toString(36).slice(-6);
+
+      // Transform data to match the API format
+      const pageData = {
+        productId: data.productId || undefined,
+        productTitle: data.productTitle.trim(),
+        searchQuery: '',
+        imageUrl: data.imageUrl.trim(),
+        offerEndDate: data.offerEndDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        description: data.description.trim(),
+        productOfferInfo: data.productOfferInfo || '',
+        paymentSectionTitle: data.paymentSectionTitle || '',
+        whyBuySection: data.whyBuySection || '',
+        urlSlug,
+        status: data.status,
+        benefits: (data.benefits || []).filter(b => b.text?.trim()).map(b => ({ id: b.id, text: b.text.trim() })),
+        price: data.price,
+        originalPrice: data.originalPrice,
+        // Additional fields from the new form
+        faqHeadline: data.faqHeadline || '',
+        faqs: (data.faqs || []).filter(f => f.question?.trim() && f.answer?.trim()).map(f => ({
+          id: f.id,
+          question: f.question.trim(),
+          answer: f.answer.trim()
+        })),
+        reviewHeadline: data.reviewHeadline || '',
+        reviews: (data.reviews || []).filter(r => r.name?.trim() && r.quote?.trim()).map(r => ({
+          id: r.id,
+          name: r.name.trim(),
+          quote: r.quote.trim(),
+          rating: r.rating || 5
+        })),
+        videoLink: data.videoLink || '',
+        productImages: (data.productImages || []).filter(img => img?.trim()),
+        backgroundColor: data.backgroundColor || '#FFFFFF',
+        textColor: data.textColor || '#000000'
+      };
+      
+      console.log('[AdminLandingPage] Creating page with data:', pageData);
+      await createOfferPage(activeTenantId, pageData);
+      handleSave();
+    } catch (error) {
+      console.error('Error creating landing page:', error);
+      throw error;
+    }
+  };
+
   const handleCancel = () => {
     setViewMode('list');
     setEditingPage(null);
@@ -102,8 +165,20 @@ const AdminLandingPage: React.FC<AdminLandingPageProps> = ({ tenantSubdomain: pr
     );
   }
 
-  // Create/Edit mode
-  if (viewMode === 'create' || viewMode === 'edit') {
+  // Create mode - use new CreateLandingPageForm
+  if (viewMode === 'create') {
+    return (
+      <CreateLandingPageForm
+        products={products}
+        tenantId={activeTenantId}
+        onSave={handleCreateLandingPage}
+        onCancel={handleCancel}
+      />
+    );
+  }
+
+  // Edit mode - use existing OfferPageBuilder
+  if (viewMode === 'edit') {
     return (
       <OfferPageBuilder
         tenantId={activeTenantId}

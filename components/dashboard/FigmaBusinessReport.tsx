@@ -1755,7 +1755,7 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
       <div className="mt-4 px-5">
         {/* Table Header */}
         <div className="bg-gradient-to-r from-[#38bdf8]/10 to-[#1e90ff]/10 h-[48px] flex items-center rounded-t-lg">
-          <div className="w-[60px] text-center">
+          <div className="w-12 flex-shrink-0 text-center">
             <input
               type="checkbox"
               className="w-5 h-5 rounded border-[#eaf8e7] accent-[#38bdf8]"
@@ -1769,14 +1769,14 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
               }}
             />
           </div>
-          <div className="w-[60px]"><p className="text-[16px] font-medium text-black font-['Poppins']">SL</p></div>
-          <div className="w-[60px]"><p className="text-[16px] font-medium text-black font-['Poppins']">Doc</p></div>
-          <div className="w-[150px]"><p className="text-[16px] font-medium text-black font-['Poppins']">Name</p></div>
-          <div className="w-[130px]"><p className="text-[16px] font-medium text-black font-['Poppins']">Number</p></div>
-          <div className="w-[120px]"><p className="text-[16px] font-medium text-black font-['Poppins']">Category</p></div>
-          <div className="w-[120px]"><p className="text-[16px] font-medium text-black font-['Poppins']">Date</p></div>
-          <div className="w-[100px] text-center"><p className="text-[16px] font-medium text-black font-['Poppins']">Amount</p></div>
-          <div className="w-[80px] text-center"><p className="text-[16px] font-medium text-black font-['Poppins']">Action</p></div>
+          <div className="w-14 flex-shrink-0"><p className="text-[16px] font-medium text-black font-['Poppins']">SL</p></div>
+          <div className="w-16 flex-shrink-0"><p className="text-[16px] font-medium text-black font-['Poppins']">Doc</p></div>
+          <div className="flex-1 min-w-[120px]"><p className="text-[16px] font-medium text-black font-['Poppins']">Name</p></div>
+          <div className="w-28 flex-shrink-0"><p className="text-[16px] font-medium text-black font-['Poppins']">Number</p></div>
+          <div className="w-28 flex-shrink-0"><p className="text-[16px] font-medium text-black font-['Poppins']">Category</p></div>
+          <div className="w-28 flex-shrink-0"><p className="text-[16px] font-medium text-black font-['Poppins']">Date</p></div>
+          <div className="w-24 flex-shrink-0 text-center"><p className="text-[16px] font-medium text-black font-['Poppins']">Amount</p></div>
+          <div className="w-16 flex-shrink-0 text-center"><p className="text-[16px] font-medium text-black font-['Poppins']">Action</p></div>
         </div>
 
         {/* Table Rows */}
@@ -1795,7 +1795,7 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
               key={purchase._id}
               className="h-[68px] flex items-center border-b border-[#b9b9b9]/50 hover:bg-gray-50"
             >
-              <div className="w-[60px] text-center">
+              <div className="w-12 flex-shrink-0 text-center">
                 <input
                   type="checkbox"
                   className="w-5 h-5 rounded border-[#eaf8e7] accent-[#38bdf8]"
@@ -1803,10 +1803,10 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
                   onChange={() => togglePurchaseSelection(purchase._id)}
                 />
               </div>
-              <div className="w-[60px]">
+              <div className="w-14 flex-shrink-0">
                 <p className="text-[12px] text-[#1d1a1a] font-['Poppins']">{filteredPurchases.length - ((purchasePage - 1) * purchasePageSize) - index}</p>
               </div>
-              <div className="w-[60px]">
+              <div className="w-16 flex-shrink-0">
                 <div className="bg-[#f5f5f5] w-[46px] h-[46px] rounded-lg flex items-center justify-center">
                   {purchase.items?.[0]?.productImage ? (
                     <img src={purchase.items[0].productImage} alt="" className="w-full h-full object-cover rounded-lg" />
@@ -1815,24 +1815,24 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
                   )}
                 </div>
               </div>
-              <div className="w-[150px]">
-                <p className="text-[12px] text-[#1d1a1a] font-['Poppins']">{purchase.supplierName || 'N/A'}</p>
+              <div className="flex-1 min-w-[120px]">
+                <p className="text-[12px] text-[#1d1a1a] font-['Poppins'] truncate">{purchase.supplierName || 'N/A'}</p>
               </div>
-              <div className="w-[130px]">
+              <div className="w-28 flex-shrink-0">
                 <p className="text-[12px] text-[#1d1a1a] font-['Poppins']">{purchase.mobileNumber || '-'}</p>
               </div>
-              <div className="w-[120px]">
+              <div className="w-28 flex-shrink-0">
                 <p className="text-[12px] text-[#1d1a1a] font-['Poppins']">Product Buy</p>
               </div>
-              <div className="w-[120px]">
+              <div className="w-28 flex-shrink-0">
                 <p className="text-[12px] text-[#1d1a1a] font-['Poppins']">
                   {new Date(purchase.createdAt).toLocaleDateString('en-GB').replace(/\//g, '-')}
                 </p>
               </div>
-              <div className="w-[100px] text-center">
+              <div className="w-24 flex-shrink-0 text-center">
                 <p className="text-[12px] text-[#da0000] font-['Poppins']">৳{purchase.totalAmount?.toLocaleString('en-IN') || 0}</p>
               </div>
-              <div className="w-[80px] flex justify-center relative">
+              <div className="w-16 flex-shrink-0 flex justify-center relative">
                 <button
                   onClick={() => setPurchaseActionMenuOpen(purchaseActionMenuOpen === purchase._id ? null : purchase._id)}
                   className="p-1 hover:bg-gray-100 rounded"

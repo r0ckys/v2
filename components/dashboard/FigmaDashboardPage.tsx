@@ -27,6 +27,7 @@ interface FigmaDashboardPageProps {
   orders?: Order[];
   products?: Product[];
   onNavigate?: (page: string) => void;
+  onLogoutClick?: () => void;
   hasUnreadChat?: boolean;
   onOpenAdminChat?: () => void;
 }
@@ -38,6 +39,7 @@ const FigmaDashboardPage: React.FC<FigmaDashboardPageProps> = ({
   orders = [],
   products = [],
   onNavigate,
+  onLogoutClick,
   hasUnreadChat = false,
   onOpenAdminChat
 }) => {
@@ -134,7 +136,8 @@ const FigmaDashboardPage: React.FC<FigmaDashboardPageProps> = ({
     <DashboardLayout
       sidebarProps={{
         activeItem: currentPage,
-        onNavigate: handleSidebarNavigation
+        onNavigate: handleSidebarNavigation,
+        onLogoutClick: onLogoutClick
       }}
       headerProps={{
         user,
