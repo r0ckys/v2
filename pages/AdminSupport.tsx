@@ -53,7 +53,7 @@ interface AdminSupportProps {
 const getApiUrl = (): string => {
   if (typeof window === 'undefined') return 'https://allinbangla.com/api';
   const hostname = window.location.hostname;
-  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+  if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.endsWith('.localhost')) {
     return 'http://localhost:5001/api';
   }
   const parts = hostname.split('.');

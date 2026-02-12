@@ -122,9 +122,12 @@ const FigmaAnalyticsChart: React.FC<FigmaAnalyticsChartProps> = ({
     return date.toLocaleDateString('en-GB', { month: 'short', day: 'numeric' });
   };
 
-  // Calculate bar height (max 192px for h-48)
+  // Calculate bar height (max 160px, min 60px for visibility)
   const getBarHeight = (value: number) => {
-    return Math.max(20, Math.round((value / maxValue) * 192));
+    const maxHeight = 160;
+    const minHeight = 60;
+    if (maxValue === 0) return minHeight;
+    return Math.max(minHeight, Math.round((value / maxValue) * maxHeight));
   };
 
   const handleDateRangeClick = (rangeType: DateRangeType) => {
@@ -241,14 +244,14 @@ const FigmaAnalyticsChart: React.FC<FigmaAnalyticsChartProps> = ({
       </div>
 
       {/* Chart */}
-      <div className="w-full h-64 sm:h-72 relative bg-white dark:bg-gray-800 rounded-lg overflow-hidden overflow-x-auto">
-        <div className="h-40 sm:h-48 left-[10px] top-[13px] absolute inline-flex justify-start items-center gap-2">
-          <div className="origin-top-left -rotate-90 text-center justify-start text-neutral-600 dark:text-gray-400 text-xs font-normal font-['DM_Sans']">Units of measure</div>
-          <div className="w-0 self-stretch outline outline-[0.70px] outline-offset-[-0.35px] outline-stone-300 dark:outline-gray-600" />
+      <div className="w-full min-h-[280px] sm:min-h-[320px] relative bg-white dark:bg-gray-800 rounded-lg overflow-x-auto">
+        <div className="absolute left-[10px] top-1/3 flex items-center gap-2">
+          <div className="origin-center -rotate-90 text-center text-neutral-600 dark:text-gray-400 text-xs font-normal font-['DM_Sans'] whitespace-nowrap">Units of measure</div>
+          <div className="w-px h-40 bg-stone-300 dark:bg-gray-600" />
         </div>
         
         {/* Dynamic bars */}
-        <div className="left-[47px] right-[18px] top-[16px] absolute inline-flex justify-between items-end">
+        <div className="ml-12 mr-4 pt-4 pb-2 flex justify-between items-end gap-2 min-h-[200px]">
           {loading ? (
             // Loading skeleton
             Array.from({ length: 7 }).map((_, i) => (
@@ -267,35 +270,35 @@ const FigmaAnalyticsChart: React.FC<FigmaAnalyticsChartProps> = ({
                 <div className="inline-flex justify-start items-end gap-1">
                   {/* Mobile - Blue */}
                   <div 
-                    className="w-6 relative bg-gradient-to-b from-sky-400 to-blue-500 overflow-hidden transition-all duration-300"
+                    className="w-7 relative bg-gradient-to-b from-sky-400 to-blue-500 rounded-t-sm flex items-start justify-center pt-2 transition-all duration-300"
                     style={{ height: `${getBarHeight(day.mobile)}px` }}
                   >
                     {day.mobile > 0 && (
-                      <div className="left-[2px] top-[5px] absolute origin-top-left -rotate-90 text-center text-white text-base font-semibold font-['Lato']">
+                      <span className="text-white text-sm font-semibold font-['Lato'] transform -rotate-90 origin-center whitespace-nowrap">
                         {day.mobile}
-                      </div>
+                      </span>
                     )}
                   </div>
                   {/* Tablet - Orange */}
                   <div 
-                    className="w-6 relative bg-gradient-to-b from-amber-500 to-orange-500 overflow-hidden transition-all duration-300"
+                    className="w-7 relative bg-gradient-to-b from-amber-400 to-orange-500 rounded-t-sm flex items-start justify-center pt-2 transition-all duration-300"
                     style={{ height: `${getBarHeight(day.tablet)}px` }}
                   >
                     {day.tablet > 0 && (
-                      <div className="left-[2px] top-[5px] absolute origin-top-left -rotate-90 text-right text-white text-base font-semibold font-['Lato']">
+                      <span className="text-white text-sm font-semibold font-['Lato'] transform -rotate-90 origin-center whitespace-nowrap">
                         {day.tablet}
-                      </div>
+                      </span>
                     )}
                   </div>
                   {/* Desktop - Purple */}
                   <div 
-                    className="w-6 relative bg-gradient-to-b from-violet-400 to-indigo-600 overflow-hidden transition-all duration-300"
+                    className="w-7 relative bg-gradient-to-b from-violet-400 to-indigo-600 rounded-t-sm flex items-start justify-center pt-2 transition-all duration-300"
                     style={{ height: `${getBarHeight(day.desktop)}px` }}
                   >
                     {day.desktop > 0 && (
-                      <div className="left-[2px] top-[5px] absolute origin-top-left -rotate-90 text-right text-white text-base font-semibold font-['Lato']">
+                      <span className="text-white text-sm font-semibold font-['Lato'] transform -rotate-90 origin-center whitespace-nowrap">
                         {day.desktop}
-                      </div>
+                      </span>
                     )}
                   </div>
                 </div>
@@ -307,19 +310,19 @@ const FigmaAnalyticsChart: React.FC<FigmaAnalyticsChartProps> = ({
           )}
         </div>
         
-        <div className="w-9 h-12 left-[10px] top-[205px] absolute" />
-        <div className="left-0 right-0 top-[200px] sm:top-[238px] absolute inline-flex flex-wrap justify-center items-center gap-3 sm:gap-6 md:gap-12 px-2">
+        {/* Legend */}
+        <div className="flex flex-wrap justify-center items-center gap-3 sm:gap-6 md:gap-12 px-2 mt-4 pb-4">
           <div className="flex justify-center items-center gap-1.5 sm:gap-2.5">
-            <div className="w-4 h-4 sm:w-5 sm:h-5 bg-gradient-to-r from-sky-400 to-blue-500 rounded-3xl" />
-            <div className="text-center justify-start text-neutral-600 dark:text-gray-400 text-[10px] sm:text-xs font-medium font-['DM_Sans']">Mobile View</div>
+            <div className="w-4 h-4 sm:w-5 sm:h-5 bg-gradient-to-r from-sky-400 to-blue-500 rounded-full" />
+            <div className="text-center text-neutral-600 dark:text-gray-400 text-[10px] sm:text-xs font-medium font-['DM_Sans']">Mobile View</div>
           </div>
           <div className="flex justify-center items-center gap-1.5 sm:gap-2.5">
-            <div className="w-4 h-4 sm:w-5 sm:h-5 bg-gradient-to-b from-orange-500 to-amber-500 rounded-3xl" />
-            <div className="text-center justify-start text-neutral-600 dark:text-gray-400 text-[10px] sm:text-xs font-medium font-['DM_Sans']">Tab View</div>
+            <div className="w-4 h-4 sm:w-5 sm:h-5 bg-gradient-to-b from-amber-400 to-orange-500 rounded-full" />
+            <div className="text-center text-neutral-600 dark:text-gray-400 text-[10px] sm:text-xs font-medium font-['DM_Sans']">Tab View</div>
           </div>
           <div className="flex justify-center items-center gap-1.5 sm:gap-2.5">
-            <div className="w-4 h-4 sm:w-5 sm:h-5 bg-gradient-to-b from-violet-400 to-indigo-600 rounded-3xl" />
-            <div className="text-center justify-start text-neutral-600 dark:text-gray-400 text-[10px] sm:text-xs font-medium font-['DM_Sans']">Desktop View</div>
+            <div className="w-4 h-4 sm:w-5 sm:h-5 bg-gradient-to-b from-violet-400 to-indigo-600 rounded-full" />
+            <div className="text-center text-neutral-600 dark:text-gray-400 text-[10px] sm:text-xs font-medium font-['DM_Sans']">Desktop View</div>
           </div>
         </div>
       </div>

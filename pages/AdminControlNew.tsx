@@ -103,7 +103,7 @@ const AdminControl: React.FC<AdminControlProps> = ({
   onAddRole, onUpdateRole, onDeleteRole, onUpdateUserRole,
   currentUser, tenantId, userPermissions = {}
 }) => {
-  const [tab, setTab] = useState<'users' | 'roles' | 'reviews' | 'customers'>('users');
+  const [tab, setTab] = useState<'users' | 'roles'>('users');
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
   
@@ -538,7 +538,7 @@ const AdminControl: React.FC<AdminControlProps> = ({
     },
     tableHeader: {
       display: 'grid',
-      gridTemplateColumns: '50px 60px 80px 150px 120px 100px 120px 140px 80px 80px',
+      gridTemplateColumns: '40px 50px 70px 1fr 1fr 100px 120px 130px 90px 70px',
       alignItems: 'center',
       height: '48px',
       background: 'linear-gradient(to right, #e0f7fa, #b2ebf2)',
@@ -553,7 +553,7 @@ const AdminControl: React.FC<AdminControlProps> = ({
     },
     tableRow: {
       display: 'grid',
-      gridTemplateColumns: '50px 60px 80px 150px 120px 100px 120px 140px 80px 80px',
+      gridTemplateColumns: '40px 50px 70px 1fr 1fr 100px 120px 130px 90px 70px',
       alignItems: 'center',
       height: '68px',
       borderBottom: '0.5px solid #b9b9b9',
@@ -667,7 +667,7 @@ const AdminControl: React.FC<AdminControlProps> = ({
           
           {/* Tabs */}
           <div style={{ display: 'flex', gap: '4px', background: '#f0f0f0', padding: '4px', borderRadius: '8px' }}>
-            {(['users', 'roles', 'reviews', 'customers'] as const).map((t) => (
+            {(['users', 'roles'] as const).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
@@ -689,8 +689,6 @@ const AdminControl: React.FC<AdminControlProps> = ({
               >
                 {t === 'users' && <Users size={14} />}
                 {t === 'roles' && <Key size={14} />}
-                {t === 'reviews' && <MessageCircle size={14} />}
-                {t === 'customers' && <UserCheck size={14} />}
                 {t.charAt(0).toUpperCase() + t.slice(1)}
               </button>
             ))}

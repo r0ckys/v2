@@ -22,9 +22,15 @@ interface AdminProductUploadProps {
   childCategories: ChildCategory[];
   brands: Brand[];
   tags: Tag[];
-  onAddProduct: (product: Product) => void;
-  onLogout: () => void;
-  onSwitchSection: (section: string) => void;
+  onAddProduct?: (product: Product) => void;
+  onLogout?: () => void;
+  onSwitchSection?: (section: string) => void;
+  // New props for edit mode
+  initialProduct?: Product | null;
+  user?: { name?: string; tenantId?: string } | null;
+  activeTenantId?: string;
+  onCancel?: () => void;
+  onSubmit?: (product: Product) => void;
 }
 
 interface FormData {
@@ -75,10 +81,16 @@ const AdminProductUpload: React.FC<AdminProductUploadProps> = ({
   tags,
   onAddProduct,
   onLogout,
-  onSwitchSection
+  onSwitchSection,
+  initialProduct,
+  user: propsUser,
+  activeTenantId,
+  onCancel,
+  onSubmit
 }) => {
-  const { user } = useAuth();
-  const tenantId = user?.tenantId || 'default';
+  const { user: authUser } = useAuth();
+  const user = propsUser || authUser;
+  const tenantId = activeTenantId || user?.tenantId || 'default';
 
   const [formData, setFormData] = useState<FormData>({
     name: '',
@@ -122,6 +134,32 @@ const AdminProductUpload: React.FC<AdminProductUploadProps> = ({
 
   const [completionPercentage, setCompletionPercentage] = useState(0);
 
+  // Load initial product data when editing
+  useEffect(() => {
+    if (initialProduct) {
+      setFormData(prev => ({
+        ...prev,
+        name: initialProduct.name || '',
+        slug: initialProduct.slug || '',
+        shortDescription: initialProduct.shortDescription || '',
+        description: initialProduct.description || '',
+        mainImage: initialProduct.image || '',
+        galleryImages: initialProduct.galleryImages || [],
+        regularPrice: initialProduct.originalPrice || 0,
+        salesPrice: initialProduct.price || 0,
+        costPrice: initialProduct.costPrice || 0,
+        quantity: initialProduct.stock || 0,
+        sku: initialProduct.sku || '',
+        brand: initialProduct.brand || '',
+        category: initialProduct.category || '',
+        subCategory: initialProduct.subCategory || '',
+        childCategory: initialProduct.childCategory || '',
+        condition: initialProduct.condition || 'New',
+        tags: initialProduct.tags || []
+      }));
+    }
+  }, [initialProduct]);
+
   // Calculate completion percentage
   useEffect(() => {
     const requiredFields = [
@@ -164,7 +202,7 @@ const AdminProductUpload: React.FC<AdminProductUploadProps> = ({
     }
 
     const newProduct: Product = {
-      id: Date.now(),
+      id: initialProduct?.id || Date.now(),
       name: formData.name,
       slug: formData.slug,
       description: formData.description,
@@ -179,14 +217,19 @@ const AdminProductUpload: React.FC<AdminProductUploadProps> = ({
       brand: formData.brand,
       sku: formData.sku,
       stock: formData.quantity,
-      colors: [],
-      sizes: [],
-      status: 'Active',
+      colors: initialProduct?.colors || [],
+      sizes: initialProduct?.sizes || [],
+      status: initialProduct?.status || 'Active',
       tags: formData.tags
     };
 
-    onAddProduct(newProduct);
-    toast.success('Product added successfully');
+    // Use onSubmit if provided (edit mode from AdminProducts), otherwise use onAddProduct
+    if (onSubmit) {
+      onSubmit(newProduct);
+    } else if (onAddProduct) {
+      onAddProduct(newProduct);
+      toast.success(initialProduct ? 'Product updated successfully' : 'Product added successfully');
+    }
     // Reset form
     setFormData({
       name: '',
@@ -233,14 +276,24 @@ const AdminProductUpload: React.FC<AdminProductUploadProps> = ({
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center gap-2 text-sm text-gray-600 mb-3">
-          <span>Welcome Back, {user?.name}</span>
-          <ChevronRight size={16} />
-          <span className="text-gray-400">Products</span>
-          <ChevronRight size={16} />
-          <span className="font-semibold text-gray-900">Product Upload</span>
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2 text-sm text-gray-600">
+            <span>Welcome Back, {user?.name}</span>
+            <ChevronRight size={16} />
+            <span className="text-gray-400">Products</span>
+            <ChevronRight size={16} />
+            <span className="font-semibold text-gray-900">{initialProduct ? 'Edit Product' : 'Product Upload'}</span>
+          </div>
+          {onCancel && (
+            <button
+              onClick={onCancel}
+              className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              ← Back to Products
+            </button>
+          )}
         </div>
-        <h1 className="text-3xl font-bold text-gray-900">Add New Product</h1>
+        <h1 className="text-3xl font-bold text-gray-900">{initialProduct ? 'Edit Product' : 'Add New Product'}</h1>
       </div>
 
       {/* Main Content */}

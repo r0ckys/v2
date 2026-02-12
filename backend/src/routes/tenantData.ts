@@ -1,7 +1,7 @@
 import { Router, Request } from 'express';
 import { z } from 'zod';
 import { getTenantData, setTenantData, getTenantDataBatch } from '../services/tenantDataService';
-import { getCached, setCachedWithTTL, CacheKeys } from '../services/redisCache';
+import { getCached, setCachedWithTTL, CacheKeys, deleteCached } from '../services/redisCache';
 import { getTenantBySubdomain } from '../services/tenantsService';
 import { createAuditLog } from './auditLogs';
 import { Server as SocketIOServer } from 'socket.io';
@@ -383,10 +383,14 @@ tenantDataRouter.put('/:tenantId/:key', async (req, res, next) => {
     const payload = updateSchema.parse(req.body ?? {});
     await setTenantData(tenantId, key, payload.data);
     
+    // Invalidate Redis cache for this key so next GET fetches fresh data
+    const cacheKey = `tenant:${tenantId}:${key}`;
+    await deleteCached(cacheKey);
+    
     // Emit real-time update via Socket.IO
     emitDataUpdate(req, tenantId, key, payload.data);
     
-    console.log(`[TenantData] Saved ${key} for tenant ${tenantId}`);
+    console.log(`[TenantData] Saved ${key} for tenant ${tenantId} (cache invalidated)`);
     
     // Create audit log for important data changes
     if (['products', 'categories', 'subcategories', 'childcategories', 'brands', 'tags'].includes(key)) {

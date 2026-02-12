@@ -416,7 +416,7 @@ const FigmaCatalogManager: React.FC<FigmaCatalogManagerProps> = ({
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               {/* Table Header - Gradient Background */}
-              <thead className="bg-gradient-to-r from-[#38bdf8] to-[#1e90ff]">
+              <thead className="bg-[#E0F2FE]">
                 <tr>
                   <th className="px-4 py-3 text-left w-[50px]">
                     <input

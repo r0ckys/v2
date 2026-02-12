@@ -82,14 +82,70 @@ const AdminProductUpload: React.FC<AdminProductUploadProps> = ({
 
   // Shipping
   const [applyDefaultShipping, setApplyDefaultShipping] = useState(false);
-  const [defaultShippingCharge, setDefaultShippingCharge] = useState(120);
-  const [specificShippingLocation, setSpecificShippingLocation] = useState('Dhaka');
-  const [specificShippingCharge, setSpecificShippingCharge] = useState(80);
+  const [defaultShippingCharge, setDefaultShippingCharge] = useState(0);
+  const [specificShippingLocation, setSpecificShippingLocation] = useState('');
+  const [specificShippingCharge, setSpecificShippingCharge] = useState(0);
 
   // Variants
   const [isVariantMandatory, setIsVariantMandatory] = useState(false);
   const [variantTitle, setVariantTitle] = useState('');
   const [attributes, setAttributes] = useState([{ id: '1', name: '', extraPrice: 0 }]);
+
+  // Calculate field completion status and progress
+  const fieldChecks = {
+    itemName: !!formData.name?.trim(),
+    media: !!formData.image,
+    productDescription: !!formData.description?.trim(),
+    pricing: (formData.price ?? 0) > 0,
+    inventory: (formData.stock ?? 0) > 0,
+  };
+
+  // Count all filled fields for progress (3% per field)
+  const filledFieldsCount = [
+    !!formData.name?.trim(),
+    !!formData.image,
+    !!formData.description?.trim(),
+    (formData.price ?? 0) > 0,
+    (formData.originalPrice ?? 0) > 0,
+    (formData.costPrice ?? 0) > 0,
+    (formData.stock ?? 0) > 0,
+    !!formData.sku?.trim(),
+    !!formData.category?.trim(),
+    !!formData.subCategory?.trim(),
+    !!formData.childCategory?.trim(),
+    !!formData.brand?.trim(),
+    (formData.tags?.length ?? 0) > 0,
+    (formData.galleryImages?.length ?? 0) > 0,
+    !!videoLink?.trim(),
+    !!shortDescription?.trim(),
+    !!unitName?.trim(),
+    !!warranty?.trim(),
+    !!barcode?.trim(),
+    initialSoldCount > 0,
+    !!expirationStart,
+    !!expirationEnd,
+    productPriority > 0,
+    !!seoTitle?.trim(),
+    !!seoDescription?.trim(),
+    !!seoKeyword?.trim(),
+    !!productSource?.trim(),
+    !!sourceUrl?.trim(),
+    !!sourceSku?.trim(),
+    !!variantTitle?.trim(),
+    applyDefaultShipping,
+    defaultShippingCharge > 0,
+    !!specificShippingLocation?.trim(),
+  ].filter(Boolean).length;
+
+  // Calculate progress: 3% per field, max 100%
+  const progressPercent = Math.min(filledFieldsCount * 3, 100);
+
+  // Progress bar color based on percentage
+  const getProgressColor = (percent: number) => {
+    if (percent < 30) return 'bg-yellow-500';
+    if (percent <= 80) return 'bg-green-500';
+    return 'bg-blue-500';
+  };
 
   useEffect(() => {
     if (editingProduct) {
@@ -875,26 +931,30 @@ const AdminProductUpload: React.FC<AdminProductUploadProps> = ({
                <div className="space-y-4">
                   <div className="flex items-center gap-4">
                     <div className="flex-1 bg-stone-50 h-2 rounded-full overflow-hidden">
-                       <div className="bg-green-900 h-full rounded-full" style={{ width: '80%' }} />
+                       <div className={`${getProgressColor(progressPercent)} h-full rounded-full transition-all duration-300`} style={{ width: `${progressPercent}%` }} />
                     </div>
-                    <span className="text-black text-sm font-medium">80%</span>
+                    <span className="text-black text-sm font-medium">{progressPercent}%</span>
                   </div>
                   <div className="border-t border-zinc-100 pt-4 space-y-4">
                     {[
-                      { label: 'Item Name', checked: !!formData.name },
-                      { label: 'Media', checked: !!formData.image },
-                      { label: 'Product Description', checked: !!formData.description },
-                      { label: 'Pricing', checked: formData.price! > 0 },
-                      { label: 'Inventory', checked: formData.stock! > 0 }
+                      { label: 'Item Name', checked: fieldChecks.itemName },
+                      { label: 'Media', checked: fieldChecks.media },
+                      { label: 'Product Description', checked: fieldChecks.productDescription },
+                      { label: 'Pricing', checked: fieldChecks.pricing },
+                      { label: 'Inventory', checked: fieldChecks.inventory }
                     ].map((item, idx, arr) => (
                       <div key={item.label}>
                         <div className="flex items-center gap-3">
-                          <div className={`w-4 h-4 rounded-full border ${item.checked ? 'bg-green-900 border-green-900 flex items-center justify-center' : 'border-green-900'}`}>
-                             {item.checked && <X size={10} className="text-white rotate-45" />}
+                          <div className={`w-4 h-4 rounded-full border flex items-center justify-center transition-all ${item.checked ? 'bg-green-500 border-green-500' : 'border-gray-300 bg-white'}`}>
+                             {item.checked && (
+                               <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                               </svg>
+                             )}
                           </div>
-                          <span className="text-black text-xs font-medium">{item.label}</span>
+                          <span className={`text-xs font-medium ${item.checked ? 'text-black' : 'text-gray-400'}`}>{item.label}</span>
                         </div>
-                        {idx < arr.length - 1 && <div className="ml-2 w-px h-2.5 border-l border-dashed border-green-900" />}
+                        {idx < arr.length - 1 && <div className={`ml-2 w-px h-2.5 border-l border-dashed ${item.checked ? 'border-green-500' : 'border-gray-300'}`} />}
                       </div>
                     ))}
                   </div>

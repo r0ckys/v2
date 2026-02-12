@@ -81,11 +81,12 @@ export interface ProductVariantStock extends ProductVariantSelection {
 }
 
 export interface Product {
-  totalSold: number;
-  sales: number;
+  totalSold?: number;
+  sales?: number;
   id: number;
   name: string;
   tenantId?: string;
+  shopName?: string;
   price: number;
   originalPrice?: number;
   costPrice?: number; // Cost price for profit calculation
@@ -126,6 +127,9 @@ export interface Popup {
 }
 
 export interface Order {
+  customerPhone: string | undefined;
+  grandTotal: any;
+  total: any;
   createdAt: string | number | Date;
   items: any;
   weight: number;

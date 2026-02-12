@@ -321,7 +321,7 @@ export const CarouselTab: React.FC<CarouselTabProps> = ({
           </div>
           <ActionButton
             onClick={() => openCarouselModal()}
-            variant="bg-green-600 text-white hover:from-[#2BAEE8] hover:to-[#1A7FE8] flex items-center gap-2 justify-center w-full sm:w-auto"
+            variant="bg-gradient-to-r from-[#38BDF8] to-[#1E90FF] text-white hover:from-[#2BAEE8] hover:to-[#1A7FE8] flex items-center gap-2 justify-center flex-1 sm:flex-none"
           >
             <Plus size={16} />
             <span className="hidden xs:inline">Add</span> Carousel

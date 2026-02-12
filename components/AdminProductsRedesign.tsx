@@ -68,6 +68,8 @@ interface Props {
   onViewInShop?: (product: Product) => void;
   onViewDetails?: (product: Product) => void;
   storeSubdomain?: string;
+  onImport?: () => void;
+  onExport?: () => void;
 }
 
 const AdminProductsRedesign: React.FC<Props> = ({
@@ -92,21 +94,26 @@ const AdminProductsRedesign: React.FC<Props> = ({
   onPageChange,
   onLogout,
   onSwitchSection,
-  activeSection
+  activeSection,
+  onImport,
+  onExport
 }) => {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
   const [isDeepSearchOpen, setIsDeepSearchOpen] = useState(false);
   const [openActionDropdown, setOpenActionDropdown] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
+  const [isViewMenuOpen, setIsViewMenuOpen] = useState(false);
 
   // Close dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (openActionDropdown) {
-        const target = event.target as HTMLElement;
-        if (!target.closest('[data-dropdown]')) {
-          setOpenActionDropdown(null);
-        }
+      const target = event.target as HTMLElement;
+      if (openActionDropdown && !target.closest('[data-dropdown]')) {
+        setOpenActionDropdown(null);
+      }
+      if (isViewMenuOpen && !target.closest('[data-view-menu]')) {
+        setIsViewMenuOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -197,6 +204,35 @@ const AdminProductsRedesign: React.FC<Props> = ({
                   <Filter size={14} /> Deep Search
                 </button>
 
+                {/* View Toggle Dropdown */}
+                <div className="relative" data-view-menu>
+                  <button
+                    onClick={() => setIsViewMenuOpen(!isViewMenuOpen)}
+                    className="flex items-center gap-2 px-4 py-2 border border-sky-500 rounded-lg text-sky-600 text-xs font-medium hover:bg-sky-50 transition"
+                  >
+                    <span className="text-[10px] text-gray-500 uppercase">View</span>
+                    {viewMode === 'list' ? <ListIcon size={16} /> : <LayoutGrid size={16} />}
+                    <span>{viewMode === 'list' ? 'List view' : 'Grid view'}</span>
+                    <ChevronDown size={14} />
+                  </button>
+                  {isViewMenuOpen && (
+                    <div className="absolute right-0 top-full mt-2 bg-white border border-gray-200 rounded-lg shadow-lg z-50 min-w-[140px]">
+                      <button
+                        onClick={() => { setViewMode('list'); setIsViewMenuOpen(false); }}
+                        className={`flex items-center gap-2 w-full px-4 py-3 text-xs hover:bg-gray-50 transition ${viewMode === 'list' ? 'bg-sky-50 text-sky-600' : 'text-gray-700'}`}
+                      >
+                        <ListIcon size={16} /> List view
+                      </button>
+                      <button
+                        onClick={() => { setViewMode('grid'); setIsViewMenuOpen(false); }}
+                        className={`flex items-center gap-2 w-full px-4 py-3 text-xs hover:bg-gray-50 transition ${viewMode === 'grid' ? 'bg-sky-50 text-sky-600' : 'text-gray-700'}`}
+                      >
+                        <LayoutGrid size={16} /> Grid view
+                      </button>
+                    </div>
+                  )}
+                </div>
+
                 <button
                   onClick={onAddProduct}
                   className="bg-gradient-to-r from-sky-400 to-blue-500 px-6 py-3 rounded-lg text-white font-bold flex items-center gap-2 hover:opacity-90 transition shadow-lg"
@@ -276,11 +312,11 @@ const AdminProductsRedesign: React.FC<Props> = ({
 
             <div className="flex justify-between items-center pt-2">
               <div className="flex items-center gap-4">
-                <button className="flex items-center gap-1 text-xs font-normal text-neutral-900 hover:text-orange-600 transition">
+                <button onClick={onImport} className="flex items-center gap-1 text-xs font-normal text-neutral-900 hover:text-orange-600 transition">
                   <div className="w-5 h-5 flex items-center justify-center border border-orange-600 rounded text-orange-600"><Upload size={12} /></div>
                   Import
                 </button>
-                <button className="flex items-center gap-1 text-xs font-normal text-neutral-900 hover:text-orange-600 transition">
+                <button onClick={onExport} className="flex items-center gap-1 text-xs font-normal text-neutral-900 hover:text-orange-600 transition">
                   <div className="w-5 h-5 flex items-center justify-center border border-orange-600 rounded text-orange-600"><Download size={12} /></div>
                   Export
                 </button>
@@ -304,8 +340,122 @@ const AdminProductsRedesign: React.FC<Props> = ({
             </div>
           </div>
 
-          {/* Table Section */}
+          {/* Products Section */}
           <div className="bg-white rounded-xl shadow-sm overflow-hidden min-h-[600px] flex flex-col">
+            {/* Grid View */}
+            {viewMode === 'grid' && (
+              <div className="flex-1 p-6">
+                {/* Select All for Grid View */}
+                <div className="flex items-center gap-4 mb-6 pb-4 border-b border-gray-100">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="w-5 h-5 rounded border-gray-300 text-sky-500 focus:ring-sky-500 cursor-pointer"
+                      checked={selectedIds.size === products.length && products.length > 0}
+                      onChange={(e) => handleSelectAll(e.target.checked)}
+                    />
+                    <span className="text-sm text-gray-600">Select All</span>
+                  </label>
+                  <span className="text-sm text-gray-400">({products.length} products)</span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                  {products.map((product, idx) => {
+                    const productKey = getProductKey(product, idx);
+                    return (
+                      <div
+                        key={productKey}
+                        className={`relative bg-white border rounded-xl overflow-hidden hover:shadow-lg transition-all cursor-pointer group ${
+                          selectedIds.has(productKey) ? 'border-sky-500 ring-2 ring-sky-200' : 'border-gray-200'
+                        }`}
+                      >
+                        {/* Selection Checkbox */}
+                        <div className="absolute top-2 left-2 z-10">
+                          <input
+                            type="checkbox"
+                            className="w-5 h-5 rounded border-gray-300 text-sky-500 focus:ring-sky-500 cursor-pointer bg-white shadow-sm"
+                            checked={selectedIds.has(productKey)}
+                            onChange={() => toggleSelect(productKey)}
+                          />
+                        </div>
+
+                        {/* Status Badge */}
+                        <div className="absolute top-2 right-2 z-10">
+                          <span className={`px-2 py-1 rounded-full text-[10px] font-medium ${
+                            product.status === 'Active'
+                              ? 'bg-green-100 text-green-700'
+                              : 'bg-amber-100 text-amber-700'
+                          }`}>
+                            {product.status || 'Draft'}
+                          </span>
+                        </div>
+
+                        {/* Product Image */}
+                        <div className="aspect-square bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden">
+                          <OptimizedImage
+                            src={product.image?.[0] || product.image || 'https://placehold.co/200x200'}
+                            alt={product.name}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                        </div>
+
+                        {/* Product Info */}
+                        <div className="p-3">
+                          <h3 className="text-sm font-medium text-gray-900 line-clamp-2 mb-1" title={product.name}>
+                            {product.name}
+                          </h3>
+                          <p className="text-xs text-gray-500 mb-2">{product.category || 'Uncategorized'}</p>
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-bold text-sky-600">
+                              {formatCurrency(product.price)}
+                            </span>
+                            <span className="text-[10px] text-gray-400 uppercase">{product.sku || 'No SKU'}</span>
+                          </div>
+                        </div>
+
+                        {/* Quick Actions */}
+                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-white via-white to-transparent pt-8 pb-2 px-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="flex items-center justify-center gap-1">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); onEditProduct(product); }}
+                              className="p-2 bg-sky-50 hover:bg-sky-100 rounded-lg transition"
+                              title="Edit"
+                            >
+                              <Edit size={14} className="text-sky-600" />
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); onCloneProduct(product); }}
+                              className="p-2 bg-gray-50 hover:bg-gray-100 rounded-lg transition"
+                              title="Duplicate"
+                            >
+                              <Copy size={14} className="text-gray-600" />
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); onDeleteProduct(product.id); }}
+                              className="p-2 bg-red-50 hover:bg-red-100 rounded-lg transition"
+                              title="Delete"
+                            >
+                              <Trash2 size={14} className="text-red-600" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {products.length === 0 && (
+                  <div className="flex flex-col items-center justify-center py-32 text-gray-400">
+                    <Archive size={64} strokeWidth={1} className="mb-4 opacity-20" />
+                    <p className="text-lg font-medium">No products found</p>
+                    <p className="text-sm">Try adding a new product or changing filters</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* List/Table View */}
+            {viewMode === 'list' && (
             <div className="overflow-x-auto flex-1">
               <table className="w-full text-left border-collapse">
                 <thead className="bg-gradient-to-b from-sky-400/20 to-blue-500/20 border-b border-gray-100">
@@ -484,6 +634,7 @@ const AdminProductsRedesign: React.FC<Props> = ({
                 </div>
               )}
             </div>
+            )}
 
             {/* Pagination Section */}
             <div className="px-8 py-6 border-t border-gray-100 flex items-center justify-between">
@@ -531,10 +682,10 @@ const AdminProductsRedesign: React.FC<Props> = ({
         </main>
 
         {/* Floating Bulk Action Bar */}
-        {selectedIds.length > 0 && (
+        {selectedIds.size > 0 && (
           <div className="fixed bottom-10 left-1/2 -translate-x-1/2 bg-white border border-gray-200 shadow-2xl rounded-2xl px-8 py-4 flex items-center gap-8 z-[100] animate-in slide-in-from-bottom-8">
             <div className="flex flex-col">
-              <span className="text-sky-500 font-bold text-lg">{selectedIds.length}</span>
+              <span className="text-sky-500 font-bold text-lg">{selectedIds.size}</span>
               <span className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Selected</span>
             </div>
 

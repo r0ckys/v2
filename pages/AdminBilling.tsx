@@ -112,8 +112,9 @@ const figmaStyles = {
   planCard: {
     backgroundColor: '#ffffff',
     borderRadius: '24px',
-    height: '338px',
-    position: 'relative' as const,
+    minHeight: '338px',
+    display: 'flex',
+    flexDirection: 'column' as const,
     overflow: 'hidden',
     padding: '30px 19px',
   },
@@ -191,9 +192,6 @@ const figmaStyles = {
     color: '#454452',
   },
   subscribeButton: {
-    position: 'absolute' as const,
-    bottom: '18px',
-    right: '19px',
     width: '233px',
     height: '40px',
     borderRadius: '69px',
@@ -550,18 +548,20 @@ const AdminBilling: React.FC<AdminBillingProps> = ({ tenant, onUpgrade }) => {
                 </div>
 
                 {/* Subscribe Button */}
-                <button
-                  style={{
-                    ...figmaStyles.subscribeButton,
-                    ...(plan.buttonStyle === 'outline' 
-                      ? { ...figmaStyles.subscribeButtonOutline, borderColor: plan.buttonColor, color: plan.buttonColor }
-                      : { ...figmaStyles.subscribeButtonFilled, backgroundColor: plan.buttonColor }
-                    ),
-                  }}
-                  onClick={onUpgrade}
-                >
-                  SUBSCRIBE NOW
-                </button>
+                <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'flex-end', paddingTop: '24px' }}>
+                  <button
+                    style={{
+                      ...figmaStyles.subscribeButton,
+                      ...(plan.buttonStyle === 'outline' 
+                        ? { ...figmaStyles.subscribeButtonOutline, borderColor: plan.buttonColor, color: plan.buttonColor }
+                        : { ...figmaStyles.subscribeButtonFilled, backgroundColor: plan.buttonColor }
+                      ),
+                    }}
+                    onClick={onUpgrade}
+                  >
+                    SUBSCRIBE NOW
+                  </button>
+                </div>
               </div>
             ))}
           </div>

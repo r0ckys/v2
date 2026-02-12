@@ -462,9 +462,16 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
   const [showDueHistoryModal, setShowDueHistoryModal] = useState(false);
   const [showAddDueModal, setShowAddDueModal] = useState(false);
 
+  // Set tenant ID on dueListService when available
+  useEffect(() => {
+    if (tenantId) {
+      dueListService.setTenantId(tenantId);
+    }
+  }, [tenantId]);
+
   // Load due entities when tab or dueTabType changes
   useEffect(() => {
-    if (activeTab === 'due') {
+    if (activeTab === 'due' && tenantId) {
       const loadDueEntities = async () => {
         setDueLoading(true);
         try {
@@ -483,11 +490,11 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
       };
       loadDueEntities();
     }
-  }, [activeTab, dueTabType, dueSearch]);
+  }, [activeTab, dueTabType, dueSearch, tenantId]);
 
   // Load transactions when selected entity changes
   useEffect(() => {
-    if (activeTab === 'due' && selectedEntityId) {
+    if (activeTab === 'due' && selectedEntityId && tenantId) {
       const loadTransactions = async () => {
         try {
           const transactions = await dueListService.getTransactions(selectedEntityId);
@@ -499,7 +506,7 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
       };
       loadTransactions();
     }
-  }, [activeTab, selectedEntityId]);
+  }, [activeTab, selectedEntityId, tenantId]);
 
   // Due summary calculations
   const dueSummary = useMemo(() => {

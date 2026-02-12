@@ -82,14 +82,15 @@ const AdminProducts: React.FC<AdminProductsProps> = ({
 }) => {
   const activeTenantId = tenantId || 'default';
   const [view, setView] = useState<'list' | 'upload'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
   const [searchTerm, setSearchTerm] = useState('');
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [draftProducts, setDraftProducts] = useState<any[]>([]);
   const [currentDraftId, setCurrentDraftId] = useState<string | null>(null);
   const [isViewMenuOpen, setIsViewMenuOpen] = useState(false);
-  const [openActionDropdown, setOpenActionDropdown] = useState<number | null>(null);
-  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [openActionDropdown, setOpenActionDropdown] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   // Refs
   const importInputRef = useRef<HTMLInputElement>(null);
@@ -189,10 +190,13 @@ const AdminProducts: React.FC<AdminProductsProps> = ({
       if (openActionDropdown !== null && !(event.target as HTMLElement).closest('[data-action-dropdown]')) {
         setOpenActionDropdown(null);
       }
+      if (isViewMenuOpen && viewMenuRef.current && !viewMenuRef.current.contains(event.target as Node)) {
+        setIsViewMenuOpen(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [openActionDropdown]);
+  }, [openActionDropdown, isViewMenuOpen]);
 
   useEffect(() => {
     setDraftProducts(getDrafts(activeTenantId));
@@ -216,12 +220,35 @@ const AdminProducts: React.FC<AdminProductsProps> = ({
   const paginatedProducts = filteredProducts.slice((currentPage - 1) * 10, currentPage * 10);
   const totalPages = Math.ceil(filteredProducts.length / 10);
 
-  const toggleSelectAll = () => {
-    setSelectedIds(selectedIds.length === paginatedProducts.length ? [] : paginatedProducts.map(p => p.id));
+  // Generate unique keys for products
+  const getProductKey = (product: Product, idx: number) => {
+    return `${product.id}-${idx}`;
   };
 
-  const toggleSelect = (id: number) => {
-    setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+  const toggleSelectAll = () => {
+    if (selectedIds.size === paginatedProducts.length) {
+      setSelectedIds(new Set());
+    } else {
+      const allKeys = paginatedProducts.map((p, idx) => getProductKey(p, idx));
+      setSelectedIds(new Set(allKeys));
+    }
+  };
+
+  const toggleSelect = (key: string) => {
+    setSelectedIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(key)) {
+        newSet.delete(key);
+      } else {
+        newSet.add(key);
+      }
+      return newSet;
+    });
+  };
+
+  // Get actual product IDs from selected keys
+  const getSelectedProductIds = (): number[] => {
+    return paginatedProducts.filter((p, idx) => selectedIds.has(getProductKey(p, idx))).map(p => p.id);
   };
 
   const Icons = {
@@ -293,6 +320,41 @@ const AdminProducts: React.FC<AdminProductsProps> = ({
             <Icons.Download /> Sample Template
           </button>
         </div>
+
+        {/* View Toggle */}
+        <div className="relative" ref={viewMenuRef}>
+          <button
+            onClick={() => setIsViewMenuOpen(!isViewMenuOpen)}
+            className="flex items-center gap-2 px-4 py-2 border border-sky-500 rounded-lg text-sky-600 text-sm font-medium hover:bg-sky-50 transition"
+          >
+            <span className="text-xs text-gray-500 uppercase">View</span>
+            {viewMode === 'list' ? (
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+            )}
+            <span>{viewMode === 'list' ? 'List view' : 'Grid view'}</span>
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          </button>
+          {isViewMenuOpen && (
+            <div className="absolute right-0 top-full mt-2 bg-white border border-gray-200 rounded-lg shadow-lg z-50 min-w-[140px]">
+              <button
+                onClick={() => { setViewMode('list'); setIsViewMenuOpen(false); }}
+                className={`flex items-center gap-2 w-full px-4 py-3 text-sm hover:bg-gray-50 transition ${viewMode === 'list' ? 'bg-sky-50 text-sky-600' : 'text-gray-700'}`}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                List view
+              </button>
+              <button
+                onClick={() => { setViewMode('grid'); setIsViewMenuOpen(false); }}
+                className={`flex items-center gap-2 w-full px-4 py-3 text-sm hover:bg-gray-50 transition ${viewMode === 'grid' ? 'bg-sky-50 text-sky-600' : 'text-gray-700'}`}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                Grid view
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Table Section */}
@@ -302,7 +364,7 @@ const AdminProducts: React.FC<AdminProductsProps> = ({
             <thead>
               <tr className="bg-[#EBF5FF] text-[#1F2937] text-sm font-semibold">
                 <th className="p-4 w-14 text-center">
-                  <input type="checkbox" onChange={toggleSelectAll} checked={selectedIds.length === paginatedProducts.length && paginatedProducts.length > 0} />
+                  <input type="checkbox" onChange={toggleSelectAll} checked={selectedIds.size === paginatedProducts.length && paginatedProducts.length > 0} />
                 </th>
                 <th className="p-4">SL</th>
                 <th className="p-4">Image</th>
@@ -314,10 +376,12 @@ const AdminProducts: React.FC<AdminProductsProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {paginatedProducts.map((product, index) => (
-                <tr key={`${product.id}-${index}`} className={`${selectedIds.includes(product.id) ? 'bg-blue-50/50' : ''} hover:bg-gray-50 transition-colors`}>
+              {paginatedProducts.map((product, index) => {
+                const productKey = getProductKey(product, index);
+                return (
+                <tr key={productKey} className={`${selectedIds.has(productKey) ? 'bg-blue-50/50' : ''} hover:bg-gray-50 transition-colors`}>
                   <td className="p-4 text-center">
-                    <input type="checkbox" checked={selectedIds.includes(product.id)} onChange={() => toggleSelect(product.id)} />
+                    <input type="checkbox" checked={selectedIds.has(productKey)} onChange={() => toggleSelect(productKey)} />
                   </td>
                   <td className="p-4 text-sm text-gray-500">{(currentPage - 1) * 10 + index + 1}</td>
                   <td className="p-4">
@@ -334,18 +398,19 @@ const AdminProducts: React.FC<AdminProductsProps> = ({
                     </span>
                   </td>
                   <td className="p-4 text-center relative" data-action-dropdown>
-                    <button onClick={() => setOpenActionDropdown(openActionDropdown === product.id ? null : product.id)} className="p-1 hover:bg-gray-100 rounded-md">
+                    <button onClick={() => setOpenActionDropdown(openActionDropdown === productKey ? null : productKey)} className="p-1 hover:bg-gray-100 rounded-md">
                       <Icons.MoreVertical className="text-gray-400" />
                     </button>
-                    {openActionDropdown === product.id && (
+                    {openActionDropdown === productKey && (
                       <div className="absolute right-full mr-2 top-0 w-32 bg-white border border-gray-100 rounded-lg shadow-xl z-50 py-1">
-                        <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50" onClick={() => { setEditingProduct(product); setView('upload'); }}>Edit</button>
-                        <button className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50" onClick={() => onDeleteProduct(product.id)}>Delete</button>
+                        <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50" onClick={() => { setEditingProduct(product); setView('upload'); setOpenActionDropdown(null); }}>Edit</button>
+                        <button className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50" onClick={() => { onDeleteProduct(product.id); setOpenActionDropdown(null); }}>Delete</button>
                       </div>
                     )}
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -359,6 +424,46 @@ const AdminProducts: React.FC<AdminProductsProps> = ({
           <button disabled={currentPage >= totalPages} onClick={() => setCurrentPage(p => p + 1)} className="px-4 py-2 text-sm font-medium border rounded-lg hover:bg-gray-50 disabled:opacity-40 transition-all">Next</button>
         </div>
       </div>
+
+      {/* Floating Bulk Action Bar */}
+      {selectedIds.size > 0 && (
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-white border border-gray-200 shadow-2xl rounded-2xl px-6 py-4 flex items-center gap-6 z-[100]">
+          <div className="flex flex-col items-center">
+            <span className="text-sky-500 font-bold text-lg">{selectedIds.size}</span>
+            <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Selected</span>
+          </div>
+
+          <div className="w-px h-8 bg-gray-200"></div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => { onBulkUpdate(getSelectedProductIds(), { status: 'Active' }); setSelectedIds(new Set()); }}
+              className="px-4 py-2 rounded-lg bg-green-50 text-green-700 text-xs font-bold hover:bg-green-100 transition flex items-center gap-2"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+              Publish
+            </button>
+            <button
+              onClick={() => { onBulkUpdate(getSelectedProductIds(), { status: 'Draft' }); setSelectedIds(new Set()); }}
+              className="px-4 py-2 rounded-lg bg-amber-50 text-amber-700 text-xs font-bold hover:bg-amber-100 transition flex items-center gap-2"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+              Draft
+            </button>
+            <button
+              onClick={() => { onBulkDelete(getSelectedProductIds()); setSelectedIds(new Set()); }}
+              className="px-4 py-2 rounded-lg bg-red-50 text-red-600 text-xs font-bold hover:bg-red-100 transition flex items-center gap-2"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+              Delete
+            </button>
+          </div>
+
+          <button onClick={() => setSelectedIds(new Set())} className="p-2 hover:bg-gray-100 rounded-full transition text-gray-400">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
+        </div>
+      )}
     </div>
   );
 };

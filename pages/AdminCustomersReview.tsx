@@ -196,7 +196,9 @@ const AdminCustomersReview: React.FC<AdminCustomersReviewProps> = ({ orders, pro
       
       const existing = customerMap.get(phone);
       const orderTotal = order.total || order.grandTotal || 0;
-      const orderDate = order.createdAt || order.date || new Date().toISOString();
+      // Normalize orderDate to string
+      const rawDate = order.createdAt || order.date || new Date().toISOString();
+      const orderDate = typeof rawDate === 'string' ? rawDate : new Date(rawDate).toISOString();
       
       if (existing) {
         existing.totalOrders += 1;
@@ -213,10 +215,10 @@ const AdminCustomersReview: React.FC<AdminCustomersReviewProps> = ({ orders, pro
       } else {
         customerMap.set(phone, {
           id: phone,
-          name: order.customerName || order.name || 'Unknown Customer',
+          name: order.customer || 'Unknown Customer',
           phone: phone,
-          email: order.customerEmail || order.email || '',
-          address: order.customerAddress || order.address || '',
+          email: order.email || '',
+          address: order.location || '',
           totalOrders: 1,
           totalSpent: orderTotal,
           lastOrderDate: orderDate,
@@ -265,21 +267,114 @@ const AdminCustomersReview: React.FC<AdminCustomersReviewProps> = ({ orders, pro
     return { totalCustomers, totalReviews, repeatCustomers, blockedCustomers };
   }, [customers, reviews]);
 
-  // Filtered customers
+  // Filtered and sorted customers
   const filteredCustomers = useMemo(() => {
-    if (!customerSearch.trim()) return customers;
-    const query = customerSearch.toLowerCase();
-    return customers.filter(c => 
-      c.name.toLowerCase().includes(query) ||
-      c.phone.includes(query) ||
-      c.email?.toLowerCase().includes(query)
-    );
-  }, [customers, customerSearch]);
+    let result = [...customers];
+    
+    // Search filter
+    if (customerSearch.trim()) {
+      const query = customerSearch.toLowerCase();
+      result = result.filter(c => 
+        c.name.toLowerCase().includes(query) ||
+        c.phone.includes(query) ||
+        c.email?.toLowerCase().includes(query) ||
+        c.address?.toLowerCase().includes(query)
+      );
+    }
+    
+    // Status filter
+    if (statusFilter !== 'All Status') {
+      result = result.filter(c => c.status === statusFilter);
+    }
+    
+    // Category/Product search (also searches customers by name, phone, email)
+    if (categorySearch.trim()) {
+      const catQuery = categorySearch.toLowerCase();
+      result = result.filter(c => 
+        // Search customer info
+        c.name.toLowerCase().includes(catQuery) ||
+        c.phone.includes(catQuery) ||
+        c.email?.toLowerCase().includes(catQuery) ||
+        c.address?.toLowerCase().includes(catQuery) ||
+        // Search products in orders
+        c.orders.some(order => 
+          order.items?.some((item: { name?: string; productName?: string }) => 
+            item.name?.toLowerCase().includes(catQuery) ||
+            item.productName?.toLowerCase().includes(catQuery)
+          )
+        )
+      );
+    }
+    
+    // Sorting
+    switch (customerSortBy) {
+      case 'Newest':
+        result.sort((a, b) => new Date(b.lastOrderDate).getTime() - new Date(a.lastOrderDate).getTime());
+        break;
+      case 'Oldest':
+        result.sort((a, b) => new Date(a.firstOrderDate).getTime() - new Date(b.firstOrderDate).getTime());
+        break;
+      case 'Name':
+        result.sort((a, b) => a.name.localeCompare(b.name));
+        break;
+      case 'Most Orders':
+        result.sort((a, b) => b.totalOrders - a.totalOrders);
+        break;
+      case 'Highest Spent':
+        result.sort((a, b) => b.totalSpent - a.totalSpent);
+        break;
+      default:
+        break;
+    }
+    
+    return result;
+  }, [customers, customerSearch, statusFilter, categorySearch, customerSortBy]);
 
-  // Filtered reviews
+  // Helper function to get product name from productId
+  const getProductName = (productId: number): string => {
+    const product = products.find(p => p.id === productId);
+    return product?.name || `Product #${productId}`;
+  };
+
+  // Filtered and sorted reviews
   const filteredReviews = useMemo(() => {
-    return reviews;
-  }, [reviews]);
+    let result = [...reviews];
+    
+    // Category/Product search for reviews
+    if (categorySearch.trim()) {
+      const catQuery = categorySearch.toLowerCase();
+      result = result.filter(r => {
+        const productName = getProductName(r.productId).toLowerCase();
+        return productName.includes(catQuery) ||
+               r.userName?.toLowerCase().includes(catQuery) ||
+               r.comment?.toLowerCase().includes(catQuery) ||
+               r.headline?.toLowerCase().includes(catQuery);
+      });
+    }
+    
+    // Sorting
+    switch (reviewSortBy) {
+      case 'Newest':
+        result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        break;
+      case 'Oldest':
+        result.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+        break;
+      case 'Highest Rating':
+        result.sort((a, b) => b.rating - a.rating);
+        break;
+      case 'Lowest Rating':
+        result.sort((a, b) => a.rating - b.rating);
+        break;
+      case 'Most Helpful':
+        result.sort((a, b) => (b.helpful || 0) - (a.helpful || 0));
+        break;
+      default:
+        break;
+    }
+    
+    return result;
+  }, [reviews, categorySearch, reviewSortBy, products]);
 
   const handleSelectAllCustomers = () => {
     if (selectedCustomers.length === filteredCustomers.length) {
@@ -307,12 +402,6 @@ const AdminCustomersReview: React.FC<AdminCustomersReviewProps> = ({ orders, pro
     setSelectedReviews(prev => 
       prev.includes(id) ? prev.filter(rid => rid !== id) : [...prev, id]
     );
-  };
-
-  // Helper function to get product name from productId
-  const getProductName = (productId: number): string => {
-    const product = products.find(p => p.id === productId);
-    return product?.name || `Product #${productId}`;
   };
 
   // Helper function to get user avatar
@@ -345,7 +434,7 @@ const AdminCustomersReview: React.FC<AdminCustomersReviewProps> = ({ orders, pro
             <input
               type="text"
               className="block w-full pl-10 pr-16 py-2.5 bg-[#F1F5F9] border-none rounded-lg text-sm text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
-              placeholder="Search Category"
+              placeholder="Search customer, phone, product..."
               value={categorySearch}
               onChange={(e) => setCategorySearch(e.target.value)}
             />
@@ -384,10 +473,10 @@ const AdminCustomersReview: React.FC<AdminCustomersReviewProps> = ({ orders, pro
             </div>
 
             {/* Add Button */}
-            <button className="flex items-center gap-2 bg-[#0095FF] hover:bg-blue-600 text-white px-5 py-2.5 rounded-lg transition-colors shadow-sm whitespace-nowrap">
+            {/* <button className="flex items-center gap-2 bg-[#0095FF] hover:bg-blue-600 text-white px-5 py-2.5 rounded-lg transition-colors shadow-sm whitespace-nowrap">
               <UserPlus className="w-5 h-5" />
               <span className="text-sm font-semibold">Add Customer</span>
-            </button>
+            </button> */}
           </div>
         </div>
       </div>
@@ -483,6 +572,8 @@ const AdminCustomersReview: React.FC<AdminCustomersReviewProps> = ({ orders, pro
                   <option>Newest</option>
                   <option>Oldest</option>
                   <option>Name</option>
+                  <option>Most Orders</option>
+                  <option>Highest Spent</option>
                 </select>
                 <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-500 pointer-events-none" />
               </div>
@@ -610,7 +701,9 @@ const AdminCustomersReview: React.FC<AdminCustomersReviewProps> = ({ orders, pro
                 >
                   <option>Newest</option>
                   <option>Oldest</option>
-                  <option>Rating</option>
+                  <option>Highest Rating</option>
+                  <option>Lowest Rating</option>
+                  <option>Most Helpful</option>
                 </select>
                 <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-500 pointer-events-none" />
               </div>

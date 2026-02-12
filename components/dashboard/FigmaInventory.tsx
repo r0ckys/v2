@@ -1,6 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { Search, ChevronDown, Package } from 'lucide-react';
 import { Product } from '../../types';
+import toast from 'react-hot-toast';
 
 // Icons matching Figma design
 const SearchIcon = () => (
@@ -63,6 +64,76 @@ const FigmaInventory: React.FC<FigmaInventoryProps> = ({
   const [lowStockThreshold, setLowStockThreshold] = useState(5);
   const [expireThreshold, setExpireThreshold] = useState(10);
   const [showSortDropdown, setShowSortDropdown] = useState(false);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Load saved thresholds from backend
+  useEffect(() => {
+    const loadThresholds = async () => {
+      if (!tenantId) return;
+      try {
+        const response = await fetch(`/api/tenant-data/${tenantId}/inventory_settings`);
+        if (response.ok) {
+          const result = await response.json();
+          if (result.data) {
+            if (result.data.lowStockThreshold) setLowStockThreshold(result.data.lowStockThreshold);
+            if (result.data.expireThreshold) setExpireThreshold(result.data.expireThreshold);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load inventory settings:', error);
+      }
+    };
+    loadThresholds();
+  }, [tenantId]);
+
+  // Save thresholds to backend (debounced)
+  const saveThresholds = useCallback(async (lowStock: number, expire: number) => {
+    if (!tenantId) {
+      console.warn('Cannot save thresholds: tenantId is undefined');
+      return;
+    }
+    try {
+      const response = await fetch(`/api/tenant-data/${tenantId}/inventory_settings`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          data: { 
+            lowStockThreshold: lowStock, 
+            expireThreshold: expire 
+          } 
+        })
+      });
+      if (response.ok) {
+        console.log(`[Inventory] Saved thresholds: lowStock=${lowStock}, expire=${expire} for tenant ${tenantId}`);
+        toast.success('Threshold settings saved');
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Failed to save settings:', errorData);
+        toast.error('Failed to save settings');
+      }
+    } catch (error) {
+      console.error('Failed to save inventory settings:', error);
+      toast.error('Failed to save settings');
+    }
+  }, [tenantId]);
+
+  // Handle low stock threshold change with debounce
+  const handleLowStockChange = (value: number) => {
+    setLowStockThreshold(value);
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(() => {
+      saveThresholds(value, expireThreshold);
+    }, 1000);
+  };
+
+  // Handle expire threshold change with debounce
+  const handleExpireThresholdChange = (value: number) => {
+    setExpireThreshold(value);
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(() => {
+      saveThresholds(lowStockThreshold, value);
+    }, 1000);
+  };
 
   // Calculate inventory stats
   const inventoryStats = useMemo(() => {
@@ -263,8 +334,9 @@ const FigmaInventory: React.FC<FigmaInventoryProps> = ({
             <input
               type="number"
               value={lowStockThreshold}
-              onChange={(e) => setLowStockThreshold(parseInt(e.target.value) || 5)}
-              className="bg-[#f9f9f9] h-[32px] w-[80px] rounded-lg text-center text-[12px] text-[#b7b7b7] outline-none"
+              onChange={(e) => handleLowStockChange(parseInt(e.target.value) || 5)}
+              className="bg-[#f9f9f9] h-[32px] w-[80px] rounded-lg text-center text-[12px] text-black outline-none border border-transparent focus:border-[#ff6a00] transition-colors"
+              min="1"
             />
             <span className="text-[12px] text-black">Unit</span>
           </div>
@@ -275,8 +347,9 @@ const FigmaInventory: React.FC<FigmaInventoryProps> = ({
             <input
               type="number"
               value={expireThreshold}
-              onChange={(e) => setExpireThreshold(parseInt(e.target.value) || 10)}
-              className="bg-[#f9f9f9] h-[32px] w-[80px] rounded-lg text-center text-[12px] text-[#b7b7b7] outline-none"
+              onChange={(e) => handleExpireThresholdChange(parseInt(e.target.value) || 10)}
+              className="bg-[#f9f9f9] h-[32px] w-[80px] rounded-lg text-center text-[12px] text-black outline-none border border-transparent focus:border-[#ff6a00] transition-colors"
+              min="1"
             />
             <span className="text-[12px] text-black">Days</span>
           </div>
@@ -290,7 +363,7 @@ const FigmaInventory: React.FC<FigmaInventoryProps> = ({
             <div className="mb-6">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="bg-gradient-to-r from-[#38bdf8] to-[#1e90ff]">
+                  <thead className="bg-[#E0F2FE]">
                     <tr>
                       <th className="px-4 py-3 text-left font-medium text-black text-[16px]">Product</th>
                       <th className="px-4 py-3 text-center font-medium text-black text-[16px]">Category</th>
@@ -343,7 +416,7 @@ const FigmaInventory: React.FC<FigmaInventoryProps> = ({
             <div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="bg-gradient-to-r from-[#38bdf8] to-[#1e90ff]">
+                  <thead className="bg-[#E0F2FE]">
                     <tr>
                       <th className="px-4 py-3 text-left font-medium text-black text-[16px]">Product</th>
                       <th className="px-4 py-3 text-center font-medium text-black text-[16px]">Category</th>

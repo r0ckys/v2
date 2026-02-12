@@ -42,6 +42,7 @@ interface FormData {
   name: string;
   slug: string;
   autoSlug: boolean;
+  shopName: string;
   shortDescription: string;
   description: string;
   mainImage: string;
@@ -243,11 +244,24 @@ const FigmaProductUpload: React.FC<FigmaProductUploadProps> = ({
   const { user } = useAuth();
   const tenantId = user?.tenantId || 'default';
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [showCatalogModal, setShowCatalogModal] = useState(false);
+  const [catalogModalTab, setCatalogModalTab] = useState<'category' | 'subcategory' | 'childcategory' | 'brand' | 'tag'>('category');
+  const [newCatalogItem, setNewCatalogItem] = useState({
+    name: '',
+    parentCategory: '',
+    parentSubCategory: '',
+    image: '',
+    isFlashSale: false,
+    isMostSales: false
+  });
+  const [savingCatalog, setSavingCatalog] = useState(false);
 
   const [formData, setFormData] = useState<FormData>({
     name: '',
     slug: '',
     autoSlug: true,
+    shopName: '',
     shortDescription: '',
     description: '',
     mainImage: '',
@@ -256,7 +270,7 @@ const FigmaProductUpload: React.FC<FigmaProductUploadProps> = ({
     regularPrice: 0,
     salesPrice: 0,
     costPrice: 0,
-    quantity: 50,
+    quantity: 0,
     priority: 0,
     unitName: '',
     warranty: '',
@@ -295,6 +309,7 @@ const FigmaProductUpload: React.FC<FigmaProductUploadProps> = ({
         name: editProduct.name || '',
         description: editProduct.description || '',
         mainImage: editProduct.image || '',
+        galleryImages: editProduct.galleryImages || [],
         salesPrice: editProduct.price || 0,
         regularPrice: editProduct.originalPrice || 0,
         category: editProduct.category || '',
@@ -309,22 +324,66 @@ const FigmaProductUpload: React.FC<FigmaProductUploadProps> = ({
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  // Calculate completion percentage
+  // Calculate completion percentage - check marks for specific fields
   const completionItems = [
-    { label: 'Item Name', completed: !!formData.name },
+    { label: 'Item Name', completed: !!formData.name?.trim() },
     { label: 'Media', completed: !!formData.mainImage },
-    { label: 'Product Description', completed: !!formData.description },
+    { label: 'Product Description', completed: !!formData.description?.trim() },
     { label: 'Pricing', completed: formData.salesPrice > 0 },
     { label: 'Inventory', completed: formData.quantity > 0 }
   ];
-  const completionPercentage = Math.round((completionItems.filter(i => i.completed).length / completionItems.length) * 100);
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // Count all filled fields for progress (3% per field)
+  const filledFieldsCount = [
+    !!formData.name?.trim(),
+    !!formData.mainImage,
+    !!formData.description?.trim(),
+    formData.salesPrice > 0,
+    formData.regularPrice > 0,
+    formData.costPrice > 0,
+    formData.quantity > 0,
+    !!formData.sku?.trim(),
+    !!formData.category?.trim(),
+    !!formData.subCategory?.trim(),
+    !!formData.childCategory?.trim(),
+    !!formData.brandName?.trim(),
+    !!formData.tag?.trim(),
+    formData.galleryImages.length > 0,
+    !!formData.videoUrl?.trim(),
+    !!formData.shortDescription?.trim(),
+    !!formData.unitName?.trim(),
+    !!formData.warranty?.trim(),
+    !!formData.barcode?.trim(),
+    formData.initialSoldCount > 0,
+    !!formData.productionStart,
+    !!formData.expirationEnd,
+    formData.priority > 0,
+    !!formData.seoTitle?.trim(),
+    !!formData.seoDescription?.trim(),
+    !!formData.keywords?.trim(),
+    !!formData.affiliateSource?.trim(),
+    !!formData.sourceProductUrl?.trim(),
+    !!formData.sourceSku?.trim(),
+    formData.variantsMandatory,
+    formData.useDefaultDelivery,
+    formData.deliveryChargeDefault > 0,
+    !!formData.modelName?.trim(),
+  ].filter(Boolean).length;
 
+  // Calculate progress: 3% per field, max 100%
+  const completionPercentage = Math.min(filledFieldsCount * 3, 100);
+
+  // Progress bar color based on percentage
+  const getProgressColor = (percent: number) => {
+    if (percent < 30) return 'bg-yellow-500';
+    if (percent <= 80) return 'bg-green-500';
+    return 'bg-blue-500';
+  };
+
+  // Upload single file and return URL
+  const uploadSingleFile = async (file: File): Promise<string | null> => {
     const formDataUpload = new FormData();
-    formDataUpload.append('image', file);
+    formDataUpload.append('file', file);
     formDataUpload.append('tenantId', tenantId);
 
     try {
@@ -333,12 +392,240 @@ const FigmaProductUpload: React.FC<FigmaProductUploadProps> = ({
         body: formDataUpload
       });
       const data = await response.json();
-      if (data.url) {
-        updateField('mainImage', data.url);
-        toast.success('Image uploaded');
+      if (data.imageUrl) {
+        return data.imageUrl;
+      } else if (data.error) {
+        toast.error(data.error);
       }
+      return null;
     } catch (error) {
-      toast.error('Failed to upload image');
+      console.error('Upload error:', error);
+      return null;
+    }
+  };
+
+  // Get all images (mainImage + galleryImages)
+  const allImages = formData.mainImage 
+    ? [formData.mainImage, ...formData.galleryImages] 
+    : formData.galleryImages;
+
+  // Handle multiple image upload
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    // Check max 20 images
+    const currentCount = allImages.length;
+    const maxAllowed = 20 - currentCount;
+    if (maxAllowed <= 0) {
+      toast.error('Maximum 20 images allowed');
+      return;
+    }
+
+    const filesToUpload = Array.from(files).slice(0, maxAllowed);
+    toast.loading(`Uploading ${filesToUpload.length} image(s)...`, { id: 'upload' });
+
+    const uploadedUrls: string[] = [];
+    for (const file of filesToUpload) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) continue;
+      // Validate file size (4MB max)
+      if (file.size > 4 * 1024 * 1024) {
+        toast.error(`${file.name} is too large (max 4MB)`);
+        continue;
+      }
+      const url = await uploadSingleFile(file);
+      if (url) uploadedUrls.push(url);
+    }
+
+    if (uploadedUrls.length > 0) {
+      // If no main image, set first uploaded as main
+      if (!formData.mainImage) {
+        updateField('mainImage', uploadedUrls[0]);
+        if (uploadedUrls.length > 1) {
+          updateField('galleryImages', [...formData.galleryImages, ...uploadedUrls.slice(1)]);
+        }
+      } else {
+        updateField('galleryImages', [...formData.galleryImages, ...uploadedUrls]);
+      }
+      toast.success(`${uploadedUrls.length} image(s) uploaded`, { id: 'upload' });
+    } else {
+      toast.error('Failed to upload images', { id: 'upload' });
+    }
+
+    // Reset input
+    e.target.value = '';
+  };
+
+  // Remove image from gallery
+  const handleRemoveImage = (index: number) => {
+    if (index === 0 && formData.mainImage) {
+      // Removing main image - promote first gallery image
+      if (formData.galleryImages.length > 0) {
+        updateField('mainImage', formData.galleryImages[0]);
+        updateField('galleryImages', formData.galleryImages.slice(1));
+      } else {
+        updateField('mainImage', '');
+      }
+    } else {
+      // Removing gallery image
+      const galleryIndex = formData.mainImage ? index - 1 : index;
+      const newGallery = formData.galleryImages.filter((_, i) => i !== galleryIndex);
+      updateField('galleryImages', newGallery);
+    }
+  };
+
+  // Set image as main (move to first position)
+  const handleSetAsMain = (index: number) => {
+    if (index === 0) return; // Already main
+    const newMainImage = allImages[index];
+    const newGallery = allImages.filter((_, i) => i !== index);
+    if (formData.mainImage) {
+      // Put old main in gallery
+      newGallery.unshift(formData.mainImage);
+    }
+    updateField('mainImage', newMainImage);
+    updateField('galleryImages', newGallery.filter(img => img !== newMainImage));
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const files = e.dataTransfer.files;
+    if (!files || files.length === 0) return;
+
+    // Check max 20 images
+    const currentCount = allImages.length;
+    const maxAllowed = 20 - currentCount;
+    if (maxAllowed <= 0) {
+      toast.error('Maximum 20 images allowed');
+      return;
+    }
+
+    const filesToUpload = Array.from(files).slice(0, maxAllowed);
+    toast.loading(`Uploading ${filesToUpload.length} image(s)...`, { id: 'upload-drop' });
+
+    const uploadedUrls: string[] = [];
+    for (const file of filesToUpload) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        toast.error(`${file.name} is not an image`);
+        continue;
+      }
+      // Validate file size (4MB max)
+      if (file.size > 4 * 1024 * 1024) {
+        toast.error(`${file.name} is too large (max 4MB)`);
+        continue;
+      }
+      const url = await uploadSingleFile(file);
+      if (url) uploadedUrls.push(url);
+    }
+
+    if (uploadedUrls.length > 0) {
+      if (!formData.mainImage) {
+        updateField('mainImage', uploadedUrls[0]);
+        if (uploadedUrls.length > 1) {
+          updateField('galleryImages', [...formData.galleryImages, ...uploadedUrls.slice(1)]);
+        }
+      } else {
+        updateField('galleryImages', [...formData.galleryImages, ...uploadedUrls]);
+      }
+      toast.success(`${uploadedUrls.length} image(s) uploaded`, { id: 'upload-drop' });
+    } else {
+      toast.error('Failed to upload images', { id: 'upload-drop' });
+    }
+  };
+
+  // Save new catalog item (category, subcategory, childcategory, brand, tag)
+  const handleSaveCatalogItem = async () => {
+    if (!newCatalogItem.name.trim()) {
+      toast.error('Name is required');
+      return;
+    }
+
+    setSavingCatalog(true);
+    try {
+      const endpoint = catalogModalTab === 'subcategory' ? 'subcategories' 
+        : catalogModalTab === 'childcategory' ? 'childcategories'
+        : catalogModalTab === 'brand' ? 'brands'
+        : catalogModalTab === 'tag' ? 'tags'
+        : 'categories';
+
+      // Fetch existing data first
+      const getResponse = await fetch(`/api/tenant-data/${tenantId}/${endpoint}`);
+      let existingData: any[] = [];
+      if (getResponse.ok) {
+        const result = await getResponse.json();
+        existingData = result.data || [];
+      }
+
+      // Create new item
+      const newItem: any = {
+        id: Date.now(),
+        name: newCatalogItem.name.trim(),
+        createdAt: new Date().toISOString()
+      };
+
+      // Add extra fields based on type
+      if (catalogModalTab === 'category') {
+        newItem.image = newCatalogItem.image;
+        newItem.isFlashSale = newCatalogItem.isFlashSale;
+        newItem.isMostSales = newCatalogItem.isMostSales;
+      } else if (catalogModalTab === 'subcategory') {
+        newItem.categoryId = newCatalogItem.parentCategory;
+        newItem.categoryName = newCatalogItem.parentCategory;
+      } else if (catalogModalTab === 'childcategory') {
+        newItem.subCategoryId = newCatalogItem.parentSubCategory;
+        newItem.subCategoryName = newCatalogItem.parentSubCategory;
+      } else if (catalogModalTab === 'brand') {
+        newItem.logo = newCatalogItem.image;
+      }
+
+      // Add to existing data
+      const updatedData = [...existingData, newItem];
+
+      // Save to backend
+      const saveResponse = await fetch(`/api/tenant-data/${tenantId}/${endpoint}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data: updatedData })
+      });
+
+      if (!saveResponse.ok) {
+        throw new Error('Failed to save');
+      }
+
+      toast.success(`${catalogModalTab.charAt(0).toUpperCase() + catalogModalTab.slice(1)} added successfully!`);
+      
+      // Reset form and close modal
+      setNewCatalogItem({
+        name: '',
+        parentCategory: '',
+        parentSubCategory: '',
+        image: '',
+        isFlashSale: false,
+        isMostSales: false
+      });
+      setShowCatalogModal(false);
+    } catch (error) {
+      console.error('Error saving catalog item:', error);
+      toast.error('Failed to save. Please try again.');
+    } finally {
+      setSavingCatalog(false);
     }
   };
 
@@ -376,7 +663,9 @@ const FigmaProductUpload: React.FC<FigmaProductUploadProps> = ({
       sku: formData.sku,
       stock: formData.quantity,
       status: 'Active',
-      tags: formData.tag ? [formData.tag] : []
+      tags: formData.tag ? [formData.tag] : [],
+      tenantId: tenantId,
+      shopName: formData.shopName
     };
 
     onAddProduct(newProduct);
@@ -430,6 +719,20 @@ const FigmaProductUpload: React.FC<FigmaProductUploadProps> = ({
                 />
               </div>
 
+              {/* Shop Name */}
+              <div className="flex flex-col gap-2">
+                <label className="text-[16px] text-black">
+                  Shop Name
+                </label>
+                <input
+                  type="text"
+                  value={formData.shopName}
+                  onChange={(e) => updateField('shopName', e.target.value)}
+                  placeholder="Enter your shop name"
+                  className="w-full h-10 bg-[#f9f9f9] rounded-lg px-3 text-[14px] placeholder:text-[#a2a2a2] outline-none"
+                />
+              </div>
+
               {/* Media */}
               <div className="flex flex-col gap-2">
                 <div className="flex items-center justify-between">
@@ -439,42 +742,107 @@ const FigmaProductUpload: React.FC<FigmaProductUploadProps> = ({
                   <ChevronUp size={20} />
                 </div>
                 
-                {/* Image Upload */}
+                {/* Image Upload & Gallery */}
                 <div 
-                  className="bg-[#f9f9f9] rounded-lg py-6 flex flex-col items-center cursor-pointer hover:bg-gray-100 transition-colors"
-                  onClick={() => fileInputRef.current?.click()}
+                  className={`rounded-lg p-4 transition-colors border-2 ${
+                    isDragging 
+                      ? 'bg-blue-50 border-blue-400 border-dashed' 
+                      : 'bg-[#f9f9f9] border-transparent hover:bg-gray-50'
+                  }`}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
                 >
-                  {formData.mainImage ? (
-                    <div className="relative">
-                      <img src={formData.mainImage} alt="Product" className="w-32 h-32 object-cover rounded-lg" />
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); updateField('mainImage', ''); }}
-                        className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center"
-                      >
-                        <X size={14} />
-                      </button>
+                  {/* Gallery Grid */}
+                  {allImages.length > 0 ? (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">{allImages.length}/20 images</span>
+                        {allImages.length < 20 && (
+                          <button 
+                            type="button"
+                            onClick={() => fileInputRef.current?.click()}
+                            className="text-sm text-[#ff9f1c] hover:underline flex items-center gap-1"
+                          >
+                            <Plus size={14} /> Add More
+                          </button>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-3">
+                        {allImages.map((img, idx) => (
+                          <div 
+                            key={idx} 
+                            className={`relative group aspect-square rounded-lg overflow-hidden border-2 ${
+                              idx === 0 ? 'border-[#ff9f1c] ring-2 ring-[#ff9f1c]/20' : 'border-gray-200'
+                            }`}
+                          >
+                            <img src={img} alt={`Product ${idx + 1}`} className="w-full h-full object-cover" />
+                            {idx === 0 && (
+                              <div className="absolute top-1 left-1 bg-[#ff9f1c] text-white text-[10px] px-1.5 py-0.5 rounded">
+                                Main
+                              </div>
+                            )}
+                            {/* Hover actions */}
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                              {idx !== 0 && (
+                                <button 
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); handleSetAsMain(idx); }}
+                                  className="w-7 h-7 bg-white text-gray-700 rounded-full flex items-center justify-center text-xs hover:bg-[#ff9f1c] hover:text-white transition-colors"
+                                  title="Set as Main"
+                                >
+                                  ★
+                                </button>
+                              )}
+                              <button 
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); handleRemoveImage(idx); }}
+                                className="w-7 h-7 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
+                                title="Remove"
+                              >
+                                <X size={14} />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                        {/* Add more placeholder */}
+                        {allImages.length < 20 && (
+                          <div 
+                            onClick={() => fileInputRef.current?.click()}
+                            className="aspect-square rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:border-[#ff9f1c] hover:bg-orange-50 transition-colors"
+                          >
+                            <Plus size={24} className="text-gray-400" />
+                            <span className="text-[10px] text-gray-400 mt-1">Add</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   ) : (
-                    <>
+                    <div className="flex flex-col items-center py-6 cursor-pointer" onClick={() => fileInputRef.current?.click()}>
                       <div className="w-[76px] h-[76px] mb-3">
                         <Upload size={76} className="text-[#a2a2a2]" />
                       </div>
                       <p className="text-[16px] text-[#a2a2a2] text-center">
-                        Drag and drop image here, or click add image.
+                        Drag and drop images here, or click to add.
                       </p>
                       <p className="text-[12px] text-[#a2a2a2] text-center mt-1">
-                        Supported formats: JPG, PNG, Max size: 4MB.<br/>
-                        Note: Use images with a 1:1.6 aspect ratio (855×1386 pixels.)
+                        Supported: JPG, PNG (max 4MB each). Up to 20 images.<br/>
+                        Recommended: 1:1.6 aspect ratio (855×1386 pixels)
                       </p>
-                      <button className="mt-4 bg-[#ff9f1c] text-white px-4 py-2 rounded-lg text-[14px] font-semibold">
-                        Add Image
+                      <button 
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
+                        className="mt-4 bg-[#ff9f1c] text-white px-4 py-2 rounded-lg text-[14px] font-semibold"
+                      >
+                        Add Images
                       </button>
-                    </>
+                    </div>
                   )}
                   <input
                     ref={fileInputRef}
                     type="file"
                     accept="image/*"
+                    multiple
                     onChange={handleImageUpload}
                     className="hidden"
                   />
@@ -970,7 +1338,7 @@ const FigmaProductUpload: React.FC<FigmaProductUploadProps> = ({
             <div className="flex items-center gap-2 mb-4">
               <div className="flex-1 h-2 bg-[#f9f9f9] rounded-full overflow-hidden">
                 <div 
-                  className="h-full bg-[#085e00] rounded-full transition-all"
+                  className={`h-full ${getProgressColor(completionPercentage)} rounded-full transition-all duration-300`}
                   style={{ width: `${completionPercentage}%` }}
                 />
               </div>
@@ -979,8 +1347,14 @@ const FigmaProductUpload: React.FC<FigmaProductUploadProps> = ({
             <div className="space-y-2">
               {completionItems.map((item, idx) => (
                 <div key={idx} className="flex items-center gap-3">
-                  <CheckCircleIcon filled={item.completed} />
-                  <span className="text-[12px] font-medium text-black">{item.label}</span>
+                  <div className={`w-4 h-4 rounded-full border flex items-center justify-center transition-all ${item.completed ? 'bg-green-500 border-green-500' : 'border-gray-300 bg-white'}`}>
+                    {item.completed && (
+                      <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </div>
+                  <span className={`text-[12px] font-medium ${item.completed ? 'text-black' : 'text-gray-400'}`}>{item.label}</span>
                 </div>
               ))}
             </div>
@@ -997,7 +1371,7 @@ const FigmaProductUpload: React.FC<FigmaProductUploadProps> = ({
               required
             />
             <button 
-              onClick={() => onNavigate?.('catalog_categories')}
+              onClick={() => setShowCatalogModal(true)}
               className="mt-4 h-10 bg-[#f4f4f4] rounded-lg px-4 flex items-center gap-2 ml-auto hover:bg-gray-200 transition-colors"
             >
               <Plus size={24} />
@@ -1040,6 +1414,167 @@ const FigmaProductUpload: React.FC<FigmaProductUploadProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Add Catalog Modal */}
+      {showCatalogModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl w-[600px] max-h-[90vh] overflow-auto shadow-2xl">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-4 border-b">
+              <h2 className="text-xl font-semibold">Add Catalog Item</h2>
+              <button 
+                onClick={() => setShowCatalogModal(false)}
+                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Tab Navigation */}
+            <div className="flex border-b overflow-x-auto">
+              {[
+                { key: 'category', label: 'Category' },
+                { key: 'subcategory', label: 'Sub Category' },
+                { key: 'childcategory', label: 'Child Category' },
+                { key: 'brand', label: 'Brand' },
+                { key: 'tag', label: 'Tag' }
+              ].map((tab) => (
+                <button
+                  key={tab.key}
+                  onClick={() => {
+                    setCatalogModalTab(tab.key as any);
+                    setNewCatalogItem({ name: '', parentCategory: '', parentSubCategory: '', image: '', isFlashSale: false, isMostSales: false });
+                  }}
+                  className={`px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors ${
+                    catalogModalTab === tab.key 
+                      ? 'text-[#ff6a00] border-b-2 border-[#ff6a00]' 
+                      : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-4">
+              {/* Name Input - Common for all */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {catalogModalTab === 'category' ? 'Category' : 
+                   catalogModalTab === 'subcategory' ? 'Sub Category' :
+                   catalogModalTab === 'childcategory' ? 'Child Category' :
+                   catalogModalTab === 'brand' ? 'Brand' : 'Tag'} Name *
+                </label>
+                <input
+                  type="text"
+                  value={newCatalogItem.name}
+                  onChange={(e) => setNewCatalogItem(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder={`Enter ${catalogModalTab} name`}
+                  className="w-full h-11 border rounded-lg px-3 text-sm outline-none focus:border-[#ff6a00]"
+                />
+              </div>
+
+              {/* Parent Category - for Sub Category */}
+              {catalogModalTab === 'subcategory' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Parent Category *</label>
+                  <select
+                    value={newCatalogItem.parentCategory}
+                    onChange={(e) => setNewCatalogItem(prev => ({ ...prev, parentCategory: e.target.value }))}
+                    className="w-full h-11 border rounded-lg px-3 text-sm outline-none focus:border-[#ff6a00] bg-white"
+                  >
+                    <option value="">Select Parent Category</option>
+                    {categories.map((cat) => (
+                      <option key={cat.id || cat.name} value={cat.name}>{cat.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Parent Sub Category - for Child Category */}
+              {catalogModalTab === 'childcategory' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Parent Sub Category *</label>
+                  <select
+                    value={newCatalogItem.parentSubCategory}
+                    onChange={(e) => setNewCatalogItem(prev => ({ ...prev, parentSubCategory: e.target.value }))}
+                    className="w-full h-11 border rounded-lg px-3 text-sm outline-none focus:border-[#ff6a00] bg-white"
+                  >
+                    <option value="">Select Parent Sub Category</option>
+                    {subCategories.map((sub) => (
+                      <option key={sub.id || sub.name} value={sub.name}>{sub.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Image Upload - for Category and Brand */}
+              {(catalogModalTab === 'category' || catalogModalTab === 'brand') && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {catalogModalTab === 'brand' ? 'Brand Logo' : 'Category Image'} (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={newCatalogItem.image}
+                    onChange={(e) => setNewCatalogItem(prev => ({ ...prev, image: e.target.value }))}
+                    placeholder="Enter image URL"
+                    className="w-full h-11 border rounded-lg px-3 text-sm outline-none focus:border-[#ff6a00]"
+                  />
+                </div>
+              )}
+
+              {/* Flash Sale & Most Sales - for Category */}
+              {catalogModalTab === 'category' && (
+                <div className="flex gap-6">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={newCatalogItem.isFlashSale}
+                      onChange={(e) => setNewCatalogItem(prev => ({ ...prev, isFlashSale: e.target.checked }))}
+                      className="w-4 h-4 accent-[#ff6a00]"
+                    />
+                    <span className="text-sm text-gray-700">⚡ Flash Sale Category</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={newCatalogItem.isMostSales}
+                      onChange={(e) => setNewCatalogItem(prev => ({ ...prev, isMostSales: e.target.checked }))}
+                      className="w-4 h-4 accent-[#ff6a00]"
+                    />
+                    <span className="text-sm text-gray-700">🔥 Most Sales Category</span>
+                  </label>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex justify-end gap-3 p-4 border-t bg-gray-50">
+              <button
+                onClick={() => setShowCatalogModal(false)}
+                className="px-5 py-2.5 text-sm text-gray-600 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveCatalogItem}
+                disabled={savingCatalog}
+                className="px-5 py-2.5 text-sm bg-[#ff6a00] text-white rounded-lg hover:bg-[#e55d00] transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                {savingCatalog && (
+                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                )}
+                {savingCatalog ? 'Saving...' : `Add ${catalogModalTab.charAt(0).toUpperCase() + catalogModalTab.slice(1)}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

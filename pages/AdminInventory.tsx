@@ -1,7 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { Search, ChevronDown, Package, AlertTriangle, CheckCircle, TrendingUp, BarChart3, Box } from 'lucide-react';
 import { Product } from '../types';
 import { normalizeImageUrl } from '../utils/imageUrlHelper';
+import toast from 'react-hot-toast';
 
 interface AdminInventoryProps {
   products: Product[];
@@ -17,12 +18,83 @@ const AdminInventory: React.FC<AdminInventoryProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [sortBy, setSortBy] = useState('stock-low-high');
+  const [lowStockThreshold, setLowStockThreshold] = useState(5);
+  const [expireThreshold, setExpireThreshold] = useState(10);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Load saved thresholds from backend
+  useEffect(() => {
+    const loadThresholds = async () => {
+      if (!tenantId) return;
+      try {
+        const response = await fetch(`/api/tenant-data/${tenantId}/inventory_settings`);
+        if (response.ok) {
+          const result = await response.json();
+          if (result.data) {
+            if (result.data.lowStockThreshold) setLowStockThreshold(result.data.lowStockThreshold);
+            if (result.data.expireThreshold) setExpireThreshold(result.data.expireThreshold);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load inventory settings:', error);
+      }
+    };
+    loadThresholds();
+  }, [tenantId]);
+
+  // Save thresholds to backend (debounced)
+  const saveThresholds = useCallback(async (lowStock: number, expire: number) => {
+    if (!tenantId) {
+      console.warn('Cannot save thresholds: tenantId is undefined');
+      return;
+    }
+    try {
+      const response = await fetch(`/api/tenant-data/${tenantId}/inventory_settings`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          data: { 
+            lowStockThreshold: lowStock, 
+            expireThreshold: expire 
+          } 
+        })
+      });
+      if (response.ok) {
+        console.log(`[Inventory] Saved thresholds: lowStock=${lowStock}, expire=${expire} for tenant ${tenantId}`);
+        toast.success('Threshold settings saved');
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Failed to save settings:', errorData);
+        toast.error('Failed to save settings');
+      }
+    } catch (error) {
+      console.error('Failed to save inventory settings:', error);
+      toast.error('Failed to save settings');
+    }
+  }, [tenantId]);
+
+  // Handle threshold changes with debounce
+  const handleLowStockChange = (value: number) => {
+    setLowStockThreshold(value);
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(() => {
+      saveThresholds(value, expireThreshold);
+    }, 1000);
+  };
+
+  const handleExpireThresholdChange = (value: number) => {
+    setExpireThreshold(value);
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(() => {
+      saveThresholds(lowStockThreshold, value);
+    }, 1000);
+  };
 
   // Calculate inventory stats
   const inventoryStats = useMemo(() => {
     const totalProducts = products.length;
     const totalUnits = products.reduce((sum, p) => sum + (p.stock || 0), 0);
-    const lowStockCount = products.filter(p => (p.stock || 0) < 5).length;
+    const lowStockCount = products.filter(p => (p.stock || 0) < lowStockThreshold).length;
     const outOfStockCount = products.filter(p => (p.stock || 0) === 0).length;
     const inventoryValue = products.reduce((sum, p) => sum + ((p.price || 0) * (p.stock || 0)), 0);
     const inventorySaleValue = products.reduce((sum, p) => sum + ((p.originalPrice || p.price || 0) * (p.stock || 0)), 0);
@@ -35,7 +107,7 @@ const AdminInventory: React.FC<AdminInventoryProps> = ({
       inventoryValue,
       inventorySaleValue
     };
-  }, [products]);
+  }, [products, lowStockThreshold]);
 
   // Get unique categories
   const categories = useMemo(() => {
@@ -213,10 +285,11 @@ const AdminInventory: React.FC<AdminInventoryProps> = ({
             <span>Set the low stock threshold at</span>
             <div className="relative">
               <input
-                type="text"
-                defaultValue="5"
-                disabled
-                className="w-12 h-8 bg-[#F9FAFB] text-center text-slate-700 rounded-md outline-none text-sm font-medium"
+                type="number"
+                value={lowStockThreshold}
+                onChange={(e) => handleLowStockChange(parseInt(e.target.value) || 5)}
+                min="1"
+                className="w-16 h-8 bg-[#F9FAFB] text-center text-slate-700 rounded-md outline-none text-sm font-medium border border-transparent focus:border-[#ff6a00] transition-colors"
               />
             </div>
             <span>Unit</span>
@@ -225,10 +298,11 @@ const AdminInventory: React.FC<AdminInventoryProps> = ({
             <span>Set the Low Expire threshold at</span>
             <div className="relative">
               <input
-                type="text"
-                defaultValue="5"
-                disabled
-                className="w-12 h-8 bg-[#F9FAFB] text-center text-slate-700 rounded-md outline-none text-sm font-medium"
+                type="number"
+                value={expireThreshold}
+                onChange={(e) => handleExpireThresholdChange(parseInt(e.target.value) || 10)}
+                min="1"
+                className="w-16 h-8 bg-[#F9FAFB] text-center text-slate-700 rounded-md outline-none text-sm font-medium border border-transparent focus:border-[#ff6a00] transition-colors"
               />
             </div>
             <span>Days</span>

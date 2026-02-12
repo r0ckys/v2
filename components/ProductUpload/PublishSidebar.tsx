@@ -1,20 +1,36 @@
 import React from 'react';
 import { Save, Plus, CheckCircle2 } from 'lucide-react';
 
+interface ChecklistItem {
+  label: string;
+  completed: boolean;
+}
+
 interface PublishSidebarProps {
   completionPercentage: number;
+  checklist?: ChecklistItem[];
   onDraft: () => void;
   onPublish: () => void;
 }
 
-const PublishSidebar: React.FC<PublishSidebarProps> = ({ completionPercentage, onDraft, onPublish }) => {
-  const checklist = [
+// Color function: yellow < 30%, green 30-80%, blue > 80%
+const getProgressColor = (percentage: number): string => {
+  if (percentage < 30) return 'bg-yellow-500';
+  if (percentage <= 80) return 'bg-green-500';
+  return 'bg-blue-500';
+};
+
+const PublishSidebar: React.FC<PublishSidebarProps> = ({ completionPercentage, checklist: externalChecklist, onDraft, onPublish }) => {
+  // Use external checklist if provided, otherwise fallback to default
+  const checklist = externalChecklist || [
     { label: 'Category', completed: completionPercentage >= 20 },
     { label: 'Media', completed: completionPercentage >= 40 },
     { label: 'Product Name', completed: completionPercentage >= 60 },
     { label: 'Price', completed: completionPercentage >= 80 },
     { label: 'Brand', completed: completionPercentage === 100 },
   ];
+
+  const progressColorClass = getProgressColor(completionPercentage);
 
   return (
     <div className="sticky top-6 space-y-4">
@@ -30,7 +46,7 @@ const PublishSidebar: React.FC<PublishSidebarProps> = ({ completionPercentage, o
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
             <div
-              className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+              className={`${progressColorClass} h-2 rounded-full transition-all duration-300`}
               style={{ width: `${completionPercentage}%` }}
             />
           </div>
@@ -45,7 +61,7 @@ const PublishSidebar: React.FC<PublishSidebarProps> = ({ completionPercentage, o
               ) : (
                 <div className="w-5 h-5 border-2 border-gray-300 rounded-full flex-shrink-0" />
               )}
-              <span className={`text-sm ${item.completed ? 'text-gray-700 line-through' : 'text-gray-600'}`}>
+              <span className={`text-sm ${item.completed ? 'text-gray-700' : 'text-gray-600'}`}>
                 {item.label}
               </span>
             </div>

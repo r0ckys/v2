@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { Plus, Search, MoreVertical, ChevronLeft, ChevronRight, ChevronDown, Download, Upload, Filter, Printer, Edit, Trash2, Copy, Eye, X, Loader2, LayoutGrid, List } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import Papa from 'papaparse';
 import { Product, Category, Brand } from '../../types';
 import { normalizeImageUrl } from '../../utils/imageUrlHelper';
 
@@ -60,6 +61,10 @@ interface FigmaProductListProps {
   onCloneProduct?: (product: Product) => void;
   onBulkDelete?: (ids: number[]) => void;
   onBulkStatusUpdate?: (ids: number[], status: 'Active' | 'Draft') => void;
+  onBulkFlashSale?: (ids: number[], action: 'add' | 'remove') => void;
+  onBulkDiscount?: (ids: number[], discount: number) => void;
+  onImport?: () => void;
+  onExport?: () => void;
 }
 
 const FigmaProductList: React.FC<FigmaProductListProps> = ({
@@ -71,15 +76,21 @@ const FigmaProductList: React.FC<FigmaProductListProps> = ({
   onDeleteProduct,
   onCloneProduct,
   onBulkDelete,
-  onBulkStatusUpdate
+  onBulkStatusUpdate,
+  onBulkFlashSale,
+  onBulkDiscount,
+  onImport,
+  onExport
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedIds, setSelectedIds] = useState<number[]>([]);
-  const [openDropdownId, setOpenDropdownId] = useState<number | null>(null);
-  const [viewMode, setViewMode] = useState<'large' | 'small' | 'list'>('large');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'large' | 'small' | 'list'>('list');
   const [showViewDropdown, setShowViewDropdown] = useState(false);
   const [productsPerPage, setProductsPerPage] = useState(10);
+  const [showDiscountModal, setShowDiscountModal] = useState(false);
+  const [discountValue, setDiscountValue] = useState<number>(0);
   
   // Filters
   const [categoryFilter, setCategoryFilter] = useState('all');
@@ -91,6 +102,64 @@ const FigmaProductList: React.FC<FigmaProductListProps> = ({
   const [showPerPageDropdown, setShowPerPageDropdown] = useState(false);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const importInputRef = useRef<HTMLInputElement>(null);
+
+  // Export products to CSV
+  const handleExportCSV = useCallback(() => {
+    if (propProducts.length === 0) {
+      toast.error('No products to export');
+      return;
+    }
+    const dataToExport = propProducts.map(p => ({
+      id: p.id,
+      name: p.name,
+      price: p.price,
+      originalPrice: p.originalPrice || '',
+      sku: p.sku || '',
+      stock: p.stock || 0,
+      category: p.category || '',
+      subCategory: p.subCategory || '',
+      brand: p.brand || '',
+      status: p.status || 'Active',
+      tags: Array.isArray(p.tags) ? p.tags.join(', ') : '',
+      galleryImages: Array.isArray(p.galleryImages) ? p.galleryImages.join(';') : '',
+      description: p.description || ''
+    }));
+    const csv = Papa.unparse(dataToExport);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `products_export_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success(`Exported ${propProducts.length} products`);
+  }, [propProducts]);
+
+  // Import products from CSV
+  const handleImportCSV = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    
+    if (onImport) {
+      onImport();
+    } else {
+      Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: (results) => {
+          toast.success(`Parsed ${results.data.length} products from CSV. Connect import handler to save.`);
+          console.log('Imported data:', results.data);
+        },
+        error: (error) => {
+          toast.error('Failed to parse CSV file');
+          console.error('CSV parse error:', error);
+        }
+      });
+    }
+    if (importInputRef.current) importInputRef.current.value = '';
+  }, [onImport]);
 
   // Close dropdowns on outside click
   useEffect(() => {
@@ -146,28 +215,124 @@ const FigmaProductList: React.FC<FigmaProductListProps> = ({
     setCurrentPage(1);
   }, [searchQuery, categoryFilter, brandFilter, statusFilter]);
 
-  // Selection handlers
-  const handleSelectAll = useCallback(() => {
-    if (selectedIds.length === paginatedProducts.length) {
-      setSelectedIds([]);
-    } else {
-      setSelectedIds(paginatedProducts.map(p => p.id));
-    }
-  }, [selectedIds, paginatedProducts]);
-
-  const handleSelectProduct = useCallback((id: number) => {
-    setSelectedIds(prev =>
-      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
-    );
+  // Helper to get unique key for each product (handles duplicate IDs)
+  const getProductKey = useCallback((product: Product, idx: number): string => {
+    return (product as any)._id || `${product.id}-${idx}`;
   }, []);
 
+  // Selection handlers
+  const handleSelectAll = useCallback(() => {
+    if (selectedIds.size === paginatedProducts.length) {
+      setSelectedIds(new Set());
+    } else {
+      const allKeys = paginatedProducts.map((p, idx) => getProductKey(p, idx));
+      setSelectedIds(new Set(allKeys));
+    }
+  }, [selectedIds.size, paginatedProducts, getProductKey]);
+
+  const handleSelectProduct = useCallback((key: string) => {
+    setSelectedIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(key)) {
+        newSet.delete(key);
+      } else {
+        newSet.add(key);
+      }
+      return newSet;
+    });
+  }, []);
+
+  // Get actual product IDs from selected keys
+  const getSelectedProductIds = useCallback((): number[] => {
+    return paginatedProducts
+      .filter((p, idx) => selectedIds.has(getProductKey(p, idx)))
+      .map(p => p.id);
+  }, [paginatedProducts, selectedIds, getProductKey]);
+
   const handlePrintMultiple = useCallback(() => {
-    if (selectedIds.length === 0) {
+    if (selectedIds.size === 0) {
       toast.error('Select products to print');
       return;
     }
-    toast.success(`Printing ${selectedIds.length} products`);
-  }, [selectedIds]);
+    toast.success(`Printing ${selectedIds.size} products`);
+  }, [selectedIds.size]);
+
+  // Bulk action handlers
+  const handleBulkDelete = useCallback(() => {
+    const ids = getSelectedProductIds();
+    if (ids.length === 0) {
+      toast.error('Select products to delete');
+      return;
+    }
+    if (onBulkDelete) {
+      onBulkDelete(ids);
+    } else {
+      toast.success(`Deleted ${ids.length} products`);
+    }
+    setSelectedIds(new Set());
+  }, [getSelectedProductIds, onBulkDelete]);
+
+  const handleBulkPublish = useCallback(() => {
+    const ids = getSelectedProductIds();
+    if (ids.length === 0) {
+      toast.error('Select products to publish');
+      return;
+    }
+    if (onBulkStatusUpdate) {
+      onBulkStatusUpdate(ids, 'Active');
+    } else {
+      toast.success(`Published ${ids.length} products`);
+    }
+    setSelectedIds(new Set());
+  }, [getSelectedProductIds, onBulkStatusUpdate]);
+
+  const handleBulkDraft = useCallback(() => {
+    const ids = getSelectedProductIds();
+    if (ids.length === 0) {
+      toast.error('Select products to draft');
+      return;
+    }
+    if (onBulkStatusUpdate) {
+      onBulkStatusUpdate(ids, 'Draft');
+    } else {
+      toast.success(`Moved ${ids.length} products to draft`);
+    }
+    setSelectedIds(new Set());
+  }, [getSelectedProductIds, onBulkStatusUpdate]);
+
+  const handleBulkFlashSale = useCallback((action: 'add' | 'remove') => {
+    const ids = getSelectedProductIds();
+    if (ids.length === 0) {
+      toast.error('Select products first');
+      return;
+    }
+    if (onBulkFlashSale) {
+      onBulkFlashSale(ids, action);
+    } else {
+      toast.success(action === 'add' ? `Added ${ids.length} products to Flash Sale` : `Removed ${ids.length} products from Flash Sale`);
+    }
+    setSelectedIds(new Set());
+  }, [getSelectedProductIds, onBulkFlashSale]);
+
+  const handleApplyDiscount = useCallback(() => {
+    const ids = getSelectedProductIds();
+    if (ids.length === 0) {
+      toast.error('Select products first');
+      return;
+    }
+    if (discountValue <= 0) {
+      toast.error('Enter a valid discount percentage');
+      return;
+    }
+    if (onBulkDiscount) {
+      onBulkDiscount(ids, discountValue);
+    } else {
+      toast.success(`Applied ${discountValue}% discount to ${ids.length} products`);
+    }
+    setShowDiscountModal(false);
+    setDiscountValue(0);
+    setSelectedIds(new Set());
+  }, [getSelectedProductIds, discountValue, onBulkDiscount]);
 
   // Generate page numbers for pagination
   const getPageNumbers = () => {
@@ -198,6 +363,14 @@ const FigmaProductList: React.FC<FigmaProductListProps> = ({
 
   return (
     <div className="bg-white rounded-2xl mx-2 sm:mx-4 md:mx-6 p-4 sm:p-6 shadow-sm font-['Poppins']">
+      {/* Hidden file input for CSV import */}
+      <input
+        type="file"
+        ref={importInputRef}
+        onChange={handleImportCSV}
+        accept=".csv"
+        className="hidden"
+      />
       {/* Header Row */}
       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 mb-5">
         <h1 className="text-[22px] font-bold text-[#023337] tracking-[0.11px] font-['Lato']">Products</h1>
@@ -289,7 +462,7 @@ const FigmaProductList: React.FC<FigmaProductListProps> = ({
       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 mb-5">
         <div className="flex items-center gap-4">
           {/* Import */}
-          <button className="flex items-center gap-1 text-[12px] text-[#161719]">
+          <button onClick={() => importInputRef.current?.click()} className="flex items-center gap-1 text-[12px] text-[#161719] hover:text-[#ff6a00] transition-colors">
             {/* <Download size={20} className="text-[#161719]" /> */}
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M14.1667 17.5C13.6611 17.0085 11.6667 15.7002 11.6667 15C11.6667 14.2997 13.6611 12.9915 14.1667 12.5M12.5001 15H18.3334" stroke="#FF5500" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round"/>
@@ -300,7 +473,7 @@ const FigmaProductList: React.FC<FigmaProductListProps> = ({
           </button>
 
           {/* Export */}
-          <button className="flex items-center gap-1 text-[12px] text-[#161719]">
+          <button onClick={handleExportCSV} className="flex items-center gap-1 text-[12px] text-[#161719] hover:text-[#ff6a00] transition-colors">
             {/* <Upload size={20} className="text-[#161719]" /> */}
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M15.8334 17.5C16.3391 17.0085 18.3334 15.7002 18.3334 15C18.3334 14.2997 16.3391 12.9915 15.8334 12.5M17.5001 15H11.6667" stroke="#FF5500" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round"/>
@@ -443,29 +616,127 @@ const FigmaProductList: React.FC<FigmaProductListProps> = ({
         </div>
       </div>
 
+      {/* Bulk Action Bar - Shows when items are selected */}
+      {selectedIds.size > 0 && (
+        <div className="bg-gradient-to-r from-[#ff6a00] to-[#ff9500] rounded-xl p-4 mb-5 flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <span className="text-white font-semibold text-sm">
+              {selectedIds.size} product{selectedIds.size > 1 ? 's' : ''} selected
+            </span>
+            <button 
+              onClick={() => setSelectedIds(new Set())}
+              className="text-white/80 hover:text-white text-sm underline"
+            >
+              Clear selection
+            </button>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={handleBulkPublish}
+              className="bg-white text-green-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-50 transition-colors flex items-center gap-2"
+            >
+              <Eye size={16} />
+              Publish
+            </button>
+            <button
+              onClick={handleBulkDraft}
+              className="bg-white text-gray-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors flex items-center gap-2"
+            >
+              <Edit size={16} />
+              Draft
+            </button>
+            <button
+              onClick={() => handleBulkFlashSale('add')}
+              className="bg-white text-orange-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-orange-50 transition-colors flex items-center gap-2"
+            >
+              ⚡ Send to Flash Sale
+            </button>
+            <button
+              onClick={() => handleBulkFlashSale('remove')}
+              className="bg-white text-yellow-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-yellow-50 transition-colors flex items-center gap-2"
+            >
+              ⚡ Remove from Flash Sale
+            </button>
+            <button
+              onClick={() => setShowDiscountModal(true)}
+              className="bg-white text-purple-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-purple-50 transition-colors flex items-center gap-2"
+            >
+              % Discount
+            </button>
+            <button
+              onClick={handleBulkDelete}
+              className="bg-white text-red-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-50 transition-colors flex items-center gap-2"
+            >
+              <Trash2 size={16} />
+              Delete
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Discount Modal */}
+      {showDiscountModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-[400px] shadow-2xl">
+            <h3 className="text-lg font-semibold mb-4">Apply Discount</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Apply discount to {selectedIds.size} selected product{selectedIds.size > 1 ? 's' : ''}
+            </p>
+            <div className="flex items-center gap-2 mb-4">
+              <input
+                type="number"
+                value={discountValue}
+                onChange={(e) => setDiscountValue(Number(e.target.value))}
+                placeholder="Enter discount %"
+                className="flex-1 h-10 border rounded-lg px-3 text-sm outline-none focus:border-[#ff6a00]"
+                min="0"
+                max="100"
+              />
+              <span className="text-gray-500">%</span>
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => { setShowDiscountModal(false); setDiscountValue(0); }}
+                className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleApplyDiscount}
+                className="px-4 py-2 text-sm bg-[#ff6a00] text-white rounded-lg hover:bg-[#e55d00]"
+              >
+                Apply Discount
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Grid View - Large Icons */}
       {viewMode === 'large' && (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {paginatedProducts.length > 0 ? paginatedProducts.map((product, idx) => (
-            <div key={`${product.id}-${idx}`} className="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-lg transition-shadow relative group">
+          {paginatedProducts.length > 0 ? paginatedProducts.map((product, idx) => {
+            const productKey = getProductKey(product, idx);
+            return (
+            <div key={productKey} className="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-lg transition-shadow relative group">
               {/* Checkbox */}
               <div className="absolute top-3 left-3 z-10">
                 <input
                   type="checkbox"
-                  checked={selectedIds.includes(product.id)}
-                  onChange={() => handleSelectProduct(product.id)}
+                  checked={selectedIds.has(productKey)}
+                  onChange={() => handleSelectProduct(productKey)}
                   className="w-5 h-5 rounded border-gray-300"
                 />
               </div>
               {/* Actions Dropdown */}
               <div className="absolute top-3 right-3 z-10" data-dropdown>
                 <button
-                  onClick={() => setOpenDropdownId(openDropdownId === product.id ? null : product.id)}
+                  onClick={() => setOpenDropdownId(openDropdownId === productKey ? null : productKey)}
                   className="p-1.5 bg-white/80 hover:bg-gray-100 rounded-full transition-colors"
                 >
                   <DotsIcon />
                 </button>
-                {openDropdownId === product.id && (
+                {openDropdownId === productKey && (
                   <div className="absolute right-0 top-full mt-1 z-50">
                     <div className="w-[140px] bg-white rounded-lg shadow-xl border overflow-hidden py-1">
                       <button
@@ -494,7 +765,7 @@ const FigmaProductList: React.FC<FigmaProductListProps> = ({
                       </button>
                     </div>
                   </div>
-                )}
+                )}&rbrace;
               </div>
               {/* Image */}
               <div className="w-full aspect-square rounded-lg overflow-hidden bg-gradient-to-r from-[#38bdf8] to-[#1e90ff] mb-3">
@@ -525,7 +796,7 @@ const FigmaProductList: React.FC<FigmaProductListProps> = ({
               </div>
               {product.sku && <p className="text-[11px] text-gray-400 mt-2">SKU: {product.sku}</p>}
             </div>
-          )) : (
+          );}) : (
             <div className="col-span-full py-12 text-center text-gray-500">
               <div className="flex flex-col items-center">
                 <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-3">
@@ -542,14 +813,16 @@ const FigmaProductList: React.FC<FigmaProductListProps> = ({
       {/* Grid View - Small Icons */}
       {viewMode === 'small' && (
         <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-3">
-          {paginatedProducts.length > 0 ? paginatedProducts.map((product, idx) => (
-            <div key={`${product.id}-${idx}`} className="bg-white border border-gray-200 rounded-lg p-2 hover:shadow-md transition-shadow relative group">
+          {paginatedProducts.length > 0 ? paginatedProducts.map((product, idx) => {
+            const productKey = getProductKey(product, idx);
+            return (
+            <div key={productKey} className="bg-white border border-gray-200 rounded-lg p-2 hover:shadow-md transition-shadow relative group">
               {/* Checkbox */}
               <div className="absolute top-1 left-1 z-10">
                 <input
                   type="checkbox"
-                  checked={selectedIds.includes(product.id)}
-                  onChange={() => handleSelectProduct(product.id)}
+                  checked={selectedIds.has(productKey)}
+                  onChange={() => handleSelectProduct(productKey)}
                   className="w-4 h-4 rounded border-gray-300"
                 />
               </div>
@@ -579,7 +852,8 @@ const FigmaProductList: React.FC<FigmaProductListProps> = ({
                 }`} title={product.status === 'Active' ? 'Published' : 'Draft'} />
               </div>
             </div>
-          )) : (
+            );
+          }) : (
             <div className="col-span-full py-12 text-center text-gray-500">
               <div className="flex flex-col items-center">
                 <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-3">
@@ -597,7 +871,7 @@ const FigmaProductList: React.FC<FigmaProductListProps> = ({
       {viewMode === 'list' && (
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-gradient-to-r from-[#38bdf8] to-[#1e90ff]">
+          <thead className="bg-[#E0F2FE]">
             <tr>
               <th className="px-4 py-3 text-left">
                 <input
@@ -620,13 +894,15 @@ const FigmaProductList: React.FC<FigmaProductListProps> = ({
             </tr>
           </thead>
           <tbody className="divide-y divide-[#b9b9b9]/50">
-            {paginatedProducts.length > 0 ? paginatedProducts.map((product, index) => (
-              <tr key={`${product.id}-${index}`} className="h-[68px] hover:bg-gray-50 transition-colors">
+            {paginatedProducts.length > 0 ? paginatedProducts.map((product, index) => {
+              const productKey = getProductKey(product, index);
+              return (
+              <tr key={productKey} className="h-[68px] hover:bg-gray-50 transition-colors">
                 <td className="px-4 py-3">
                   <input
                     type="checkbox"
-                    checked={selectedIds.includes(product.id)}
-                    onChange={() => handleSelectProduct(product.id)}
+                    checked={selectedIds.has(productKey)}
+                    onChange={() => handleSelectProduct(productKey)}
                     className="w-5 h-5 rounded border-[1.5px] border-[#eaf8e7] bg-white"
                   />
                 </td>
@@ -680,12 +956,12 @@ const FigmaProductList: React.FC<FigmaProductListProps> = ({
                 <td className="px-4 py-3 text-center relative">
                   <div data-dropdown>
                     <button
-                      onClick={() => setOpenDropdownId(openDropdownId === product.id ? null : product.id)}
+                      onClick={() => setOpenDropdownId(openDropdownId === productKey ? null : productKey)}
                       className="p-1 hover:bg-gray-200 rounded transition-colors"
                     >
                       <DotsIcon />
                     </button>
-                    {openDropdownId === product.id && (
+                    {openDropdownId === productKey && (
                       <div className="absolute right-0 top-full mt-1 z-50">
                         <div className="w-[160px] bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden py-2">
                           <button
@@ -723,7 +999,7 @@ const FigmaProductList: React.FC<FigmaProductListProps> = ({
                   </div>
                 </td>
               </tr>
-            )) : (
+            );}) : (
               <tr>
                 <td colSpan={11} className="px-4 py-12 text-center text-gray-500">
                   <div className="flex flex-col items-center">
