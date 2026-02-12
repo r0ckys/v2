@@ -81,6 +81,7 @@ export interface ProductVariantStock extends ProductVariantSelection {
 }
 
 export interface Product {
+  totalSold: number;
   sales: number;
   id: number;
   name: string;
@@ -126,10 +127,7 @@ export interface Popup {
 
 export interface Order {
   createdAt: string | number | Date;
-  createdAt: any;
   items: any;
-  items(items: boolean): unknown;
-  items: boolean;
   weight: number;
   pathaoArea: number;
   pathaoZone: number;

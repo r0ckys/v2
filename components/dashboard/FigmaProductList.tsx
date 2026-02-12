@@ -481,6 +481,12 @@ const FigmaProductList: React.FC<FigmaProductListProps> = ({
                         <Copy size={14} /> Duplicate
                       </button>
                       <button
+                        onClick={() => { window.open(`/product/${product.slug || product.id}`, '_blank'); setOpenDropdownId(null); }}
+                        className="flex items-center gap-2 w-full px-3 py-2 hover:bg-gray-50 text-sm text-gray-700"
+                      >
+                        <Eye size={14} /> View
+                      </button>
+                      <button
                         onClick={() => { onDeleteProduct?.(product.id); setOpenDropdownId(null); }}
                         className="flex items-center gap-2 w-full px-3 py-2 hover:bg-gray-50 text-sm text-red-600"
                       >
@@ -660,7 +666,7 @@ const FigmaProductList: React.FC<FigmaProductListProps> = ({
                   {product.sku || '-'}
                 </td>
                 <td className="px-4 py-3 text-[12px] text-[#1d1a1a]">
-                  {product.tag || product.tags?.join(', ') || '-'}
+                  {product.tag || (Array.isArray(product.tags) ? product.tags.join(', ') : '') || '-'}
                 </td>
                 <td className="px-4 py-3">
                   <span className={`px-[9px] py-0.5 rounded-[30px] text-[12px] font-medium ${
@@ -737,17 +743,8 @@ const FigmaProductList: React.FC<FigmaProductListProps> = ({
 
       {/* Footer: Print & Pagination */}
       {filteredProducts.length > 0 && (
-        <div className="flex items-center justify-between mt-6 pt-4">
-          {/* Print Multiple */}
-          <button
-            onClick={handlePrintMultiple}
-            className="flex items-center gap-2 text-sm text-gray-700 hover:text-gray-900"
-          >
-            <Printer size={20} />
-            <span>Print Multiple Order</span>
-          </button>
-
-          {/* Pagination */}
+        <div className="flex flex-col items-center mt-6 pt-4 gap-4">
+          {/* Pagination - Centered */}
           <div className="flex items-center gap-2">
             <button
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}

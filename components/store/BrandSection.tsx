@@ -12,7 +12,7 @@ interface Brand {
 
 interface Props {
   brands: Brand[];
-  onBrandClick: (brand: Brand) => void;
+  onBrandClick?: (brand: Brand) => void;
   style?: string;
   sectionRef?: React.RefObject<HTMLElement>;
 }
@@ -48,7 +48,7 @@ const BrandStyle1 = memo(({ brands, onBrandClick }: Omit<Props, 'style' | 'secti
           {duplicated.map((brand, i) => (
             <button
               key={`${brand.name}-${i}`}
-              onClick={() => onBrandClick(brand)}
+              onClick={() => onBrandClick?.(brand)}
               className="flex-shrink-0 w-28 h-20 sm:w-36 sm:h-24 bg-white rounded-xl border border-gray-200 hover:border-theme-primary hover:shadow-lg transition-all flex items-center justify-center p-4 group"
             >
               {brand.image || brand.logo ? (
@@ -84,7 +84,7 @@ const BrandStyle2 = memo(({ brands, onBrandClick }: Omit<Props, 'style' | 'secti
         {display.map((brand) => (
           <button
             key={brand.name}
-            onClick={() => onBrandClick(brand)}
+            onClick={() => onBrandClick?.(brand)}
             className="group relative bg-white rounded-2xl border border-gray-200 p-6 h-32 flex items-center justify-center hover:shadow-xl hover:border-theme-primary transition-all overflow-hidden"
           >
             <div className="absolute inset-0 bg-gradient-theme-br opacity-0 group-hover:opacity-5 transition-opacity" />
@@ -136,7 +136,7 @@ const BrandStyle3 = memo(({ brands, onBrandClick }: Omit<Props, 'style' | 'secti
         {display.map((brand) => (
           <button
             key={brand.name}
-            onClick={() => onBrandClick(brand)}
+            onClick={() => onBrandClick?.(brand)}
             className="flex-shrink-0 flex flex-col items-center gap-2 group"
           >
             <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-white border-2 border-gray-200 group-hover:border-theme-primary p-3 flex items-center justify-center shadow-md group-hover:shadow-lg transition-all">
@@ -173,7 +173,7 @@ const BrandStyle4 = memo(({ brands, onBrandClick }: Omit<Props, 'style' | 'secti
         {display.map((brand) => (
           <button
             key={brand.name}
-            onClick={() => onBrandClick(brand)}
+            onClick={() => onBrandClick?.(brand)}
             className="inline-flex items-center gap-2 px-4 py-2.5 bg-white rounded-full border border-gray-200 hover:border-theme-primary hover:shadow-md transition-all group"
           >
             {(brand.image || brand.logo) && (
@@ -206,7 +206,7 @@ const BrandStyle5 = memo(({ brands, onBrandClick }: Omit<Props, 'style' | 'secti
         {display.map((brand, i) => (
           <button
             key={brand.name}
-            onClick={() => onBrandClick(brand)}
+            onClick={() => onBrandClick?.(brand)}
             className={`group relative bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-6 hover:shadow-xl transition-all overflow-hidden ${i === 0 ? 'md:col-span-2 md:row-span-2' : ''}`}
           >
             <div className="absolute top-3 right-3 px-2 py-1 bg-theme-primary/10 rounded-full">

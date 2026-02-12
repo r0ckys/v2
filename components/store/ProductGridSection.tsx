@@ -10,9 +10,9 @@ interface Props {
   products: Product[]; 
   accentColor?: 'green' | 'purple' | 'orange' | 'blue'; 
   onProductClick: (p: Product) => void; 
-  onBuyNow: (p: Product) => void; 
-  onQuickView: (p: Product) => void; 
-  onAddToCart: (p: Product) => void; 
+  onBuyNow?: (p: Product) => void; 
+  onQuickView?: (p: Product) => void; 
+  onAddToCart?: (p: Product) => void; 
   productCardStyle?: string; 
   productSectionStyle?: string;
   keyPrefix: string; 
@@ -43,7 +43,7 @@ const ProductSectionStyle1 = memo(({ title, products, accentColor = 'green', onP
         <SectionHeader title={title} className="text-lg md:text-xl font-bold text-gray-900"/>
       </div>
       <div className="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-        {products.map(p => <ProductCard key={`${keyPrefix}-${p.id}`} product={p} onClick={onProductClick} onBuyNow={onBuyNow} variant={productCardStyle} onQuickView={onQuickView} onAddToCart={onAddToCart}/>)}
+        {products.map((p, idx) => <ProductCard key={`${keyPrefix}-${p.id}-${idx}`} product={p} onClick={onProductClick} onBuyNow={onBuyNow} variant={productCardStyle} onQuickView={onQuickView} onAddToCart={onAddToCart}/>)}
       </div>
     </section>
   );
@@ -65,7 +65,7 @@ const ProductSectionStyle2 = memo(({ title, products, accentColor = 'green', onP
       </div>
       <div className="bg-white rounded-2xl border border-gray-200 p-3 sm:p-4">
         <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-          {products.map(p => <ProductCard key={`${keyPrefix}-${p.id}`} product={p} onClick={onProductClick} onBuyNow={onBuyNow} variant={productCardStyle} onQuickView={onQuickView} onAddToCart={onAddToCart}/>)}
+          {products.map((p, idx) => <ProductCard key={`${keyPrefix}-${p.id}-${idx}`} product={p} onClick={onProductClick} onBuyNow={onBuyNow} variant={productCardStyle} onQuickView={onQuickView} onAddToCart={onAddToCart}/>)}
         </div>
       </div>
     </section>
@@ -88,7 +88,7 @@ const ProductSectionStyle3 = memo(({ title, products, accentColor = 'green', onP
       </div>
       <div className="bg-gray-50 rounded-b-2xl p-3 sm:p-4 border border-t-0 border-gray-200">
         <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-          {products.map(p => <ProductCard key={`${keyPrefix}-${p.id}`} product={p} onClick={onProductClick} onBuyNow={onBuyNow} variant={productCardStyle} onQuickView={onQuickView} onAddToCart={onAddToCart}/>)}
+          {products.map((p, idx) => <ProductCard key={`${keyPrefix}-${p.id}-${idx}`} product={p} onClick={onProductClick} onBuyNow={onBuyNow} variant={productCardStyle} onQuickView={onQuickView} onAddToCart={onAddToCart}/>)}
         </div>
       </div>
     </section>
@@ -108,7 +108,7 @@ const ProductSectionStyle4 = memo(({ title, products, accentColor = 'green', onP
         <span className="text-sm text-gray-500">{products.length} products</span>
       </div>
       <div className="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-        {products.map(p => <ProductCard key={`${keyPrefix}-${p.id}`} product={p} onClick={onProductClick} onBuyNow={onBuyNow} variant={productCardStyle} onQuickView={onQuickView} onAddToCart={onAddToCart}/>)}
+        {products.map((p, idx) => <ProductCard key={`${keyPrefix}-${p.id}-${idx}`} product={p} onClick={onProductClick} onBuyNow={onBuyNow} variant={productCardStyle} onQuickView={onQuickView} onAddToCart={onAddToCart}/>)}
       </div>
     </section>
   );
@@ -134,7 +134,7 @@ const ProductSectionStyle5 = memo(({ title, products, accentColor = 'green', onP
         </div>
         <div className="p-3 sm:p-4">
           <div className="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-            {products.map(p => <ProductCard key={`${keyPrefix}-${p.id}`} product={p} onClick={onProductClick} onBuyNow={onBuyNow} variant={productCardStyle} onQuickView={onQuickView} onAddToCart={onAddToCart}/>)}
+            {products.map((p, idx) => <ProductCard key={`${keyPrefix}-${p.id}-${idx}`} product={p} onClick={onProductClick} onBuyNow={onBuyNow} variant={productCardStyle} onQuickView={onQuickView} onAddToCart={onAddToCart}/>)}
           </div>
         </div>
       </div>

@@ -68,6 +68,7 @@ const io = new SocketIOServer(httpServer, {
       const systemnextPattern = /^https?:\/\/([a-z0-9-]+\.)?systemnextit\.com$/i;
       const cartngetPattern = /^https?:\/\/([a-z0-9-]+\.)?cartnget\.shop$/i;
       const shopbdPattern = /^https?:\/\/([a-z0-9-]+\.)?shopbdit\.com$/i;
+      // Support localhost with subdomains: store.localhost:3000, admin.localhost:5173, etc.
       const localhostPattern = /^https?:\/\/([a-z0-9-]+\.)?localhost(:\d+)?$/i;
       const origins = Array.isArray(origin) ? origin : [origin];
       const isAllowed = origins.some(o => 
@@ -125,7 +126,8 @@ const corsOptions: cors.CorsOptions = {
     const systemnextPattern = /^https?:\/\/([a-z0-9-]+\.)?systemnextit\.com$/i;
     const cartngetPattern = /^https?:\/\/([a-z0-9-]+\.)?cartnget\.shop$/i;
     const shopbdPattern = /^https?:\/\/([a-z0-9-]+\.)?shopbdit\.com$/i;
-    const localhostPattern = /^https?:\/\/localhost(:\d+)?$/i;
+    // Support localhost with subdomains: store.localhost:3000, admin.localhost:5173, etc.
+    const localhostPattern = /^https?:\/\/([a-z0-9-]+\.)?localhost(:\d+)?$/i;
     
     if (systemnextPattern.test(origin) || cartngetPattern.test(origin) || shopbdPattern.test(origin) || localhostPattern.test(origin)) {
       return callback(null, true);

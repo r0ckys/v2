@@ -46,6 +46,31 @@ interface StoreLayoutData {
   version?: number;
 }
 
+interface ProductVariant {
+  [key: string]: any;
+}
+
+interface SectionSettings {
+  [key: string]: any;
+}
+
+interface AddToCartParams {
+  product: Product;
+  quantity: number;
+  variant: ProductVariant;
+}
+
+interface FlashSaleProduct extends Product {
+  flashSale?: boolean;
+  flashSaleStartDate?: string;
+  flashSaleEndDate?: string;
+}
+
+interface ConfigData {
+  enabled: boolean;
+  productDisplayOrder: number[];
+}
+
 interface StoreFrontRendererProps {
   tenantId: string;
   products: Product[];
@@ -67,12 +92,19 @@ interface StoreFrontRendererProps {
 
 // Helper to compute flash sales countdown
 const useFlashSaleCountdown = () => {
-  const [countdown, setCountdown] = useState({ hours: 23, minutes: 59, seconds: 59 });
+  const [countdown, setCountdown] = useState<{ label: string; value: string; }[]>([
+    { label: 'Hours', value: '23' },
+    { label: 'Minutes', value: '59' },
+    { label: 'Seconds', value: '59' }
+  ]);
   
   useEffect(() => {
     const timer = setInterval(() => {
       setCountdown(prev => {
-        let { hours, minutes, seconds } = prev;
+        let hours = parseInt(prev[0].value);
+        let minutes = parseInt(prev[1].value);
+        let seconds = parseInt(prev[2].value);
+        
         if (seconds > 0) {
           seconds--;
         } else if (minutes > 0) {
@@ -87,7 +119,12 @@ const useFlashSaleCountdown = () => {
           minutes = 59;
           seconds = 59;
         }
-        return { hours, minutes, seconds };
+        
+        return [
+          { label: 'Hours', value: String(hours).padStart(2, '0') },
+          { label: 'Minutes', value: String(minutes).padStart(2, '0') },
+          { label: 'Seconds', value: String(seconds).padStart(2, '0') }
+        ];
       });
     }, 1000);
     return () => clearInterval(timer);
@@ -122,6 +159,13 @@ export const StoreFrontRenderer: React.FC<StoreFrontRendererProps> = ({
 
   const flashSaleCountdown = useFlashSaleCountdown();
 
+  // Memoized fallback handlers to prevent re-renders
+  const noopHandler = useCallback(() => {}, []);
+  const handleBuyNowFallback = useCallback((p: Product) => onBuyNow?.(p), [onBuyNow]);
+  const handleQuickViewFallback = useCallback((p: Product) => onQuickView?.(p), [onQuickView]);
+  const handleAddToCartFallback = useCallback((p: Product) => onAddToCart?.(p, 1, {}), [onAddToCart]);
+  const handleBrandClickFallback = useCallback((brand: any) => onBrandClick?.(`brand:${brand.slug || brand.name}`), [onBrandClick]);
+
   // Apply product display order if store studio is enabled
   const orderedProducts = useMemo(() => {
     if (!storeStudioEnabled || !productDisplayOrder || productDisplayOrder.length === 0) {
@@ -150,17 +194,17 @@ export const StoreFrontRenderer: React.FC<StoreFrontRendererProps> = ({
     const active = orderedProducts.filter(p => p.status === 'Active' || !p.status);
     
     const flash = active.filter(p => {
-      if (!p.flashSale) return false;
-      const start = p.flashSaleStartDate ? new Date(p.flashSaleStartDate) : null;
-      const end = p.flashSaleEndDate ? new Date(p.flashSaleEndDate) : null;
+      if (!(p as any).flashSale) return false;
+      const start = (p as any).flashSaleStartDate ? new Date((p as any).flashSaleStartDate) : null;
+      const end = (p as any).flashSaleEndDate ? new Date((p as any).flashSaleEndDate) : null;
       if (start && now < start) return false;
       if (end && now > end) return false;
       return true;
     });
 
     const bestSale = active
-      .filter(p => (p.sold || 0) > 0)
-      .sort((a, b) => (b.sold || 0) - (a.sold || 0))
+      .filter(p => (p.totalSold || 0) > 0)
+      .sort((a, b) => (b.totalSold || 0) - (a.totalSold || 0))
       .slice(0, 12);
 
     const popular = active
@@ -251,18 +295,18 @@ export const StoreFrontRenderer: React.FC<StoreFrontRendererProps> = ({
   // Get products filtered by tag
   const getTagProducts = useCallback((tagName: string) => {
     return activeProducts.filter(p => 
-      p.tags?.some((pt: any) => 
+      Array.isArray(p.tags) && p.tags.some((pt: any) => 
         (typeof pt === 'string' ? pt : pt?.name)?.toLowerCase() === tagName.toLowerCase()
       )
     );
   }, [activeProducts]);
 
   // Render a section based on its type
-  const renderSection = useCallback((section: PlacedSection) => {
+  const renderSection = useCallback((section: PlacedSection, idx: number) => {
     if (!section.visible) return null;
 
     const { type, settings, id } = section;
-    const key = id;
+    const key = `${id}-${idx}`;
 
     switch (type) {
       case 'announcement-bar':
@@ -297,7 +341,7 @@ export const StoreFrontRenderer: React.FC<StoreFrontRendererProps> = ({
             <CategoriesSection
               style={settings?.style || websiteConfig?.categorySectionStyle || 'style6'}
               categories={categories}
-              onCategoryClick={onCategoryClick}
+              onCategoryClick={onCategoryClick || noopHandler}
             />
           </section>
         );
@@ -312,9 +356,9 @@ export const StoreFrontRenderer: React.FC<StoreFrontRendererProps> = ({
                 showCounter={settings?.showCountdown !== false}
                 countdown={flashSaleCountdown}
                 onProductClick={onProductClick}
-                onBuyNow={onBuyNow}
-                onQuickView={onQuickView}
-                onAddToCart={onAddToCart}
+                onBuyNow={handleBuyNowFallback}
+                onQuickView={handleQuickViewFallback}
+                onAddToCart={handleAddToCartFallback}
                 productCardStyle={websiteConfig?.productCardStyle}
               />
             </Suspense>
@@ -338,9 +382,9 @@ export const StoreFrontRenderer: React.FC<StoreFrontRendererProps> = ({
                   maxProducts={settings?.productsToShow || 12}
                   reverseOrder={false}
                   onProductClick={onProductClick}
-                  onBuyNow={onBuyNow}
-                  onQuickView={onQuickView}
-                  onAddToCart={onAddToCart}
+                  onBuyNow={handleBuyNowFallback}
+                  onQuickView={handleQuickViewFallback}
+                  onAddToCart={handleAddToCartFallback}
                   productCardStyle={websiteConfig?.productCardStyle}
                   productSectionStyle={websiteConfig?.productSectionStyle}
                 />
@@ -357,7 +401,7 @@ export const StoreFrontRenderer: React.FC<StoreFrontRendererProps> = ({
               <LazySection fallback={<BrandSkeleton />} rootMargin="0px 0px 300px" minHeight="200px">
                 <BrandSection
                   brands={brands}
-                  onBrandClick={onBrandClick ? (brand) => onBrandClick(`brand:${brand.slug || brand.name}`) : undefined}
+                  onBrandClick={onBrandClick ? handleBrandClickFallback : undefined}
                   style={settings?.style || websiteConfig?.brandSectionStyle}
                 />
               </LazySection>
@@ -465,9 +509,9 @@ export const StoreFrontRenderer: React.FC<StoreFrontRendererProps> = ({
                   maxProducts={settings?.productsToShow || 8}
                   reverseOrder={false}
                   onProductClick={onProductClick}
-                  onBuyNow={onBuyNow}
-                  onQuickView={onQuickView}
-                  onAddToCart={onAddToCart}
+                  onBuyNow={handleBuyNowFallback}
+                  onQuickView={handleQuickViewFallback}
+                  onAddToCart={handleAddToCartFallback}
                   productCardStyle={websiteConfig?.productCardStyle}
                   productSectionStyle={websiteConfig?.productSectionStyle}
                 />
@@ -714,7 +758,7 @@ export const StoreFrontRenderer: React.FC<StoreFrontRendererProps> = ({
   // Render the custom layout
   return (
     <div className="space-y-3">
-      {layout.sections.map(renderSection)}
+      {layout.sections.map((section, idx) => renderSection(section, idx))}
     </div>
   );
 };

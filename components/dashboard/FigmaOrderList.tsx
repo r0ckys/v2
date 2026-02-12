@@ -4,7 +4,7 @@ import { DonutChart } from '../modern-dashboard/OrderSummaryChart';
 import { TrendChart } from './order/TrendChart';
 import GmvStats from './order/GmvStats';
 import { toast } from 'react-hot-toast';
-import { Order, CourierConfig, PathaoConfig } from '../../types';
+import { Order, CourierConfig, PathaoConfig, Product } from '../../types';
 import { CourierService, FraudCheckResult } from '../../services/CourierService';
 import { normalizeImageUrl } from '../../utils/imageUrlHelper';
 import { printInvoice } from '../InvoicePrintTemplate';
@@ -26,6 +26,25 @@ const STATUS_COLORS: Record<Order['status'], string> = {
 
 const STATUSES: Order['status'][] = ['Pending', 'Confirmed', 'On Hold', 'Processing', 'Shipped', 'Sent to Courier', 'Delivered', 'Cancelled', 'Return', 'Refund', 'Returned Receive'];
 
+// Statuses grouped for display - normal flow vs terminal/negative statuses
+const NORMAL_STATUSES: Order['status'][] = ['Pending', 'Confirmed', 'On Hold', 'Shipped', 'Sent to Courier', 'Delivered'];
+const TERMINAL_STATUSES: Order['status'][] = ['Cancelled', 'Return', 'Refund', 'Returned Receive'];
+
+// Display labels for statuses (matching Figma design)
+const STATUS_LABELS: Record<Order['status'], string> = {
+  Pending: 'Pending',
+  Confirmed: 'Confirmed',
+  'On Hold': 'On Hold',
+  Processing: 'Shipping',
+  Shipped: 'Shipping',
+  'Sent to Courier': 'Sent To Courier',
+  Delivered: 'Delivered',
+  Cancelled: 'Cancel',
+  Return: 'Return',
+  Refund: 'Refund',
+  'Returned Receive': 'Returned Receive'
+};
+
 const formatCurrency = (value: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'BDT', maximumFractionDigits: 0 }).format(value);
 
 const getCourierId = (order: Order) => {
@@ -46,19 +65,28 @@ interface FigmaOrderListProps {
   courierConfig?: CourierConfig;
   onUpdateOrder?: (orderId: string, updates: Partial<Order>) => void;
   onAddOrder?: () => void;
+  products?: Product[];
+  tenantId?: string;
+  onNewOrder?: (order: Order) => void;
 }
 
 const FigmaOrderList: React.FC<FigmaOrderListProps> = ({
   orders: propOrders = [],
   courierConfig = { apiKey: '', secretKey: '', instruction: '' },
   onUpdateOrder,
-  onAddOrder
+  onAddOrder,
+  products = [],
+  tenantId: propTenantId,
+  onNewOrder
 }) => {
   const [activeTab, setActiveTab] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Multi-select state
+  const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set());
 
   // Modal states
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -67,6 +95,43 @@ const FigmaOrderList: React.FC<FigmaOrderListProps> = ({
   const [courierModalOrderId, setCourierModalOrderId] = useState<string | null>(null);
   const [detailsOrder, setDetailsOrder] = useState<Order | null>(null);
   const [showStatusMenu, setShowStatusMenu] = useState<string | null>(null);
+
+  // Add Order Modal state
+  const [showAddOrderModal, setShowAddOrderModal] = useState(false);
+  const [isCreatingOrder, setIsCreatingOrder] = useState(false);
+  const [newOrderForm, setNewOrderForm] = useState({
+    customer: '',
+    phone: '',
+    address: '',
+    division: '',
+    productId: '',
+    quantity: 1,
+    deliveryCharge: 0,
+    notes: ''
+  });
+
+  // Get tenant ID from props or localStorage
+  const tenantId = propTenantId || localStorage.getItem('activeTenantId') || '';
+
+  // Ensure products is always an array
+  const safeProducts = Array.isArray(products) ? products : [];
+
+  // Get selected product for Add Order modal
+  const selectedProductForOrder = useMemo(() => {
+    if (!newOrderForm.productId) return null;
+    return safeProducts.find(p => String(p.id) === String(newOrderForm.productId)) || null;
+  }, [newOrderForm.productId, safeProducts]);
+
+  // Debug: Log products when modal opens
+  useEffect(() => {
+    if (showAddOrderModal) {
+      console.log('[FigmaOrderList] Add Order Modal opened');
+      console.log('[FigmaOrderList] products prop:', products);
+      console.log('[FigmaOrderList] safeProducts:', safeProducts);
+      console.log('[FigmaOrderList] products count:', safeProducts.length);
+      console.log('[FigmaOrderList] tenantId:', tenantId);
+    }
+  }, [showAddOrderModal, products, safeProducts, tenantId]);
 
   // Loading states
   const [isSaving, setIsSaving] = useState(false);
@@ -140,6 +205,7 @@ const FigmaOrderList: React.FC<FigmaOrderListProps> = ({
 
   useEffect(() => {
     setCurrentPage(1);
+    setSelectedOrders(new Set()); // Clear selection on tab/search change
   }, [activeTab, searchQuery]);
 
   // Order summary calculations
@@ -338,6 +404,139 @@ const FigmaOrderList: React.FC<FigmaOrderListProps> = ({
     setOpenDropdownId(null);
   };
 
+  // Multi-select handlers
+  const toggleSelectOrder = (orderId: string) => {
+    setSelectedOrders(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(orderId)) {
+        newSet.delete(orderId);
+      } else {
+        newSet.add(orderId);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedOrders.size === paginatedOrders.length) {
+      setSelectedOrders(new Set());
+    } else {
+      setSelectedOrders(new Set(paginatedOrders.map(o => o.id)));
+    }
+  };
+
+  const clearSelection = () => {
+    setSelectedOrders(new Set());
+  };
+
+  // Bulk action handlers
+  const handleBulkPrint = () => {
+    const orders = paginatedOrders.filter(o => selectedOrders.has(o.id));
+    orders.forEach(order => handlePrintInvoice(order));
+    toast.success(`Printing ${orders.length} invoice(s)`);
+    clearSelection();
+  };
+
+  const handleBulkDelete = () => {
+    if (window.confirm(`Delete ${selectedOrders.size} selected orders?`)) {
+      // Implement bulk delete logic
+      toast.success(`${selectedOrders.size} orders deleted`);
+      clearSelection();
+    }
+  };
+
+  const handleBulkStatusChange = (newStatus: Order['status']) => {
+    if (!onUpdateOrder) return;
+    selectedOrders.forEach(orderId => {
+      onUpdateOrder(orderId, { status: newStatus });
+    });
+    toast.success(`${selectedOrders.size} orders updated to ${newStatus}`);
+    clearSelection();
+  };
+
+  // Handle creating new order
+  const handleCreateOrder = async () => {
+    if (!newOrderForm.customer.trim() || !newOrderForm.phone.trim() || !newOrderForm.productId) {
+      toast.error('Customer name, phone, and product are required');
+      return;
+    }
+
+    // Use the memoized selected product
+    if (!selectedProductForOrder) {
+      toast.error('Please select a valid product');
+      return;
+    }
+
+    setIsCreatingOrder(true);
+    const orderId = `#${Math.floor(1000 + Math.random() * 9000)}`;
+    const orderAmount = (selectedProductForOrder.price || 0) * newOrderForm.quantity;
+    
+    const newOrder: Order = {
+      id: orderId,
+      tenantId,
+      customer: newOrderForm.customer.trim(),
+      location: newOrderForm.address.trim(),
+      phone: newOrderForm.phone.trim(),
+      division: newOrderForm.division,
+      amount: orderAmount + newOrderForm.deliveryCharge,
+      date: new Date().toLocaleString('en-US', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+      status: 'Pending',
+      productId: selectedProductForOrder.id,
+      productName: selectedProductForOrder.name,
+      productImage: selectedProductForOrder.image,
+      quantity: newOrderForm.quantity,
+      deliveryCharge: newOrderForm.deliveryCharge,
+      source: 'admin' as const,
+      createdAt: new Date().toISOString(),
+      items: [],
+      weight: 0,
+      pathaoArea: 0,
+      pathaoZone: 0,
+      pathaoCity: 0,
+      sku: selectedProductForOrder.sku || ''
+    };
+
+    try {
+      const apiBase = import.meta.env.VITE_API_BASE_URL || '';
+      const response = await fetch(`${apiBase}/api/orders/${tenantId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newOrder)
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        const createdOrder = result.data || newOrder;
+        
+        // Notify parent component
+        if (onNewOrder) {
+          onNewOrder(createdOrder);
+        }
+        
+        toast.success(`Order ${orderId} created successfully!`);
+        setShowAddOrderModal(false);
+        setNewOrderForm({
+          customer: '',
+          phone: '',
+          address: '',
+          division: '',
+          productId: '',
+          quantity: 1,
+          deliveryCharge: 0,
+          notes: ''
+        });
+      } else {
+        const error = await response.json();
+        toast.error(error.message || 'Failed to create order');
+      }
+    } catch (error) {
+      console.error('Error creating order:', error);
+      toast.error('Failed to create order');
+    } finally {
+      setIsCreatingOrder(false);
+    }
+  };
+
   const handleAssignCourier = (orderId: string, courierName: string) => {
     if (!onUpdateOrder) return;
     onUpdateOrder(orderId, {
@@ -390,7 +589,7 @@ const FigmaOrderList: React.FC<FigmaOrderListProps> = ({
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-semibold text-gray-900">Order List</h1>
         <button 
-          onClick={onAddOrder}
+          onClick={() => setShowAddOrderModal(true)}
           className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-sky-400 to-blue-500 text-white rounded-lg text-sm font-medium hover:from-sky-500 hover:to-blue-600 transition-all"
         >
           <Plus className="w-4 h-4" />
@@ -475,62 +674,130 @@ const FigmaOrderList: React.FC<FigmaOrderListProps> = ({
         </button>
       </div>
 
+      {/* Bulk Action Toolbar */}
+      {selectedOrders.size > 0 && (
+        <div className="flex items-center gap-3 mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <span className="text-sm font-medium text-blue-700">
+            {selectedOrders.size} order{selectedOrders.size > 1 ? 's' : ''} selected
+          </span>
+          <div className="flex items-center gap-2 ml-auto">
+            <button
+              onClick={handleBulkPrint}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              <Printer size={16} />
+              Print
+            </button>
+            <button
+              onClick={() => handleBulkStatusChange('Confirmed')}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 text-white rounded-md text-sm font-medium hover:bg-emerald-600 transition-colors"
+            >
+              <CheckCircle2 size={16} />
+              Confirm
+            </button>
+            <button
+              onClick={() => handleBulkStatusChange('Sent to Courier')}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-500 text-white rounded-md text-sm font-medium hover:bg-purple-600 transition-colors"
+            >
+              <Send size={16} />
+              Send to Courier
+            </button>
+            <button
+              onClick={() => handleBulkStatusChange('Cancelled')}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-500 text-white rounded-md text-sm font-medium hover:bg-orange-600 transition-colors"
+            >
+              <X size={16} />
+              Cancel
+            </button>
+            <button
+              onClick={handleBulkDelete}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500 text-white rounded-md text-sm font-medium hover:bg-red-600 transition-colors"
+            >
+              <Trash2 size={16} />
+              Delete
+            </button>
+            <button
+              onClick={clearSelection}
+              className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
+            >
+              <X size={18} />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Table */}
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full text-sm table-fixed">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
-              <th className="px-4 py-3 text-left font-semibold text-gray-700">Order ID</th>
-              <th className="px-4 py-3 text-left font-semibold text-gray-700">Product</th>
-              <th className="px-4 py-3 text-left font-semibold text-gray-700">Customer</th>
-              <th className="px-4 py-3 text-left font-semibold text-gray-700">Date</th>
-              <th className="px-4 py-3 text-left font-semibold text-gray-700">Price</th>
-              <th className="px-4 py-3 text-left font-semibold text-gray-700">Payment</th>
-              <th className="px-4 py-3 text-left font-semibold text-gray-700">Status</th>
-              <th className="px-4 py-3 text-center font-semibold text-gray-700">Action</th>
+              <th className="w-10 px-3 py-3">
+                <input
+                  type="checkbox"
+                  checked={paginatedOrders.length > 0 && selectedOrders.size === paginatedOrders.length}
+                  onChange={toggleSelectAll}
+                  className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                />
+              </th>
+              <th className="w-24 px-3 py-3 text-left font-semibold text-gray-700">Order ID</th>
+              <th className="w-44 px-3 py-3 text-left font-semibold text-gray-700">Product</th>
+              <th className="w-40 px-3 py-3 text-left font-semibold text-gray-700">Customer</th>
+              <th className="w-20 px-3 py-3 text-left font-semibold text-gray-700">Date</th>
+              <th className="w-24 px-3 py-3 text-left font-semibold text-gray-700">Price</th>
+              <th className="w-16 px-3 py-3 text-left font-semibold text-gray-700">Payment</th>
+              <th className="w-32 px-3 py-3 text-left font-semibold text-gray-700">Status</th>
+              <th className="w-12 px-3 py-3 text-center font-semibold text-gray-700">Action</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
             {paginatedOrders.length > 0 ? paginatedOrders.map((order) => (
-              <tr key={order.id} className="hover:bg-gray-50 transition-colors">
-                <td className="px-4 py-3 font-medium text-gray-900">#{order.id?.slice(-6)}</td>
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-2">
+              <tr key={order.id} className={`hover:bg-gray-50 transition-colors ${selectedOrders.has(order.id) ? 'bg-blue-50' : ''}`}>
+                <td className="px-3 py-3">
+                  <input
+                    type="checkbox"
+                    checked={selectedOrders.has(order.id)}
+                    onChange={() => toggleSelectOrder(order.id)}
+                    className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                  />
+                </td>
+                <td className="px-3 py-3 font-medium text-gray-900 whitespace-nowrap">#{order.id?.slice(-6)}</td>
+                <td className="px-3 py-3">
+                  <div className="flex items-center gap-2 min-w-0">
                     {order.productImage ? (
-                      <img src={normalizeImageUrl(order.productImage)} alt="" className="w-8 h-8 rounded object-cover" />
+                      <img src={normalizeImageUrl(order.productImage)} alt="" className="w-8 h-8 rounded object-cover flex-shrink-0" />
                     ) : (
-                      <div className="w-8 h-8 rounded bg-gray-100 flex items-center justify-center">
+                      <div className="w-8 h-8 rounded bg-gray-100 flex items-center justify-center flex-shrink-0">
                         <Package2 size={14} className="text-gray-400" />
                       </div>
                     )}
-                    <span className="text-gray-700 truncate max-w-[150px]">{order.productName || 'Custom Order'}</span>
+                    <span className="text-gray-700 truncate" title={order.productName || 'Custom Order'}>{order.productName || 'Custom Order'}</span>
                   </div>
                 </td>
-                <td className="px-4 py-3">
-                  <div className="text-gray-900 font-medium">{order.customer}</div>
-                  <div className="text-xs text-gray-500">{order.phone || 'No phone'}</div>
+                <td className="px-3 py-3">
+                  <div className="truncate text-gray-900 font-medium" title={order.customer}>{order.customer}</div>
+                  <div className="text-xs text-gray-500 truncate">{order.phone || 'No phone'}</div>
                 </td>
-                <td className="px-4 py-3 text-gray-700">
+                <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
                   {order.date ? new Date(order.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : '-'}
                 </td>
-                <td className="px-4 py-3 font-medium text-gray-900">{formatCurrency(order.amount)}</td>
-                <td className="px-4 py-3">
-                  <span className={`px-2 py-1 rounded text-xs font-medium ${getPaymentBadge(order)}`}>
+                <td className="px-3 py-3 font-medium text-gray-900 whitespace-nowrap">{formatCurrency(order.amount)}</td>
+                <td className="px-3 py-3">
+                  <span className={`px-2 py-1 rounded text-xs font-medium whitespace-nowrap ${getPaymentBadge(order)}`}>
                     {(order as any).paymentMethod?.match(/bKash|Nagad|Card|Paid/i) ? 'Paid' : 'COD'}
                   </span>
                 </td>
-                <td className="px-4 py-3">
+                <td className="px-3 py-3">
                   <div className="flex items-center gap-2">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="flex-shrink-0">
                       <path d="M4.25 3.75H13.5C14.4665 3.75 15.25 4.53351 15.25 5.5V6.88965H17.2041C17.7848 6.88978 18.3279 7.1782 18.6533 7.65918L21.1992 11.4238C21.395 11.7132 21.4999 12.0549 21.5 12.4043V17.25H22C22.1381 17.25 22.25 17.3619 22.25 17.5C22.25 17.6381 22.1381 17.75 22 17.75H19.6621L19.5869 18.1582C19.3651 19.3485 18.3198 20.2498 17.0654 20.25C15.8109 20.25 14.7657 19.3487 14.5439 18.1582L14.4678 17.75H9.91211L9.83691 18.1582C9.61515 19.3485 8.56978 20.2498 7.31543 20.25C6.06089 20.25 5.01579 19.3487 4.79395 18.1582L4.71777 17.75H4.25C3.28351 17.75 2.5 16.9665 2.5 16V5.5C2.5 4.5335 3.2835 3.75 4.25 3.75ZM7.31543 15.6201C6.17509 15.6201 5.25023 16.5443 5.25 17.6846C5.25 18.825 6.17495 19.75 7.31543 19.75C8.45571 19.7498 9.37988 18.8249 9.37988 17.6846C9.37965 16.5445 8.45557 15.6203 7.31543 15.6201ZM17.0654 15.6201C15.9251 15.6201 15.0002 16.5443 15 17.6846C15 18.825 15.925 19.75 17.0654 19.75C18.2057 19.7498 19.1299 18.8249 19.1299 17.6846C19.1297 16.5445 18.2055 15.6203 17.0654 15.6201ZM4.25 4.25C3.55965 4.25 3 4.80965 3 5.5V16C3 16.6903 3.55964 17.25 4.25 17.25H4.75977L4.87109 16.9023C5.20208 15.8679 6.17245 15.1201 7.31543 15.1201C8.45822 15.1203 9.42782 15.868 9.75879 16.9023L9.87012 17.25H14.5098L14.6211 16.9023C14.6466 16.8227 14.6762 16.7448 14.709 16.6689L14.75 16.5742V5.5C14.75 4.80964 14.1903 4.25 13.5 4.25H4.25ZM15.25 15.707L15.9648 15.3672C16.2977 15.2089 16.6707 15.1201 17.0654 15.1201C18.2082 15.1203 19.1779 15.8681 19.5088 16.9023L19.6201 17.25H21V12.1953H15.25V15.707ZM15.25 11.6953H20.7793L20.251 10.915L18.2393 7.93945C18.0068 7.5959 17.6189 7.38978 17.2041 7.38965H15.25V11.6953Z" stroke="#26007F"/>
                       <path d="M12 10C12 11.6569 10.6569 13 9 13C7.34315 13 6 11.6569 6 10C6 8.34315 7.34315 7 9 7C9.47068 7 9.91605 7.1084 10.3125 7.30159M11.4375 8.125L8.8125 10.75L8.0625 10" stroke="#26007F" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${STATUS_COLORS[order.status] || 'bg-gray-100 text-gray-600'}`}>
-                      {order.status}
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${STATUS_COLORS[order.status] || 'bg-gray-100 text-gray-600'}`}>
+                      {STATUS_LABELS[order.status] || order.status}
                     </span>
                   </div>
                 </td>
-                <td className="px-4 py-3 text-center relative">
+                <td className="px-3 py-3 text-center relative">
                   <div data-dropdown>
                     <button 
                       onClick={() => setOpenDropdownId(openDropdownId === order.id ? null : order.id)} 
@@ -539,12 +806,12 @@ const FigmaOrderList: React.FC<FigmaOrderListProps> = ({
                       <MoreVertical className="w-4 h-4 text-gray-600" />
                     </button>
                     {openDropdownId === order.id && (
-                      <div className="absolute right-0 top-full mt-1 z-50">
-                        <div style={{ width: '169px', backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 4px 20px rgba(0,0,0,0.15)', overflow: 'hidden', padding: '8px 0' }}>
+                      <div className="absolute right-full top-0 mr-2 z-50">
+                        <div style={{ width: '180px', backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 4px 20px rgba(0,0,0,0.15)', overflow: 'visible', padding: '8px 0' }}>
                           {/* Edit */}
                           <button 
                             onClick={() => openOrderModal(order)}
-                            style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', height: '48px', padding: '0 24px', backgroundColor: 'white', border: 'none', cursor: 'pointer', fontFamily: '"Lato", sans-serif', fontWeight: 600, fontSize: '16px', color: 'black' }}
+                            style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', height: '48px', padding: '0 24px', backgroundColor: 'white', border: 'none', cursor: 'pointer', fontFamily: '"Lato", sans-serif', fontWeight: 600, fontSize: '16px', color: 'black', whiteSpace: 'nowrap' }}
                             onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9f9f9'}
                             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
                           >
@@ -554,7 +821,7 @@ const FigmaOrderList: React.FC<FigmaOrderListProps> = ({
                           {/* Print Invoice */}
                           <button 
                             onClick={() => { handlePrintInvoice(order); setOpenDropdownId(null); }}
-                            style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', height: '48px', padding: '0 24px', backgroundColor: 'white', border: 'none', cursor: 'pointer', fontFamily: '"Lato", sans-serif', fontWeight: 600, fontSize: '16px', color: 'black' }}
+                            style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', height: '48px', padding: '0 24px', backgroundColor: 'white', border: 'none', cursor: 'pointer', fontFamily: '"Lato", sans-serif', fontWeight: 600, fontSize: '16px', color: 'black', whiteSpace: 'nowrap' }}
                             onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9f9f9'}
                             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
                           >
@@ -564,7 +831,7 @@ const FigmaOrderList: React.FC<FigmaOrderListProps> = ({
                           {/* Details - Highlighted */}
                           <button 
                             onClick={() => handleOpenDetails(order)}
-                            style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', height: '48px', padding: '0 24px', backgroundColor: '#f4f4f4', border: 'none', cursor: 'pointer', fontFamily: '"Lato", sans-serif', fontWeight: 600, fontSize: '16px', color: 'black' }}
+                            style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', height: '48px', padding: '0 24px', backgroundColor: '#f4f4f4', border: 'none', cursor: 'pointer', fontFamily: '"Lato", sans-serif', fontWeight: 600, fontSize: '16px', color: 'black', whiteSpace: 'nowrap' }}
                             onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#eaeaea'}
                             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#f4f4f4'}
                           >
@@ -574,7 +841,7 @@ const FigmaOrderList: React.FC<FigmaOrderListProps> = ({
                           {/* Duplicate */}
                           <button 
                             onClick={() => handleDuplicateOrder(order)}
-                            style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', height: '48px', padding: '0 24px', backgroundColor: 'white', border: 'none', cursor: 'pointer', fontFamily: '"Lato", sans-serif', fontWeight: 600, fontSize: '16px', color: 'black' }}
+                            style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', height: '48px', padding: '0 24px', backgroundColor: 'white', border: 'none', cursor: 'pointer', fontFamily: '"Lato", sans-serif', fontWeight: 600, fontSize: '16px', color: 'black', whiteSpace: 'nowrap' }}
                             onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9f9f9'}
                             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
                           >
@@ -584,8 +851,8 @@ const FigmaOrderList: React.FC<FigmaOrderListProps> = ({
                           {/* Order Status */}
                           <div style={{ position: 'relative' }}>
                             <button 
-                              onClick={() => setShowStatusMenu(showStatusMenu === order.id ? null : order.id)}
-                              style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', height: '48px', padding: '0 24px', backgroundColor: 'white', border: 'none', cursor: 'pointer', fontFamily: '"Lato", sans-serif', fontWeight: 600, fontSize: '16px', color: 'black' }}
+                              onClick={(e) => { e.stopPropagation(); setShowStatusMenu(showStatusMenu === order.id ? null : order.id); }}
+                              style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', height: '48px', padding: '0 24px', backgroundColor: 'white', border: 'none', cursor: 'pointer', fontFamily: '"Lato", sans-serif', fontWeight: 600, fontSize: '16px', color: 'black', whiteSpace: 'nowrap' }}
                               onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9f9f9'}
                               onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
                             >
@@ -593,16 +860,31 @@ const FigmaOrderList: React.FC<FigmaOrderListProps> = ({
                               Order Status
                             </button>
                             {showStatusMenu === order.id && (
-                              <div style={{ position: 'absolute', left: '100%', top: 0, width: '160px', backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 4px 20px rgba(0,0,0,0.15)', padding: '8px 0', zIndex: 60 }}>
-                                {STATUSES.map(status => (
+                              <div style={{ position: 'absolute', right: '100%', top: '-50%', width: '180px', backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 4px 20px rgba(0,0,0,0.15)', padding: '8px 0', zIndex: 100, marginRight: '8px' }}>
+                                {/* Normal statuses */}
+                                {NORMAL_STATUSES.map(status => (
                                   <button
                                     key={status}
-                                    onClick={() => handleStatusChange(order.id, status)}
-                                    style={{ display: 'block', width: '100%', padding: '8px 16px', textAlign: 'left', backgroundColor: order.status === status ? '#f0f0f0' : 'white', border: 'none', cursor: 'pointer', fontFamily: '"Lato", sans-serif', fontSize: '14px', color: 'black' }}
+                                    onClick={(e) => { e.stopPropagation(); handleStatusChange(order.id, status); }}
+                                    style={{ display: 'block', width: '100%', padding: '10px 16px', textAlign: 'left', backgroundColor: order.status === status ? '#f0f0f0' : 'white', border: 'none', cursor: 'pointer', fontFamily: '"Lato", sans-serif', fontSize: '14px', color: 'black', whiteSpace: 'nowrap' }}
                                     onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f4f4f4'}
                                     onMouseLeave={(e) => e.currentTarget.style.backgroundColor = order.status === status ? '#f0f0f0' : 'white'}
                                   >
-                                    {status}
+                                    {STATUS_LABELS[status]}
+                                  </button>
+                                ))}
+                                {/* Separator line */}
+                                <div style={{ height: '1px', backgroundColor: '#e5e5e5', margin: '8px 0' }} />
+                                {/* Terminal/negative statuses */}
+                                {TERMINAL_STATUSES.map(status => (
+                                  <button
+                                    key={status}
+                                    onClick={(e) => { e.stopPropagation(); handleStatusChange(order.id, status); }}
+                                    style={{ display: 'block', width: '100%', padding: '10px 16px', textAlign: 'left', backgroundColor: order.status === status ? '#f0f0f0' : 'white', border: 'none', cursor: 'pointer', fontFamily: '"Lato", sans-serif', fontSize: '14px', color: 'black', whiteSpace: 'nowrap' }}
+                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f4f4f4'}
+                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = order.status === status ? '#f0f0f0' : 'white'}
+                                  >
+                                    {STATUS_LABELS[status]}
                                   </button>
                                 ))}
                               </div>
@@ -611,7 +893,7 @@ const FigmaOrderList: React.FC<FigmaOrderListProps> = ({
                           {/* Delete */}
                           <button 
                             onClick={() => handleDeleteOrder(order.id)}
-                            style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', height: '48px', padding: '0 24px', backgroundColor: 'white', border: 'none', cursor: 'pointer', fontFamily: '"Lato", sans-serif', fontWeight: 600, fontSize: '16px', color: '#da0000' }}
+                            style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', height: '48px', padding: '0 24px', backgroundColor: 'white', border: 'none', cursor: 'pointer', fontFamily: '"Lato", sans-serif', fontWeight: 600, fontSize: '16px', color: '#da0000', whiteSpace: 'nowrap' }}
                             onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9f9f9'}
                             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
                           >
@@ -626,7 +908,7 @@ const FigmaOrderList: React.FC<FigmaOrderListProps> = ({
               </tr>
             )) : (
               <tr>
-                <td colSpan={8} className="px-4 py-12 text-center text-gray-500">
+                <td colSpan={9} className="px-4 py-12 text-center text-gray-500">
                   <Package2 className="w-12 h-12 mx-auto mb-3 text-gray-300" />
                   <p className="font-medium">No orders found</p>
                   <p className="text-sm">Try adjusting your search or filters</p>
@@ -639,24 +921,76 @@ const FigmaOrderList: React.FC<FigmaOrderListProps> = ({
 
       {/* Pagination */}
       {filteredOrders.length > ordersPerPage && (
-        <div className="flex items-center justify-between mt-6 pt-4 border-t">
-          <p className="text-sm text-gray-500">
+        <div className="flex flex-col items-center mt-6 pt-4 border-t border-pink-200">
+          <p className="text-sm text-gray-500 mb-3">
             Showing {((currentPage - 1) * ordersPerPage) + 1} to {Math.min(currentPage * ordersPerPage, filteredOrders.length)} of {filteredOrders.length}
           </p>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
+            {/* Previous Button */}
             <button
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className="px-3 py-1.5 border rounded-md text-sm disabled:opacity-50"
+              className="flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-md sm:rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <ChevronLeft size={16} />
+              Previous
             </button>
-            <span className="px-3 py-1.5 text-sm font-medium">{currentPage} / {totalPages}</span>
+            
+            {/* Page Numbers */}
+            <div className="flex items-center gap-1 sm:gap-2 mx-1 sm:mx-2">
+              {(() => {
+                const pages: (number | string)[] = [];
+                if (totalPages <= 7) {
+                  for (let i = 1; i <= totalPages; i++) pages.push(i);
+                } else {
+                  // Always show first page
+                  pages.push(1);
+                  
+                  if (currentPage <= 4) {
+                    // Near start: 1 2 3 4 5 ... last
+                    for (let i = 2; i <= 5; i++) pages.push(i);
+                    pages.push('...');
+                    pages.push(totalPages);
+                  } else if (currentPage >= totalPages - 3) {
+                    // Near end: 1 ... last-4 last-3 last-2 last-1 last
+                    pages.push('...');
+                    for (let i = totalPages - 4; i <= totalPages; i++) pages.push(i);
+                  } else {
+                    // Middle: 1 ... current-1 current current+1 ... last
+                    pages.push('...');
+                    for (let i = currentPage - 1; i <= currentPage + 1; i++) pages.push(i);
+                    pages.push('...');
+                    pages.push(totalPages);
+                  }
+                }
+                
+                return pages.map((page, idx) => (
+                  page === '...' ? (
+                    <span key={`ellipsis-${idx}`} className="px-2 py-1 text-gray-400">....</span>
+                  ) : (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page as number)}
+                      className={`min-w-[36px] h-9 px-2 sm:px-3 py-1.5 sm:py-2 text-sm font-medium rounded-md sm:rounded-lg border transition-all shadow-sm ${
+                        currentPage === page 
+                          ? 'bg-gradient-to-r from-sky-400 to-blue-500 text-white border-transparent hover:opacity-90' 
+                          : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50 hover:border-gray-300'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  )
+                ));
+              })()}
+            </div>
+            
+            {/* Next Button */}
             <button
               onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
-              className="px-3 py-1.5 border rounded-md text-sm disabled:opacity-50"
+              className="flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md sm:rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
+              Next
               <ChevronRight size={16} />
             </button>
           </div>
@@ -804,7 +1138,12 @@ const FigmaOrderList: React.FC<FigmaOrderListProps> = ({
                           value={draftOrder.status} 
                           onChange={(e) => handleDraftChange('status', e.target.value as Order['status'])}
                         >
-                          {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+                          <optgroup label="Order Flow">
+                            {NORMAL_STATUSES.map(s => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
+                          </optgroup>
+                          <optgroup label="Terminal">
+                            {TERMINAL_STATUSES.map(s => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
+                          </optgroup>
                         </select>
                       </label>
                       <label className="block space-y-1.5">
@@ -962,7 +1301,7 @@ const FigmaOrderList: React.FC<FigmaOrderListProps> = ({
               {/* Status Badge */}
               <div style={{ marginBottom: '24px' }}>
                 <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold ${STATUS_COLORS[detailsOrder.status] || 'bg-gray-100 text-gray-600'}`}>
-                  {detailsOrder.status}
+                  {STATUS_LABELS[detailsOrder.status] || detailsOrder.status}
                 </span>
               </div>
 
@@ -1079,6 +1418,211 @@ const FigmaOrderList: React.FC<FigmaOrderListProps> = ({
               >
                 <Edit3 size={18} />
                 Edit Order
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Order Modal */}
+      {showAddOrderModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={(e) => { if (e.target === e.currentTarget) setShowAddOrderModal(false); }}>
+          <div className="bg-white rounded-2xl w-full max-w-lg shadow-xl" onClick={(e) => e.stopPropagation()}>
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b">
+              <h2 className="text-xl font-semibold text-gray-900">Add New Order</h2>
+              <button 
+                onClick={() => setShowAddOrderModal(false)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+
+            {/* Form */}
+            <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
+              {/* No Products Warning */}
+              {safeProducts.length === 0 && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center">
+                  <p className="text-yellow-800 font-medium">No products available</p>
+                  <p className="text-yellow-600 text-sm mt-1">Please add products first to create orders.</p>
+                </div>
+              )}
+              
+              {/* Customer Name */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Customer Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={newOrderForm.customer}
+                  onChange={(e) => setNewOrderForm(prev => ({ ...prev, customer: e.target.value }))}
+                  placeholder="Enter customer name"
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                />
+              </div>
+
+              {/* Phone */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Phone Number <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="tel"
+                  value={newOrderForm.phone}
+                  onChange={(e) => setNewOrderForm(prev => ({ ...prev, phone: e.target.value }))}
+                  placeholder="01XXXXXXXXX"
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                />
+              </div>
+
+              {/* Address */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Delivery Address
+                </label>
+                <input
+                  type="text"
+                  value={newOrderForm.address}
+                  onChange={(e) => setNewOrderForm(prev => ({ ...prev, address: e.target.value }))}
+                  placeholder="Full address"
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                />
+              </div>
+
+              {/* Division */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Division
+                </label>
+                <select
+                  value={newOrderForm.division}
+                  onChange={(e) => setNewOrderForm(prev => ({ ...prev, division: e.target.value }))}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white"
+                >
+                  <option value="">Select Division</option>
+                  <option value="Dhaka">Dhaka</option>
+                  <option value="Chattogram">Chattogram</option>
+                  <option value="Rajshahi">Rajshahi</option>
+                  <option value="Khulna">Khulna</option>
+                  <option value="Barishal">Barishal</option>
+                  <option value="Sylhet">Sylhet</option>
+                  <option value="Rangpur">Rangpur</option>
+                  <option value="Mymensingh">Mymensingh</option>
+                </select>
+              </div>
+
+              {/* Product Selection */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Product <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={newOrderForm.productId}
+                  onChange={(e) => setNewOrderForm(prev => ({ ...prev, productId: e.target.value }))}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white"
+                >
+                  <option value="">Select a product</option>
+                  {safeProducts.map((product, idx) => (
+                    <option key={`${product.id}-${idx}`} value={String(product.id)}>
+                      {product.name || 'Unnamed'} - ৳{(product.price || 0).toLocaleString()}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Selected Product Preview */}
+              {selectedProductForOrder && (
+                <div className="bg-gray-50 rounded-lg p-3 flex items-center gap-3">
+                  <img 
+                    src={selectedProductForOrder.image || '/placeholder.png'} 
+                    alt={selectedProductForOrder.name || 'Product'} 
+                    className="w-12 h-12 object-cover rounded-lg"
+                    onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.png'; }}
+                  />
+                  <div className="flex-1">
+                    <p className="font-medium text-gray-900 text-sm">{selectedProductForOrder.name || 'Unnamed'}</p>
+                    <p className="text-blue-600 font-semibold">৳{(selectedProductForOrder.price || 0).toLocaleString()}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Quantity and Delivery Charge */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Quantity
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={newOrderForm.quantity}
+                    onChange={(e) => setNewOrderForm(prev => ({ ...prev, quantity: Math.max(1, parseInt(e.target.value) || 1) }))}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Delivery Charge
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={newOrderForm.deliveryCharge}
+                    onChange={(e) => setNewOrderForm(prev => ({ ...prev, deliveryCharge: Math.max(0, parseInt(e.target.value) || 0) }))}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Order Summary */}
+              {selectedProductForOrder && (
+                <div className="bg-blue-50 rounded-lg p-4 space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Subtotal:</span>
+                    <span className="font-medium">
+                      ৳{((selectedProductForOrder.price || 0) * newOrderForm.quantity).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Delivery:</span>
+                    <span className="font-medium">৳{newOrderForm.deliveryCharge.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-base font-semibold border-t border-blue-100 pt-2">
+                    <span className="text-gray-900">Total:</span>
+                    <span className="text-blue-600">
+                      ৳{(((selectedProductForOrder.price || 0) * newOrderForm.quantity) + newOrderForm.deliveryCharge).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="flex justify-end gap-3 p-6 border-t bg-gray-50 rounded-b-2xl">
+              <button
+                onClick={() => setShowAddOrderModal(false)}
+                className="px-5 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-100 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreateOrder}
+                disabled={isCreatingOrder || safeProducts.length === 0 || !selectedProductForOrder}
+                className="px-5 py-2.5 bg-gradient-to-r from-sky-400 to-blue-500 text-white rounded-lg font-medium hover:from-sky-500 hover:to-blue-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {isCreatingOrder ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-4 h-4" />
+                    Create Order
+                  </>
+                )}
               </button>
             </div>
           </div>

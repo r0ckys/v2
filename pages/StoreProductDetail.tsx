@@ -842,7 +842,7 @@ const StoreProductDetail = ({
 
                 <div className="space-y-2 text-sm text-gray-600 border-t border-gray-100 pt-4 mt-auto">
                   <p><span className="font-semibold text-gray-800 w-24 inline-block">Category:</span> <span className="text-theme-primary">{product.category || 'Electronics'}</span></p>
-                  {product.tags && (
+                  {Array.isArray(product.tags) && product.tags.length > 0 && (
                     <><p><span className="font-semibold text-gray-800 w-24 inline-block">Tags:</span> {product.tags.join(', ')}</p> <p><span className="font-semibold text-gray-800 w-24 inline-block">SKU: {product.sku}</span></p></>
                   )}
                 </div>

@@ -350,7 +350,7 @@ const FigmaDashboardHeader: React.FC<DashboardHeaderProps> = ({
                         const currentIndex = globalIndex++;
                         return (
                           <div
-                            key={item.id}
+                            key={currentIndex}
                             onClick={() => handleSearchItemClick(item.id)}
                             className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-colors ${
                               selectedIndex === currentIndex 

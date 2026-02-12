@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, ReactNode } from 'react';
+import { useEffect, useRef, useState, ReactNode, useCallback, useMemo } from 'react';
 import { useIntersectionObserver } from '../../utils/performanceHelpers';
 
 interface Props { 
@@ -14,8 +14,14 @@ export const LazySection = ({ fallback, children, className, rootMargin = '0px 0
   const ref = useRef<HTMLDivElement | null>(null);
   const [visible, setVisible] = useState(false);
 
+  const handleIntersection = useCallback((isVisible: boolean) => {
+    if (isVisible) setVisible(true);
+  }, []);
+
+  const observerOptions = useMemo(() => ({ rootMargin, threshold }), [rootMargin, threshold]);
+
   useEffect(() => { if (typeof window !== 'undefined' && !('IntersectionObserver' in window)) setVisible(true); }, []);
-  useIntersectionObserver(ref, v => v && setVisible(true), { rootMargin, threshold });
+  useIntersectionObserver(ref, handleIntersection, observerOptions);
 
   return (
     <div ref={ref} className={className} style={minHeight && !visible ? { minHeight } : undefined}>

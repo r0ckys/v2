@@ -140,6 +140,11 @@ export function useAppHandlers(props: UseAppHandlersProps) {
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, ...updates, tenantId: o.tenantId || activeTenantId } : o));
   }, [activeTenantId, setOrders]);
 
+  const handleAddOrder = useCallback((newOrder: Order) => {
+    const scopedOrder = { ...newOrder, tenantId: newOrder.tenantId || activeTenantId };
+    setOrders(prev => [scopedOrder, ...prev]);
+  }, [activeTenantId, setOrders]);
+
   // === WISHLIST HANDLERS ===
   const addToWishlist = useCallback((id: number) => {
     setWishlist(prev => prev.includes(id) ? prev : [...prev, id]);
@@ -458,6 +463,7 @@ export function useAppHandlers(props: UseAppHandlersProps) {
     
     // Order handlers
     handleUpdateOrder,
+    handleAddOrder,
     
     // Wishlist handlers
     addToWishlist,

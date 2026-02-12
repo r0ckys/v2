@@ -162,6 +162,11 @@ const App = () => {
   const cart = useCart({ user, products, tenantId: activeTenantId });
   const { cartItems, handleCartToggle, handleAddProductToCart } = cart;
 
+  // Adapter for onToggleCart prop signature
+  const handleToggleCartForProduct = useCallback((product: any, quantity: number, variant?: any) => {
+    handleCartToggle(product.id, { silent: false });
+  }, [handleCartToggle]);
+
   // === AUTH ===
   const auth = useAuth({
     tenants,
@@ -231,7 +236,7 @@ const App = () => {
 
   const handleUpsertLandingPage = useCallback(async (page: any) => {
     const scopedPage = { ...page, tenantId: page.tenantId || activeTenantId };
-    let newPages: any[];
+    let newPages: any[] = [];
     setLandingPages(prev => {
       const exists = prev.some(lp => lp.id === scopedPage.id);
       newPages = exists ? prev.map(lp => lp.id === scopedPage.id ? scopedPage : lp) : [scopedPage, ...prev];
@@ -246,15 +251,26 @@ const App = () => {
     }
   }, [activeTenantId, setLandingPages]);
 
-  const handleToggleLandingPublish = useCallback((pageId: string, status: string) => {
+  const handleToggleLandingPublish = useCallback(async (pageId: string, status: string) => {
     const timestamp = new Date().toISOString();
-    setLandingPages(prev => prev.map(lp => lp.id === pageId ? {
-      ...lp,
-      status,
-      updatedAt: timestamp,
-      publishedAt: status === 'published' ? timestamp : undefined
-    } : lp));
-  }, [setLandingPages]);
+    let newPages: any[] = [];
+    setLandingPages(prev => {
+      newPages = prev.map(lp => lp.id === pageId ? {
+        ...lp,
+        status,
+        updatedAt: timestamp,
+        publishedAt: status === 'published' ? timestamp : undefined
+      } : lp);
+      return newPages;
+    });
+
+    try {
+      await DataService.saveImmediate('landing_pages', newPages, activeTenantId);
+    } catch (error) {
+      console.error('[Landing Page] Failed to update publish status:', error);
+      throw error;
+    }
+  }, [setLandingPages, activeTenantId]);
 
   // === EFFECTS ===
   // Theme & Facebook Pixel
@@ -262,15 +278,15 @@ const App = () => {
   useFacebookPixel(facebookPixelConfig);
 
   // Session management
-  useSessionRestoration({ setUser, setCurrentView, setActiveTenantId, refs });
+  useSessionRestoration({ setUser, setCurrentView: setCurrentView as (view: string) => void, setActiveTenantId, refs });
   useSessionPersistence({ user, refs });
-  useUserRoleEffect({ user, activeTenantId, currentViewRef, refs, setActiveTenantId, setCurrentView, setAdminSection });
+  useUserRoleEffect({ user, activeTenantId, currentViewRef, refs, setActiveTenantId, setCurrentView: setCurrentView as (view: string) => void, setAdminSection });
 
   // Socket & Data loading
   useSocketRoom(activeTenantId);
   useInitialDataLoad({
     activeTenantId,
-    hostTenantSlug,
+    hostTenantSlug: hostTenantSlug || '',
     loadChatMessages,
     completeTenantSwitch,
     setActiveTenantId,
@@ -401,104 +417,105 @@ const App = () => {
     <HelmetProvider>
       <AuthProvider>
         <DarkModeProvider>
-        <ThemeProvider themeConfig={themeConfig || undefined}>
-          <Suspense fallback={null}>
-            <Toaster position="top-right" toastOptions={{ duration: 2500 }} />
-            <div className="relative bg-gray-50 dark:bg-gray-900 min-h-screen transition-colors duration-300">
-              <AppRoutes
-              currentView={currentView}
-              isSuperAdminSubdomain={isSuperAdminSubdomain}
-              products={products}
-              orders={orders}
-              logo={logo}
-              themeConfig={themeConfig}
-              websiteConfig={websiteConfig}
-              deliveryConfig={deliveryConfig}
-              paymentMethods={paymentMethods}
-              courierConfig={courierConfig}
-              facebookPixelConfig={facebookPixelConfig}
-              categories={categories}
-              subCategories={subCategories}
-              childCategories={childCategories}
-              brands={brands}
-              tags={tags}
-              chatMessages={chatMessages}
-              user={user}
-              wishlist={wishlist}
-              cartItems={cartItems}
-              selectedProduct={selectedProduct}
-              selectedLandingPage={selectedLandingPage}
-              selectedVariant={selectedVariant}
-              checkoutQuantity={checkoutQuantity}
-              storeSearchQuery={storeSearchQuery}
-              urlCategoryFilter={urlCategoryFilter}
-              activeTenantId={activeTenantId}
-              headerTenants={headerTenants}
-              isTenantSwitching={isTenantSwitching}
-              isTenantSeeding={isTenantSeeding}
-              deletingTenantId={deletingTenantId}
-              isChatOpen={isChatOpen}
-              isAdminChatOpen={isAdminChatOpen}
-              hasUnreadChat={hasUnreadChat}
-              canAccessAdminChat={canAccessAdminChat}
-              onProductClick={handleProductClick}
-              onQuickCheckout={handlers.handleCheckoutStart}
-              onToggleWishlist={(id) => handlers.isInWishlist(id) ? handlers.removeFromWishlist(id) : handlers.addToWishlist(id)}
-              isInWishlist={handlers.isInWishlist}
-              onLogin={handleLogin}
-              onRegister={handleRegister}
-              onGoogleLogin={handleGoogleLogin}
-              onLogout={handleLogout}
-              onUpdateProfile={handleUpdateProfile}
-              onUpdateOrder={handlers.handleUpdateOrder}
-              onAddProduct={handlers.handleAddProduct}
-              onUpdateProduct={handlers.handleUpdateProduct}
-              onDeleteProduct={handlers.handleDeleteProduct}
-              onBulkDeleteProducts={handlers.handleBulkDeleteProducts}
-              onBulkUpdateProducts={handlers.handleBulkUpdateProducts}
-              onUpdateLogo={handlers.handleUpdateLogo}
-              onUpdateTheme={handlers.handleUpdateTheme}
-              onUpdateWebsiteConfig={handlers.handleUpdateWebsiteConfig}
-              onUpdateDeliveryConfig={handlers.handleUpdateDeliveryConfig}
-              onUpdatePaymentMethods={handlers.handleUpdatePaymentMethods}
-              onUpdateCourierConfig={handlers.handleUpdateCourierConfig}
-              onPlaceOrder={handlers.handlePlaceOrder}
-              onLandingOrderSubmit={handlers.handleLandingOrderSubmit}
-              onCloseLandingPreview={handlers.handleCloseLandingPreview}
-              onTenantChange={handleTenantChange}
-              onCreateTenant={handleCreateTenant}
-              onDeleteTenant={handleDeleteTenant}
-              onRefreshTenants={refreshTenants}
-              onSearchChange={handleStoreSearchChange}
-              onCategoryFilterChange={handleCategoryFilterChange}
-              onMobileMenuOpenRef={(fn) => { handleMobileMenuOpenRef.current = fn; }}
-              onToggleCart={handleCartToggle}
-              onCheckoutFromCart={handlers.handleCheckoutFromCart}
-              onAddToCart={handleAddProductToCart}
-              onOpenChat={handleOpenChat}
-              onCloseChat={handleCloseChat}
-              onOpenAdminChat={handleOpenAdminChat}
-              onCloseAdminChat={handleCloseAdminChat}
-              onCustomerSendChat={handleCustomerSendChat}
-              onAdminSendChat={handleAdminSendChat}
-              onEditChatMessage={handleEditChatMessage}
-              onDeleteChatMessage={handleDeleteChatMessage}
-              setCurrentView={setCurrentView}
-              setUser={setUser}
-              setIsLoginOpen={setIsLoginOpen}
-              isLoginOpen={isLoginOpen}
-              landingPages={landingPages}
-              onCreateLandingPage={handleCreateLandingPage}
-              onUpsertLandingPage={handleUpsertLandingPage}
-              onToggleLandingPublish={handleToggleLandingPublish}
-            />
-          </div>
-        </Suspense>
-      </ThemeProvider>
-      </DarkModeProvider>
-    </AuthProvider>
-  </HelmetProvider>
-);
+          <ThemeProvider themeConfig={themeConfig || undefined}>
+            <Suspense fallback={null}>
+              <Toaster position="top-right" toastOptions={{ duration: 2500 }} />
+              <div className="relative bg-gray-50 dark:bg-gray-900 min-h-screen transition-colors duration-300">
+                <AppRoutes
+                  currentView={currentView}
+                  isSuperAdminSubdomain={isSuperAdminSubdomain}
+                  products={products}
+                  orders={orders}
+                  logo={logo}
+                  themeConfig={themeConfig}
+                  websiteConfig={websiteConfig}
+                  deliveryConfig={deliveryConfig}
+                  paymentMethods={paymentMethods}
+                  courierConfig={courierConfig}
+                  facebookPixelConfig={facebookPixelConfig}
+                  categories={categories}
+                  subCategories={subCategories}
+                  childCategories={childCategories}
+                  brands={brands}
+                  tags={tags}
+                  chatMessages={chatMessages}
+                  user={user}
+                  wishlist={wishlist}
+                  cartItems={cartItems}
+                  selectedProduct={selectedProduct}
+                  selectedLandingPage={selectedLandingPage}
+                  selectedVariant={selectedVariant}
+                  checkoutQuantity={checkoutQuantity}
+                  storeSearchQuery={storeSearchQuery}
+                  urlCategoryFilter={urlCategoryFilter}
+                  activeTenantId={activeTenantId}
+                  headerTenants={headerTenants}
+                  isTenantSwitching={isTenantSwitching}
+                  isTenantSeeding={isTenantSeeding}
+                  deletingTenantId={deletingTenantId}
+                  isChatOpen={isChatOpen}
+                  isAdminChatOpen={isAdminChatOpen}
+                  hasUnreadChat={hasUnreadChat}
+                  canAccessAdminChat={canAccessAdminChat}
+                  onProductClick={handleProductClick}
+                  onQuickCheckout={handlers.handleCheckoutStart}
+                  onToggleWishlist={(id) => handlers.isInWishlist(id) ? handlers.removeFromWishlist(id) : handlers.addToWishlist(id)}
+                  isInWishlist={handlers.isInWishlist}
+                  onLogin={handleLogin}
+                  onRegister={handleRegister}
+                  onGoogleLogin={handleGoogleLogin}
+                  onLogout={handleLogout}
+                  onUpdateProfile={handleUpdateProfile}
+                  onUpdateOrder={handlers.handleUpdateOrder}
+                  onAddProduct={handlers.handleAddProduct}
+                  onUpdateProduct={handlers.handleUpdateProduct}
+                  onDeleteProduct={handlers.handleDeleteProduct}
+                  onBulkDeleteProducts={handlers.handleBulkDeleteProducts}
+                  onBulkUpdateProducts={handlers.handleBulkUpdateProducts}
+                  onUpdateLogo={handlers.handleUpdateLogo}
+                  onUpdateTheme={handlers.handleUpdateTheme}
+                  onUpdateWebsiteConfig={handlers.handleUpdateWebsiteConfig}
+                  onUpdateDeliveryConfig={handlers.handleUpdateDeliveryConfig}
+                  onUpdatePaymentMethods={handlers.handleUpdatePaymentMethods}
+                  onUpdateCourierConfig={handlers.handleUpdateCourierConfig}
+                  onPlaceOrder={handlers.handlePlaceOrder}
+                  onLandingOrderSubmit={handlers.handleLandingOrderSubmit}
+                  onCloseLandingPreview={handlers.handleCloseLandingPreview}
+                  onTenantChange={handleTenantChange}
+                  onCreateTenant={handleCreateTenant}
+                  onDeleteTenant={handleDeleteTenant}
+                  onRefreshTenants={refreshTenants}
+                  onSearchChange={handleStoreSearchChange}
+                  onCategoryFilterChange={handleCategoryFilterChange}
+                  onMobileMenuOpenRef={(fn) => { handleMobileMenuOpenRef.current = fn; }}
+                  onToggleCart={handleToggleCartForProduct}
+                  onCheckoutFromCart={handlers.handleCheckoutFromCart}
+                  onAddToCart={handleAddProductToCart}
+                  onOpenChat={handleOpenChat}
+                  onCloseChat={handleCloseChat}
+                  onOpenAdminChat={handleOpenAdminChat}
+                  onCloseAdminChat={handleCloseAdminChat}
+                  onCustomerSendChat={handleCustomerSendChat}
+                  onAdminSendChat={handleAdminSendChat}
+                  onEditChatMessage={handleEditChatMessage}
+                  onDeleteChatMessage={handleDeleteChatMessage}
+                  setCurrentView={setCurrentView}
+                  setUser={setUser}
+                  setIsLoginOpen={setIsLoginOpen}
+                  isLoginOpen={isLoginOpen}
+                  landingPages={landingPages}
+                  onCreateLandingPage={handleCreateLandingPage}
+                  onUpsertLandingPage={handleUpsertLandingPage}
+                  onToggleLandingPublish={handleToggleLandingPublish}
+                  onAddOrder={handlers.handleAddOrder}
+                />
+              </div>
+            </Suspense>
+          </ThemeProvider>
+        </DarkModeProvider>
+      </AuthProvider>
+    </HelmetProvider>
+  );
 };
 
 export default App;

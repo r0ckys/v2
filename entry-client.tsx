@@ -13,6 +13,20 @@ const getTenantScope = (): string => {
   if (hostname.startsWith('admin.') || hostname.startsWith('superadmin.')) return '';
   // Extract subdomain
   const parts = hostname.split('.');
+  
+  // Handle localhost development: tenant.localhost or tenant.localhost:port
+  // Also handle: tenant.local, tenant.test, tenant.dev
+  if (parts.length === 2 && ['localhost', 'local', 'test', 'dev'].includes(parts[1].split(':')[0])) {
+    const subdomain = parts[0].toLowerCase().replace(/[^a-z0-9-]/g, '');
+    if (subdomain && subdomain !== 'www') {
+      try {
+        const cached = localStorage.getItem(`tenant_id_${subdomain}`);
+        if (cached) return cached;
+      } catch {}
+      return subdomain; // Use subdomain directly for localhost
+    }
+  }
+  
   if (parts.length >= 3 && parts[0] !== 'www') {
     const subdomain = parts[0].toLowerCase().replace(/[^a-z0-9-]/g, '');
     // Check cached tenant ID for this subdomain

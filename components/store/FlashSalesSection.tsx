@@ -8,9 +8,9 @@ interface Props {
   showCounter: boolean; 
   countdown: { label: string; value: string }[]; 
   onProductClick: (p: Product) => void; 
-  onBuyNow: (p: Product) => void; 
-  onQuickView: (p: Product) => void; 
-  onAddToCart: (p: Product) => void; 
+  onBuyNow?: (p: Product) => void; 
+  onQuickView?: (p: Product) => void; 
+  onAddToCart?: (p: Product) => void; 
   productCardStyle?: string; 
   sectionRef?: RefObject<HTMLElement>;
   onViewAll?: () => void;
@@ -20,9 +20,9 @@ interface Props {
 const ProductCard = ({ product, onProductClick, onBuyNow, onAddToCart, onQuickView }: { 
   product: Product; 
   onProductClick: (p: Product) => void;
-  onBuyNow: (p: Product) => void;
-  onAddToCart: (p: Product) => void;
-  onQuickView: (p: Product) => void;
+  onBuyNow?: (p: Product) => void;
+  onAddToCart?: (p: Product) => void;
+  onQuickView?: (p: Product) => void;
 }) => {
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
@@ -65,13 +65,13 @@ const ProductCard = ({ product, onProductClick, onBuyNow, onAddToCart, onQuickVi
         {/* Quick Actions on Hover - Hidden on Mobile Touch, Visible on Desktop */}
         <div className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-1 sm:p-2 hidden sm:flex justify-center gap-1 sm:gap-2 transition-all duration-300 ${isHovered ? 'sm:opacity-100 sm:translate-y-0' : 'sm:opacity-0 sm:translate-y-2'}`}>
           <button 
-            onClick={() => onQuickView(product)}
+            onClick={() => onQuickView?.(product)}
             className="w-6 h-6 sm:w-8 sm:h-8 bg-white rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors shadow-md"
           >
             <Eye size={12} className="sm:w-[14px] sm:h-[14px] text-gray-700" />
           </button>
           <button 
-            onClick={() => onAddToCart(product)}
+            onClick={() => onAddToCart?.(product)}
             className="w-6 h-6 sm:w-8 sm:h-8 bg-white rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors shadow-md"
           >
             <ShoppingCart size={12} className="sm:w-[14px] sm:h-[14px] text-gray-700" />
@@ -105,7 +105,7 @@ const ProductCard = ({ product, onProductClick, onBuyNow, onAddToCart, onQuickVi
         
         {/* Buy Now Button - Compact on Mobile */}
         <button 
-          onClick={() => onBuyNow(product)}
+          onClick={() => onBuyNow?.(product)}
           className="mt-1 sm:mt-2 w-full py-1 sm:py-1.5 md:py-2 bg-gradient-to-r from-pink-500 to-rose-500 text-white text-[10px] sm:text-xs font-semibold rounded sm:rounded-lg hover:from-pink-600 hover:to-rose-600 transition-all shadow-sm"
         >
           Buy Now
@@ -246,9 +246,9 @@ export const FlashSalesSection = ({ products, showCounter, countdown, onProductC
               ref={scrollRef}
               className="flex gap-2 sm:gap-3 md:gap-4 overflow-x-auto scrollbar-hide pb-1 sm:pb-2 scroll-smooth px-0.5 sm:px-1"
             >
-              {products.map(p => (
+              {products.map((p, idx) => (
                 <ProductCard 
-                  key={p.id}
+                  key={`flash-${p.id}-${idx}`}
                   product={p} 
                   onProductClick={onProductClick} 
                   onBuyNow={onBuyNow}

@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Search,
   Plus,
@@ -65,6 +65,9 @@ interface Props {
   onLogout: () => void;
   onSwitchSection: (section: string) => void;
   activeSection: string;
+  onViewInShop?: (product: Product) => void;
+  onViewDetails?: (product: Product) => void;
+  storeSubdomain?: string;
 }
 
 const AdminProductsRedesign: React.FC<Props> = ({
@@ -78,6 +81,9 @@ const AdminProductsRedesign: React.FC<Props> = ({
   onCloneProduct,
   onBulkDelete,
   onBulkStatusUpdate,
+  onViewInShop,
+  onViewDetails,
+  storeSubdomain,
   onBulkCategoryUpdate,
   onSearch,
   onDeepSearch,
@@ -92,6 +98,20 @@ const AdminProductsRedesign: React.FC<Props> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [isDeepSearchOpen, setIsDeepSearchOpen] = useState(false);
   const [openActionDropdown, setOpenActionDropdown] = useState<string | null>(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (openActionDropdown) {
+        const target = event.target as HTMLElement;
+        if (!target.closest('[data-dropdown]')) {
+          setOpenActionDropdown(null);
+        }
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [openActionDropdown]);
 
   // Helper to get selected product IDs from Set of keys
   const getSelectedProductIds = (): number[] => {
@@ -365,7 +385,7 @@ const AdminProductsRedesign: React.FC<Props> = ({
                         </span>
                       </td>
                       <td className="px-4 py-4 text-center">
-                        <div className="relative inline-block">
+                        <div className="relative inline-block" data-dropdown>
                           <button
                             onClick={() => setOpenActionDropdown(openActionDropdown === productKey ? null : productKey)}
                             className="p-2 hover:bg-gray-100 rounded-lg transition"
@@ -374,16 +394,77 @@ const AdminProductsRedesign: React.FC<Props> = ({
                           </button>
 
                           {openActionDropdown === productKey && (
-                            <div className="absolute right-0 bottom-full mb-2 w-40 bg-white border border-gray-100 rounded-xl shadow-2xl z-50 overflow-hidden py-1 animate-in slide-in-from-bottom-2">
-                              <button onClick={() => { onEditProduct(product); setOpenActionDropdown(null); }} className="w-full px-4 py-2.5 text-left text-xs text-gray-700 hover:bg-sky-50 flex items-center gap-2 transition">
-                                <Edit size={14} className="text-sky-500" /> Edit Product
+                            <div className="absolute right-full top-0 mr-2 z-50" style={{ width: '180px', backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 4px 20px rgba(0,0,0,0.15)', padding: '8px 0' }}>
+                              {/* Edit */}
+                              <button 
+                                onClick={() => { onEditProduct(product); setOpenActionDropdown(null); }}
+                                style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', height: '48px', padding: '0 24px', backgroundColor: 'white', border: 'none', cursor: 'pointer', fontFamily: '"Lato", sans-serif', fontWeight: 600, fontSize: '16px', color: 'black', whiteSpace: 'nowrap' }}
+                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9f9f9'}
+                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+                              >
+                                <Edit size={24} color="black" />
+                                Edit
                               </button>
-                              <button onClick={() => { onCloneProduct(product); setOpenActionDropdown(null); }} className="w-full px-4 py-2.5 text-left text-xs text-gray-700 hover:bg-sky-50 flex items-center gap-2 transition">
-                                <Copy size={14} className="text-green-500" /> Clone Product
+                              {/* View in Shop */}
+                              <button 
+                                onClick={() => { 
+                                  if (onViewInShop) {
+                                    onViewInShop(product);
+                                  } else if (storeSubdomain) {
+                                    window.open(`//${storeSubdomain}.${window.location.host}/product/${product.id}`, '_blank');
+                                  }
+                                  setOpenActionDropdown(null); 
+                                }}
+                                style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', height: '48px', padding: '0 24px', backgroundColor: 'white', border: 'none', cursor: 'pointer', fontFamily: '"Lato", sans-serif', fontWeight: 600, fontSize: '16px', color: 'black', whiteSpace: 'nowrap' }}
+                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9f9f9'}
+                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+                              >
+                                <ExternalLink size={24} color="black" />
+                                View in Shop
                               </button>
-                              <div className="border-t border-gray-50 my-1"></div>
-                              <button onClick={() => { onDeleteProduct(product.id); setOpenActionDropdown(null); }} className="w-full px-4 py-2.5 text-left text-xs text-red-600 hover:bg-red-50 flex items-center gap-2 transition">
-                                <Trash2 size={14} /> Delete
+                              {/* Details - Highlighted */}
+                              <button 
+                                onClick={() => { if (onViewDetails) onViewDetails(product); setOpenActionDropdown(null); }}
+                                style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', height: '48px', padding: '0 24px', backgroundColor: '#f4f4f4', border: 'none', cursor: 'pointer', fontFamily: '"Lato", sans-serif', fontWeight: 600, fontSize: '16px', color: 'black', whiteSpace: 'nowrap' }}
+                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#eaeaea'}
+                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#f4f4f4'}
+                              >
+                                <Eye size={24} color="black" />
+                                Details
+                              </button>
+                              {/* Duplicate */}
+                              <button 
+                                onClick={() => { onCloneProduct(product); setOpenActionDropdown(null); }}
+                                style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', height: '48px', padding: '0 24px', backgroundColor: 'white', border: 'none', cursor: 'pointer', fontFamily: '"Lato", sans-serif', fontWeight: 600, fontSize: '16px', color: 'black', whiteSpace: 'nowrap' }}
+                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9f9f9'}
+                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+                              >
+                                <Copy size={24} color="black" />
+                                Duplicate
+                              </button>
+                              {/* Product Status */}
+                              <button 
+                                onClick={() => { 
+                                  const newStatus = product.status === 'Active' ? 'Draft' : 'Active';
+                                  onBulkStatusUpdate([product.id], newStatus as 'Active' | 'Draft');
+                                  setOpenActionDropdown(null); 
+                                }}
+                                style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', height: '48px', padding: '0 24px', backgroundColor: 'white', border: 'none', cursor: 'pointer', fontFamily: '"Lato", sans-serif', fontWeight: 600, fontSize: '16px', color: 'black', whiteSpace: 'nowrap' }}
+                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9f9f9'}
+                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+                              >
+                                <CheckCircle size={24} color="black" />
+                                {product.status === 'Active' ? 'Set Draft' : 'Set Active'}
+                              </button>
+                              {/* Delete */}
+                              <button 
+                                onClick={() => { onDeleteProduct(product.id); setOpenActionDropdown(null); }}
+                                style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', height: '48px', padding: '0 24px', backgroundColor: 'white', border: 'none', cursor: 'pointer', fontFamily: '"Lato", sans-serif', fontWeight: 600, fontSize: '16px', color: '#da0000', whiteSpace: 'nowrap' }}
+                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9f9f9'}
+                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+                              >
+                                <Trash2 size={24} color="#da0000" />
+                                Delete
                               </button>
                             </div>
                           )}

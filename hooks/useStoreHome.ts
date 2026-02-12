@@ -257,7 +257,8 @@ export const useStoreHome = ({
     const acceptedSet = new Set(accepted.map(t => normalizeTagValue(t)).filter(Boolean));
     const primary = normalizeTagValue(product.tag);
     if (primary && acceptedSet.has(primary)) return true;
-    if (product.tags?.length) {
+    // Ensure tags is an array before calling .some()
+    if (Array.isArray(product.tags) && product.tags.length) {
       return product.tags.some(t => acceptedSet.has(normalizeTagValue(t)));
     }
     return false;
@@ -292,8 +293,8 @@ export const useStoreHome = ({
         contains(product.subCategory) ||
         contains(product.childCategory)
       ) return true;
-      if (product.tags?.some(tag => contains(tag))) return true;
-      if (product.searchTags?.some(tag => contains(tag))) return true;
+      if (Array.isArray(product.tags) && product.tags.some(tag => contains(tag))) return true;
+      if (Array.isArray(product.searchTags) && product.searchTags.some(tag => contains(tag))) return true;
       return false;
     });
   }, [activeProducts, normalizedSearch]);

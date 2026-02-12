@@ -103,7 +103,7 @@ export const StoreCategoryProducts = ({ products, categories, subCategories, chi
     const tagNames = new Set<string>();
     activeProducts.forEach(p => {
       if (eq(p.category, selectedCategory) || isBrandFilter) {
-        p.tags?.forEach(t => tagNames.add(t));
+        if (Array.isArray(p.tags)) p.tags.forEach(t => tagNames.add(t));
       }
     });
     return activeTags.filter(t => tagNames.has(t.name));

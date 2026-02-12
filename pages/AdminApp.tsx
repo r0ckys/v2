@@ -108,10 +108,10 @@ interface AdminAppProps {
   orders: Order[];
   products: Product[];
   logo: string | null;
-  themeConfig: ThemeConfig;
+  themeConfig: ThemeConfig | null;
   websiteConfig?: WebsiteConfig;
   deliveryConfig: DeliveryConfig[];
-  paymentMethods: PaymentMethod[];
+  paymentMethods?: PaymentMethod[];
   courierConfig: CourierConfig;
   facebookPixelConfig: FacebookPixelConfig;
   chatMessages: ChatMessage[];
@@ -126,7 +126,7 @@ interface AdminAppProps {
   onUpdateTheme: (config: ThemeConfig) => Promise<void>;
   onUpdateWebsiteConfig: (config: WebsiteConfig) => Promise<void>;
   onUpdateDeliveryConfig: (configs: DeliveryConfig[]) => void;
-  onUpdatePaymentMethods: (methods: PaymentMethod[]) => void;
+  onUpdatePaymentMethods?: (methods: PaymentMethod[]) => void;
   onUpdateCourierConfig: (config: CourierConfig) => void;
   onUpdateProfile: (user: User) => void;
   onTenantChange: (tenantId: string) => void;
@@ -135,16 +135,18 @@ interface AdminAppProps {
   onOpenAdminChat: () => void;
   hasUnreadChat: boolean;
   // Tenant management props
-  onCreateTenant: (payload: CreateTenantPayload, options?: { activate?: boolean }) => Promise<Tenant>;
-  onDeleteTenant: (tenantId: string) => Promise<void>;
-  onRefreshTenants: () => Promise<Tenant[]>;
-  isTenantCreating: boolean;
-  deletingTenantId: string | null;
+  onCreateTenant?: (payload: CreateTenantPayload, options?: { activate?: boolean }) => Promise<Tenant>;
+  onDeleteTenant?: (tenantId: string) => Promise<void>;
+  onRefreshTenants?: () => Promise<Tenant[]>;
+  isTenantCreating?: boolean;
+  deletingTenantId?: string | null;
   // Landing pages props
   landingPages: any[];
   onCreateLandingPage: (page: any) => void;
   onUpsertLandingPage: (page: any) => void;
   onToggleLandingPublish: (pageId: string, status: string) => void;
+  // Order management
+  onAddOrder?: (order: Order) => void;
 }
 
 interface AdminLayoutProps {
@@ -426,6 +428,7 @@ const AdminApp: React.FC<AdminAppProps> = ({
   onCreateLandingPage,
   onUpsertLandingPage,
   onToggleLandingPublish,
+  onAddOrder,
 }) => {
   const [adminSection, setAdminSectionInternal] = useState(() => getPageFromUrl());
 
@@ -463,6 +466,7 @@ const AdminApp: React.FC<AdminAppProps> = ({
   const [users, setUsers] = useState<User[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [hasLoadedAdminData, setHasLoadedAdminData] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
   // Load admin-only data
   useEffect(() => {
@@ -700,9 +704,9 @@ const AdminApp: React.FC<AdminAppProps> = ({
       >
         <Suspense fallback={<PageLoadingFallback section={adminSection} />}>
           {
-            adminSection === 'orders' ? <FigmaOrderList orders={orders} courierConfig={courierConfig} onUpdateOrder={onUpdateOrder} /> :
-              adminSection === 'products' ? <FigmaProductList products={products} categories={categories} brands={brands} onAddProduct={() => setAdminSection('product-upload')} onEditProduct={(p) => onUpdateProduct(p)} onDeleteProduct={onDeleteProduct} onCloneProduct={(p) => onAddProduct({ ...p, id: Date.now(), name: p.name + ' (Copy)' })} onBulkDelete={onBulkDeleteProducts} onBulkStatusUpdate={(ids, status) => onBulkUpdateProducts(ids, { status })} /> :
-                adminSection === 'product-upload' ? <FigmaProductUpload categories={categories} subCategories={subCategories} childCategories={childCategories} brands={brands} tags={tags} onAddProduct={onAddProduct} onBack={() => setAdminSection('products')} onNavigate={setAdminSection} /> :
+            adminSection === 'orders' ? <FigmaOrderList orders={orders} courierConfig={courierConfig} onUpdateOrder={onUpdateOrder} products={products} tenantId={activeTenantId} onNewOrder={onAddOrder} /> :
+              adminSection === 'products' ? <FigmaProductList products={products} categories={categories} brands={brands} onAddProduct={() => { setEditingProduct(null); setAdminSection('product-upload'); }} onEditProduct={(p) => { setEditingProduct(p); setAdminSection('product-upload'); }} onDeleteProduct={onDeleteProduct} onCloneProduct={(p) => onAddProduct({ ...p, id: Date.now(), name: p.name + ' (Copy)' })} onBulkDelete={onBulkDeleteProducts} onBulkStatusUpdate={(ids, status) => onBulkUpdateProducts(ids, { status })} /> :
+                adminSection === 'product-upload' ? <FigmaProductUpload categories={categories} subCategories={subCategories} childCategories={childCategories} brands={brands} tags={tags} onAddProduct={editingProduct ? onUpdateProduct : onAddProduct} onBack={() => { setEditingProduct(null); setAdminSection('products'); }} onNavigate={setAdminSection} editProduct={editingProduct} /> :
                   adminSection === 'store_studio' ? <StoreStudioManager tenantId={activeTenantId} onBack={() => setAdminSection('manage_shop')} products={products} /> :
                   adminSection === 'landing_pages' ? <AdminLandingPage tenantSubdomain={selectedTenantRecord?.subdomain || ''} products={products} landingPages={landingPages} onCreateLandingPage={onCreateLandingPage} onUpdateLandingPage={onUpsertLandingPage} onTogglePublish={onToggleLandingPublish} onPreviewLandingPage={handlePreviewLandingPage} /> :
                     adminSection === 'due_list' ? <AdminDueList user={user} onLogout={onLogout} /> :
@@ -721,7 +725,7 @@ const AdminApp: React.FC<AdminAppProps> = ({
                                               adminSection === 'sms_marketing' ? <AdminSMSMarketing tenantId={activeTenantId} onBack={() => setAdminSection('manage_shop')} /> :
                                                 adminSection === 'support' ? <AdminSupport user={user} activeTenant={selectedTenantRecord} /> :
                                                   adminSection === 'settings_delivery' ? <AdminDeliverySettings configs={deliveryConfig} onSave={onUpdateDeliveryConfig} onBack={() => setAdminSection('settings')} /> :
-                                                    adminSection === 'settings_payment' ? <AdminPaymentSettings paymentMethods={paymentMethods} onSave={onUpdatePaymentMethods} onBack={() => setAdminSection('settings')} /> :
+                                                    adminSection === 'settings_payment' ? <AdminPaymentSettings paymentMethods={paymentMethods ?? []} onSave={onUpdatePaymentMethods ?? (() => {})} onBack={() => setAdminSection('settings')} /> :
                                                       adminSection === 'settings_courier' ? <AdminCourierSettings config={courierConfig} onSave={onUpdateCourierConfig} onBack={() => setAdminSection('settings')} tenantId={activeTenantId} /> :
                                                         adminSection === 'settings_facebook_pixel' ? <AdminFacebookPixel config={facebookPixelConfig} onSave={async (cfg: FacebookPixelConfig) => { await fetch('/api/facebook-pixel/config', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Tenant-Id': activeTenantId, ...getAuthHeader() }, body: JSON.stringify(cfg) }); toast.success('Facebook Pixel config saved'); }} onBack={() => setAdminSection('settings')} /> :
                                                           adminSection === 'settings_gtm' ? <AdminGTM onBack={() => setAdminSection('settings')} tenantId={activeTenantId} /> :
@@ -729,8 +733,8 @@ const AdminApp: React.FC<AdminAppProps> = ({
                                                               adminSection === 'admin_control' ? <AdminControlNew users={users as any} roles={roles as any} onAddUser={handleAddUser} onUpdateUser={handleUpdateUser} onDeleteUser={handleDeleteUser} onAddRole={handleAddRole} onUpdateRole={handleUpdateRole} onDeleteRole={handleDeleteRole} onUpdateUserRole={handleUpdateUserRole} currentUser={user as any} tenantId={activeTenantId} userPermissions={userPermissions} /> :
                                                               adminSection.startsWith('catalog_') ? <FigmaCatalogManager view={adminSection} onNavigate={setAdminSection} categories={categories} subCategories={subCategories} childCategories={childCategories} brands={brands} tags={tags} onAddCategory={catHandlers.add} onUpdateCategory={catHandlers.update} onDeleteCategory={catHandlers.delete} onAddSubCategory={subCatHandlers.add} onUpdateSubCategory={subCatHandlers.update} onDeleteSubCategory={subCatHandlers.delete} onAddChildCategory={childCatHandlers.add} onUpdateChildCategory={childCatHandlers.update} onDeleteChildCategory={childCatHandlers.delete} onAddBrand={brandHandlers.add} onUpdateBrand={brandHandlers.update} onDeleteBrand={brandHandlers.delete} onAddTag={tagHandlers.add} onUpdateTag={tagHandlers.update} onDeleteTag={tagHandlers.delete} /> :
                                                                 (adminSection === 'business_report' || adminSection.startsWith('business_report_')) ? <FigmaBusinessReport initialTab={adminSection} orders={orders} products={products} user={user} onLogout={onLogout} tenantId={activeTenantId} /> :
-                                                                  (adminSection === 'website_content' || adminSection === 'carousel' || adminSection === 'campaigns' || adminSection === 'popup' || adminSection === 'website_info' || adminSection === 'chat_settings') ? <AdminWebsiteContent tenantId={activeTenantId} logo={logo} onUpdateLogo={onUpdateLogo} themeConfig={themeConfig} onUpdateTheme={onUpdateTheme} websiteConfig={websiteConfig} onUpdateWebsiteConfig={onUpdateWebsiteConfig} products={products} initialTab={adminSection === 'website_content' ? 'carousel' : adminSection} /> :
-                                                                    <AdminCustomization tenantId={activeTenantId} logo={logo} onUpdateLogo={onUpdateLogo} themeConfig={themeConfig} onUpdateTheme={onUpdateTheme} websiteConfig={websiteConfig} onUpdateWebsiteConfig={onUpdateWebsiteConfig} products={products} initialTab={adminSection === 'customization' ? 'theme_view' : adminSection} />
+                                                                  (adminSection === 'website_content' || adminSection === 'carousel' || adminSection === 'campaigns' || adminSection === 'popup' || adminSection === 'website_info' || adminSection === 'chat_settings') ? <AdminWebsiteContent tenantId={activeTenantId} logo={logo} onUpdateLogo={onUpdateLogo} themeConfig={themeConfig ?? undefined} onUpdateTheme={onUpdateTheme} websiteConfig={websiteConfig} onUpdateWebsiteConfig={onUpdateWebsiteConfig} products={products} initialTab={adminSection === 'website_content' ? 'carousel' : adminSection} /> :
+                                                                    <AdminCustomization tenantId={activeTenantId} logo={logo} onUpdateLogo={onUpdateLogo} themeConfig={themeConfig ?? undefined} onUpdateTheme={onUpdateTheme} websiteConfig={websiteConfig} onUpdateWebsiteConfig={onUpdateWebsiteConfig} products={products} initialTab={adminSection === 'customization' ? 'theme_view' : adminSection} />
           }
         </Suspense>
         <AIChatAssistant tenantId={activeTenantId} shopName={selectedTenantRecord?.name} onNavigate={setAdminSection} />

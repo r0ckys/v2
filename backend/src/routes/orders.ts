@@ -15,7 +15,7 @@ const orderSchema = z.object({
   location: z.string().optional(),
   amount: z.number(),
   date: z.string(),
-  status: z.enum(['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled', 'Returned']).default('Pending'),
+  status: z.enum(['Pending', 'Confirmed', 'On Hold', 'Processing', 'Shipped', 'Sent to Courier', 'Delivered', 'Cancelled', 'Return', 'Refund', 'Returned Receive', 'Returned']).default('Pending'),
   email: z.string().email().optional(),
   phone: z.string().optional(),
   division: z.string().optional(),
@@ -23,8 +23,10 @@ const orderSchema = z.object({
     color: z.string(),
     size: z.string()
   }).optional(),
-  productId: z.number().optional(),
+  productId: z.union([z.number(), z.string()]).optional(),
   productName: z.string().optional(),
+  productImage: z.string().optional().nullable(),
+  sku: z.string().optional(),
   quantity: z.number().default(1),
   deliveryType: z.string().optional(),
   deliveryCharge: z.number().optional(),
@@ -32,7 +34,13 @@ const orderSchema = z.object({
   courierProvider: z.string().optional(),
   notes: z.string().optional(),
   source: z.enum(['store', 'landing_page', 'admin']).optional(),
-  landingPageId: z.string().optional()
+  landingPageId: z.string().optional(),
+  createdAt: z.string().optional(),
+  items: z.array(z.any()).optional(),
+  weight: z.number().optional(),
+  pathaoArea: z.number().optional(),
+  pathaoZone: z.number().optional(),
+  pathaoCity: z.number().optional(),
 });
 // order interface
 export interface Order {
@@ -170,7 +178,7 @@ ordersRouter.post('/:tenantId', async (req, res, next) => {
     console.log(`[Orders] New order ${orderData.id} created for tenant ${tenantId}`);
     res.status(201).json({ data: orderData, success: true });
   } catch (error) {
-    console.error('[Orders] Error creating order:', error);
+console.error('[Orders] Error creating order:', error instanceof Error ? error.message : String(error));
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: error.errors });
     }

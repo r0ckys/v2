@@ -314,7 +314,7 @@ const StoreHome: React.FC<StoreHomeProps> = ({
     <div className="min-h-screen font-sans text-slate-900" style={{ background: 'linear-gradient(to bottom, #f0f4f8, #e8ecf1)' }}>
       <StoreHeader 
         onTrackOrder={() => setIsTrackOrderOpen(true)} 
-        onImageSearchClick={onImageSearchClick}
+        // onImageSearchClick={onImageSearchClick}
         productCatalog={activeProducts}
         wishlistCount={wishlistCount}
         wishlist={wishlist}
@@ -404,7 +404,7 @@ const StoreHome: React.FC<StoreHomeProps> = ({
             style={(websiteConfig?.categorySectionStyle as any) || 'style6'}
             categories={displayCategories}
             onCategoryClick={handleCategoryClick}
-            categoryScrollRef={categoryScrollRef}
+            categoryScrollRef={categoryScrollRef as React.RefObject<HTMLDivElement>}
           />
         </section>
       )}
@@ -443,7 +443,7 @@ const StoreHome: React.FC<StoreHomeProps> = ({
                   onQuickView={setQuickViewProduct}
                   onAddToCart={handleAddProductToCartFromCard}
                   productCardStyle={websiteConfig?.productCardStyle}
-                  sectionRef={productsSectionRef}
+                  sectionRef={productsSectionRef as React.RefObject<HTMLElement>}
                 />
               </Suspense>
             )}
@@ -547,17 +547,17 @@ const StoreHome: React.FC<StoreHomeProps> = ({
             {/* Tag-based Product Sections */}
             {tags?.filter(t => !t.status || t.status === 'Active' || t.status?.toLowerCase() === 'active').map((tag, idx) => {
               const tagProducts = activeProducts.filter(p => 
-                p.tags?.some((pt: any) => (typeof pt === 'string' ? pt : pt?.name)?.toLowerCase() === tag.name?.toLowerCase())
+                Array.isArray(p.tags) && p.tags.some((pt: any) => (typeof pt === 'string' ? pt : pt?.name)?.toLowerCase() === tag.name?.toLowerCase())
               );
               if (!tagProducts.length) return null;
-              const colors = ['purple', 'pink', 'indigo', 'teal', 'orange'];
+              const colors = ['purple', 'orange', 'blue', 'green', 'purple'] as const;
               return (
                 <Suspense key={tag.id || tag.name} fallback={<ProductGridSkeleton count={10} />}>
                   <LazySection fallback={<ProductGridSkeleton count={10} />} rootMargin="0px 0px 300px" minHeight="400px">
                     <ProductGridSection
                       title={`#${tag.name}`}
                       products={tagProducts}
-                      accentColor={colors[idx % colors.length]}
+                      accentColor={colors[idx % colors.length] as 'purple' | 'orange' | 'blue' | 'green'}
                       keyPrefix={`tag-${tag.name}`}
                       maxProducts={10}
                       reverseOrder={false}
