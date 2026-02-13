@@ -1,10 +1,17 @@
 import { Router, Request, Response } from 'express';
 import { ObjectId } from 'mongodb';
 import { getDatabase } from '../db/mongo';
+import { getCached, setCachedWithTTL, invalidateCachePattern } from '../services/redisCache';
 
 const router = Router();
 
-// GET all purchases for tenant
+// Cache key generators for purchases
+const PurchaseCacheKeys = {
+  list: (tenantId: string, params: string) => `purchases:${tenantId}:list:${params}`,
+  summary: (tenantId: string) => `purchases:${tenantId}:summary`,
+};
+
+// GET all purchases for tenant with pagination and caching
 router.get('/', async (req: Request, res: Response) => {
   try {
     const tenantId = req.headers['x-tenant-id'] as string;
@@ -12,13 +19,47 @@ router.get('/', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Tenant ID is required' });
     }
 
-    const db = await getDatabase();
-    const purchases = await db.collection('purchases')
-      .find({ tenantId })
-      .sort({ createdAt: -1 })
-      .toArray();
+    const { startDate, endDate, page = '1', pageSize = '50' } = req.query as any;
+    const pageNum = Number(page);
+    const limit = Math.min(Number(pageSize), 100); // Cap at 100
 
-    res.json(purchases);
+    // Generate cache key
+    const cacheParams = `sd=${startDate || ''}&ed=${endDate || ''}&p=${pageNum}&ps=${limit}`;
+    const cacheKey = PurchaseCacheKeys.list(tenantId, cacheParams);
+
+    // Check cache first
+    const cached = await getCached<{ items: any[]; total: number }>(cacheKey);
+    if (cached) {
+      return res.json(cached);
+    }
+
+    const db = await getDatabase();
+    const filter: any = { tenantId };
+
+    // Date range filter
+    if (startDate || endDate) {
+      filter.createdAt = {};
+      if (startDate) filter.createdAt.$gte = new Date(startDate);
+      if (endDate) filter.createdAt.$lte = new Date(endDate + 'T23:59:59.999Z');
+    }
+
+    // Use Promise.all for parallel execution
+    const [total, purchases] = await Promise.all([
+      db.collection('purchases').countDocuments(filter),
+      db.collection('purchases')
+        .find(filter)
+        .sort({ createdAt: -1 })
+        .skip((pageNum - 1) * limit)
+        .limit(limit)
+        .toArray()
+    ]);
+
+    const result = { items: purchases, total };
+
+    // Cache for 2 minutes
+    setCachedWithTTL(cacheKey, result, 'short');
+
+    res.json(result);
   } catch (error) {
     console.error('Error fetching purchases:', error);
     res.status(500).json({ error: 'Failed to fetch purchases' });
@@ -50,12 +91,19 @@ router.get('/:id', async (req: Request, res: Response) => {
   }
 });
 
-// GET purchase summary (totals, counts)
+// GET purchase summary (totals, counts) with caching
 router.get('/summary/stats', async (req: Request, res: Response) => {
   try {
     const tenantId = req.headers['x-tenant-id'] as string;
     if (!tenantId) {
       return res.status(400).json({ error: 'Tenant ID is required' });
+    }
+
+    // Check cache first
+    const cacheKey = PurchaseCacheKeys.summary(tenantId);
+    const cached = await getCached<{ totalPurchases: number; totalAmount: number; totalItems: number }>(cacheKey);
+    if (cached) {
+      return res.json(cached);
     }
 
     const db = await getDatabase();
@@ -71,7 +119,12 @@ router.get('/summary/stats', async (req: Request, res: Response) => {
       }
     ]).toArray();
 
-    res.json(summary[0] || { totalPurchases: 0, totalAmount: 0, totalItems: 0 });
+    const result = summary[0] || { totalPurchases: 0, totalAmount: 0, totalItems: 0 };
+
+    // Cache for 2 minutes
+    setCachedWithTTL(cacheKey, result, 'short');
+
+    res.json(result);
   } catch (error) {
     console.error('Error fetching purchase summary:', error);
     res.status(500).json({ error: 'Failed to fetch purchase summary' });
@@ -141,6 +194,9 @@ router.post('/', async (req: Request, res: Response) => {
       }
     }
 
+    // Invalidate cache
+    invalidateCachePattern(`purchases:${tenantId}:*`);
+
     res.status(201).json({ 
       ...purchase, 
       _id: result.insertedId,
@@ -188,6 +244,9 @@ router.put('/:id', async (req: Request, res: Response) => {
       { $set: updateData }
     );
 
+    // Invalidate cache
+    invalidateCachePattern(`purchases:${tenantId}:*`);
+
     res.json({ message: 'Purchase updated successfully' });
   } catch (error) {
     console.error('Error updating purchase:', error);
@@ -231,6 +290,9 @@ router.delete('/:id', async (req: Request, res: Response) => {
       _id: new ObjectId(req.params.id),
       tenantId
     });
+
+    // Invalidate cache
+    invalidateCachePattern(`purchases:${tenantId}:*`);
 
     res.json({ message: 'Purchase deleted successfully' });
   } catch (error) {

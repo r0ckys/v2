@@ -4,6 +4,33 @@
 // Resolve API base URL from Vite env
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
+// In-memory cache for faster subsequent loads
+const cache = new Map<string, { data: any; expires: number }>();
+const CACHE_TTL = 60 * 1000; // 1 minute cache
+
+function getCached<T>(key: string): T | null {
+  const entry = cache.get(key);
+  if (entry && entry.expires > Date.now()) {
+    return entry.data as T;
+  }
+  cache.delete(key);
+  return null;
+}
+
+function setCache(key: string, data: any, ttl = CACHE_TTL): void {
+  cache.set(key, { data, expires: Date.now() + ttl });
+}
+
+function invalidateCache(pattern?: string): void {
+  if (pattern) {
+    for (const key of cache.keys()) {
+      if (key.includes(pattern)) cache.delete(key);
+    }
+  } else {
+    cache.clear();
+  }
+}
+
 export interface IncomeDTO {
   id?: string;
   name: string;
@@ -49,27 +76,59 @@ function headers(extra?: Record<string, string>): Record<string, string> {
 }
 
 export const IncomeService = {
+  // List incomes with caching
   async list(opts: { query?: string; status?: string; category?: string; from?: string; to?: string; page?: number; pageSize?: number } = {}) {
+    const cacheKey = `incomes:list:${JSON.stringify(opts)}:${_tenantId}`;
+    const cached = getCached<{ items: IncomeDTO[]; total: number }>(cacheKey);
+    if (cached) return cached;
+
     const url = buildUrl('/api/incomes', opts);
     const res = await fetch(url, { headers: headers() });
     if (!res.ok) return { items: [], total: 0 };
-    return res.json() as Promise<{ items: IncomeDTO[]; total: number }>;
+    const data = await res.json() as { items: IncomeDTO[]; total: number };
+    setCache(cacheKey, data);
+    return data;
   },
 
+  // Summary with caching
   async summary(opts: { from?: string; to?: string } = {}) {
+    const cacheKey = `incomes:summary:${JSON.stringify(opts)}:${_tenantId}`;
+    const cached = getCached<IncomeSummary>(cacheKey);
+    if (cached) return cached;
+
     const url = buildUrl('/api/incomes/summary', opts);
     const res = await fetch(url, { headers: headers() });
     if (!res.ok) return { totalAmount: 0, totalTransactions: 0, categories: 0 };
-    return res.json() as Promise<IncomeSummary>;
+    const data = await res.json() as IncomeSummary;
+    setCache(cacheKey, data);
+    return data;
   },
 
+  // Load both list and summary in parallel (for fast initial load)
+  async loadAll(opts: { query?: string; status?: string; category?: string; from?: string; to?: string; page?: number; pageSize?: number } = {}) {
+    const [listResult, summaryResult, categories] = await Promise.all([
+      this.list(opts),
+      this.summary({ from: opts.from, to: opts.to }),
+      this.listCategories()
+    ]);
+    return { list: listResult, summary: summaryResult, categories };
+  },
+
+  // Categories with caching
   async listCategories() {
+    const cacheKey = `incomes:categories:${_tenantId}`;
+    const cached = getCached<IncomeCategoryDTO[]>(cacheKey);
+    if (cached) return cached;
+
     const res = await fetch(buildUrl('/api/incomes/categories'), { headers: headers() });
     if (!res.ok) return [];
-    return res.json() as Promise<IncomeCategoryDTO[]>;
+    const data = await res.json() as IncomeCategoryDTO[];
+    setCache(cacheKey, data, 5 * 60 * 1000); // 5 min cache for categories
+    return data;
   },
 
   async createCategory(name: string) {
+    invalidateCache('incomes:categories');
     const res = await fetch(buildUrl('/api/incomes/categories'), {
       method: 'POST',
       headers: headers({ 'Content-Type': 'application/json' }),
@@ -80,6 +139,7 @@ export const IncomeService = {
   },
 
   async create(payload: IncomeDTO) {
+    invalidateCache('incomes:');
     const res = await fetch(buildUrl('/api/incomes'), {
       method: 'POST',
       headers: headers({ 'Content-Type': 'application/json' }),
@@ -90,6 +150,7 @@ export const IncomeService = {
   },
 
   async update(id: string, payload: Partial<IncomeDTO>) {
+    invalidateCache('incomes:');
     const res = await fetch(buildUrl(`/api/incomes/${id}`), {
       method: 'PUT',
       headers: headers({ 'Content-Type': 'application/json' }),
@@ -100,8 +161,14 @@ export const IncomeService = {
   },
 
   async remove(id: string) {
+    invalidateCache('incomes:');
     const res = await fetch(buildUrl(`/api/incomes/${id}`), { method: 'DELETE', headers: headers() });
     if (!res.ok) throw new Error('Failed to delete income');
     return res.json() as Promise<{ success: boolean }>;
   },
+
+  // Clear cache manually
+  clearCache() {
+    invalidateCache('incomes:');
+  }
 };

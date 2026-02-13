@@ -131,6 +131,8 @@ const AdminExpenses: React.FC<AdminExpensesProps> = ({ tenantId }) => {
     try {
       setLoading(true);
       setError(null);
+      
+      // Use optimized loadAll for faster parallel fetching with caching
       const [expRes, catRes] = await Promise.all([
         ExpenseService.list({
           query: query || undefined,
@@ -139,7 +141,7 @@ const AdminExpenses: React.FC<AdminExpensesProps> = ({ tenantId }) => {
           from: dateRange.from,
           to: dateRange.to,
           page: 1,
-          pageSize: 500,
+          pageSize: 100, // Reduced pageSize for faster initial load
         }),
         CategoryService.list(),
       ]);

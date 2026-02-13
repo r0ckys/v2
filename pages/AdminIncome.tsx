@@ -110,20 +110,20 @@ const AdminIncome: React.FC<AdminIncomeProps> = ({ tenantId }) => {
     try {
       setLoading(true);
       setError(null);
-      const [incomeRes, catRes] = await Promise.all([
-        IncomeService.list({
-          query: query || undefined,
-          status: statusTab === 'All' ? undefined : statusTab,
-          category: selectedCategory || undefined,
-          from: dateRange.from,
-          to: dateRange.to,
-          page: 1,
-          pageSize: 500,
-        }),
-        IncomeService.listCategories(),
-      ]);
-      setItems((incomeRes.items || []).map((x: any) => ({ ...x, id: x.id || x._id })));
-      setCategories((catRes || []).map((c: any) => ({ ...c, id: c.id || c._id })));
+      
+      // Use optimized loadAll for faster parallel fetching with caching
+      const result = await IncomeService.loadAll({
+        query: query || undefined,
+        status: statusTab === 'All' ? undefined : statusTab,
+        category: selectedCategory || undefined,
+        from: dateRange.from,
+        to: dateRange.to,
+        page: 1,
+        pageSize: 100, // Reduced pageSize for faster initial load
+      });
+      
+      setItems((result.list.items || []).map((x: any) => ({ ...x, id: x.id || x._id })));
+      setCategories((result.categories || []).map((c: any) => ({ ...c, id: c.id || c._id })));
     } catch (e: any) {
       setError(e?.message || 'Failed to load income');
     } finally {

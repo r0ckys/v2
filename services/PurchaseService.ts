@@ -3,6 +3,33 @@
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
+// In-memory cache for faster subsequent loads
+const cache = new Map<string, { data: any; expires: number }>();
+const CACHE_TTL = 60 * 1000; // 1 minute cache
+
+function getCached<T>(key: string): T | null {
+  const entry = cache.get(key);
+  if (entry && entry.expires > Date.now()) {
+    return entry.data as T;
+  }
+  cache.delete(key);
+  return null;
+}
+
+function setCache(key: string, data: any, ttl = CACHE_TTL): void {
+  cache.set(key, { data, expires: Date.now() + ttl });
+}
+
+function invalidateCache(pattern?: string): void {
+  if (pattern) {
+    for (const key of cache.keys()) {
+      if (key.includes(pattern)) cache.delete(key);
+    }
+  } else {
+    cache.clear();
+  }
+}
+
 export interface PurchaseItemDTO {
   productId?: string;
   productName: string;
@@ -62,26 +89,58 @@ function headers(extra?: Record<string, string>): Record<string, string> {
 }
 
 export const PurchaseService = {
-  async list(opts: { startDate?: string; endDate?: string } = {}) {
+  // List with caching and pagination
+  async list(opts: { startDate?: string; endDate?: string; page?: number; pageSize?: number } = {}) {
+    const cacheKey = `purchases:list:${JSON.stringify(opts)}:${_tenantId}`;
+    const cached = getCached<{ items: PurchaseDTO[]; total: number } | PurchaseDTO[]>(cacheKey);
+    if (cached) return cached;
+
     const url = buildUrl('/api/purchases', opts);
     const res = await fetch(url, { headers: headers() });
-    if (!res.ok) return [];
-    return res.json() as Promise<PurchaseDTO[]>;
+    if (!res.ok) return { items: [], total: 0 };
+    const data = await res.json();
+    // Handle both old (array) and new (paginated) response formats
+    const result = Array.isArray(data) ? { items: data, total: data.length } : data;
+    setCache(cacheKey, result);
+    return result as { items: PurchaseDTO[]; total: number };
   },
 
   async getById(id: string) {
+    const cacheKey = `purchases:item:${id}:${_tenantId}`;
+    const cached = getCached<PurchaseDTO>(cacheKey);
+    if (cached) return cached;
+
     const res = await fetch(buildUrl(`/api/purchases/${id}`), { headers: headers() });
     if (!res.ok) throw new Error('Purchase not found');
-    return res.json() as Promise<PurchaseDTO>;
+    const data = await res.json() as PurchaseDTO;
+    setCache(cacheKey, data);
+    return data;
   },
 
+  // Summary with caching
   async summary() {
+    const cacheKey = `purchases:summary:${_tenantId}`;
+    const cached = getCached<PurchaseSummary>(cacheKey);
+    if (cached) return cached;
+
     const res = await fetch(buildUrl('/api/purchases/summary/stats'), { headers: headers() });
     if (!res.ok) return { totalPurchases: 0, totalAmount: 0, totalItems: 0 };
-    return res.json() as Promise<PurchaseSummary>;
+    const data = await res.json() as PurchaseSummary;
+    setCache(cacheKey, data);
+    return data;
+  },
+
+  // Load both list and summary in parallel (for fast initial load)
+  async loadAll(opts: { startDate?: string; endDate?: string; page?: number; pageSize?: number } = {}) {
+    const [listResult, summaryResult] = await Promise.all([
+      this.list(opts),
+      this.summary()
+    ]);
+    return { list: listResult, summary: summaryResult };
   },
 
   async create(payload: Omit<PurchaseDTO, '_id' | 'purchaseNumber' | 'createdAt'>) {
+    invalidateCache('purchases:');
     const res = await fetch(buildUrl('/api/purchases'), {
       method: 'POST',
       headers: headers({ 'Content-Type': 'application/json' }),
@@ -92,6 +151,7 @@ export const PurchaseService = {
   },
 
   async update(id: string, payload: Partial<PurchaseDTO>) {
+    invalidateCache('purchases:');
     const res = await fetch(buildUrl(`/api/purchases/${id}`), {
       method: 'PUT',
       headers: headers({ 'Content-Type': 'application/json' }),
@@ -102,8 +162,14 @@ export const PurchaseService = {
   },
 
   async remove(id: string) {
+    invalidateCache('purchases:');
     const res = await fetch(buildUrl(`/api/purchases/${id}`), { method: 'DELETE', headers: headers() });
     if (!res.ok) throw new Error('Failed to delete purchase');
     return res.json() as Promise<{ message: string }>;
   },
+
+  // Clear cache manually
+  clearCache() {
+    invalidateCache('purchases:');
+  }
 };
