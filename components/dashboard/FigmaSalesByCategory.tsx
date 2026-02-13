@@ -148,7 +148,7 @@ const FigmaSalesByCategory: React.FC<FigmaSalesByCategoryProps> = ({
       </div>
 
       {/* Legend - Responsive grid */}
-      <div className="mt-4 sm:mt-6 grid grid-cols-2 gap-x-2 gap-y-1.5 sm:gap-x-4 sm:gap-y-2.5">
+      <div className="mt-2 sm:mt-3 grid grid-cols-2 gap-x-2 gap-y-1 sm:gap-x-4 sm:gap-y-1.5">
         {computedCategories.map((category, index) => (
           <div key={index} className="flex justify-start items-center gap-1.5 sm:gap-2.5">
             <div className={`w-2.5 h-2.5 sm:w-3 sm:h-3 ${category.bgColor} rounded-full flex-shrink-0`} />

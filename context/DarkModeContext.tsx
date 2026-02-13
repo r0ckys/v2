@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 
 interface DarkModeContextValue {
   isDarkMode: boolean;
@@ -50,6 +50,9 @@ interface DarkModeProviderProps {
 }
 
 export const DarkModeProvider: React.FC<DarkModeProviderProps> = ({ children }) => {
+  // Track if this is the initial render to avoid overwriting localStorage
+  const isInitialMount = useRef(true);
+  
   // Initialize with localStorage value synchronously to prevent flash
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     const initial = getInitialDarkMode();
@@ -63,10 +66,17 @@ export const DarkModeProvider: React.FC<DarkModeProviderProps> = ({ children }) 
   // Apply dark mode class to document whenever isDarkMode changes
   useEffect(() => {
     applyDarkModeClass(isDarkMode);
-    // Persist to localStorage
-    try {
-      localStorage.setItem(DARK_MODE_KEY, String(isDarkMode));
-    } catch {}
+    
+    // Only persist to localStorage after initial mount (user-initiated changes)
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      console.log('[DarkMode] Initial mount - not saving to localStorage');
+    } else {
+      console.log('[DarkMode] User changed - saving to localStorage:', isDarkMode);
+      try {
+        localStorage.setItem(DARK_MODE_KEY, String(isDarkMode));
+      } catch {}
+    }
   }, [isDarkMode]);
 
   const toggleDarkMode = useCallback(() => {

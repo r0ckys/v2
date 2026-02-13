@@ -92,7 +92,7 @@ export function useThemeEffects({
     if (!isAdminView) {
       ['--admin-bg','--admin-bg-input','--admin-border-rgb','--admin-focus-rgb']
         .forEach((key) => root.style.removeProperty(key));
-      root.classList.remove('dark');
+      // Note: Dark mode is now handled by DarkModeContext - don't override here
     } else {
       if (themeConfig.adminBgColor) {
         root.style.setProperty('--admin-bg', hexToRgb(themeConfig.adminBgColor));
@@ -106,9 +106,7 @@ export function useThemeEffects({
       if (themeConfig.adminFocusColor) {
         root.style.setProperty('--admin-focus-rgb', hexToRgb(themeConfig.adminFocusColor));
       }
-      
-      if (themeConfig.darkMode) root.classList.add('dark');
-      else root.classList.remove('dark');
+      // Note: Dark mode is now handled by DarkModeContext - don't override here
     }
     
     // Track when theme is loaded (saves are handled by App.tsx)
