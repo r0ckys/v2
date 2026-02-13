@@ -178,7 +178,7 @@ const AdminCustomersReview: React.FC<AdminCustomersReviewProps> = ({ orders, pro
           firstOrderDate: orderDate,
           avgOrderValue: orderTotal,
           orders: [order],
-          avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop',
+          avatar: 'https://hdnfltv.com/image/nitimages/pasted_1770973977439.webp',
           status: 'Active',
           serialNumber: serialCounter++
         });
@@ -200,7 +200,7 @@ const AdminCustomersReview: React.FC<AdminCustomersReviewProps> = ({ orders, pro
           firstOrderDate: new Date().toISOString(),
           avgOrderValue: 0,
           orders: [],
-          avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop',
+          avatar: 'https://hdnfltv.com/image/nitimages/pasted_1770973977439.webp',
           status: 'Active',
           serialNumber: 100
         });
@@ -517,7 +517,7 @@ const AdminCustomersReview: React.FC<AdminCustomersReviewProps> = ({ orders, pro
                       <td className="px-2 sm:px-3 py-3">
                         <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-sky-400 to-blue-500 rounded-lg overflow-hidden">
                           <img 
-                            src={customer.avatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop'}
+                            src={customer.avatar || 'https://hdnfltv.com/image/nitimages/pasted_1770973977439.webp'}
                             alt={customer.name}
                             className="w-full h-full object-cover"
                           />
@@ -576,7 +576,7 @@ const AdminCustomersReview: React.FC<AdminCustomersReviewProps> = ({ orders, pro
                     </div>
                     <div className="w-12 h-12 bg-gradient-to-r from-sky-400 to-blue-500 rounded-lg overflow-hidden flex-shrink-0">
                       <img 
-                        src={customer.avatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop'}
+                        src={customer.avatar || 'https://hdnfltv.com/image/nitimages/pasted_1770973977439.webp'}
                         alt={customer.name}
                         className="w-full h-full object-cover"
                       />

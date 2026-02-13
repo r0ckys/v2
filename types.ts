@@ -80,6 +80,19 @@ export interface ProductVariantStock extends ProductVariantSelection {
   sku?: string;
 }
 
+// Enhanced variant system with image support
+export interface ProductVariantOption {
+  attribute: string;
+  extraPrice: number;
+  image?: string;
+}
+
+export interface ProductVariantGroup {
+  title: string;
+  isMandatory?: boolean;
+  options: ProductVariantOption[];
+}
+
 export interface Product {
   totalSold?: number;
   sales?: number;
@@ -108,6 +121,7 @@ export interface Product {
   searchTags?: string[]; // Deep search tags for advanced product search
   colors?: string[]; // Added: Array of color codes or names
   sizes?: string[]; // Added: Array of size strings (S, M, L, XL etc)
+  variantGroups?: ProductVariantGroup[]; // Enhanced variants with images
   status?: 'Active' | 'Draft'; // Added for filtering
   stock?: number;
   variantDefaults?: Partial<ProductVariantSelection>;

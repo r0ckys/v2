@@ -244,7 +244,11 @@ const FigmaProductUpload: React.FC<FigmaProductUploadProps> = ({
   const { user } = useAuth();
   const tenantId = user?.tenantId || 'default';
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const variantImageRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const catalogImageRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [uploadingVariantImage, setUploadingVariantImage] = useState<string | null>(null);
+  const [uploadingCatalogImage, setUploadingCatalogImage] = useState(false);
   const [showCatalogModal, setShowCatalogModal] = useState(false);
   const [catalogModalTab, setCatalogModalTab] = useState<'category' | 'subcategory' | 'childcategory' | 'brand' | 'tag'>('category');
   const [newCatalogItem, setNewCatalogItem] = useState({
@@ -304,6 +308,16 @@ const FigmaProductUpload: React.FC<FigmaProductUploadProps> = ({
   // Load edit product
   useEffect(() => {
     if (editProduct) {
+      // Convert variantGroups back to formData.variants format
+      const loadedVariants = editProduct.variantGroups?.map(vg => ({
+        title: vg.title,
+        options: vg.options.map(o => ({
+          attribute: o.attribute,
+          extraPrice: o.extraPrice || 0,
+          image: o.image
+        }))
+      })) || [{ title: '', options: [{ attribute: '', extraPrice: 0 }] }];
+      
       setFormData(prev => ({
         ...prev,
         name: editProduct.name || '',
@@ -315,7 +329,9 @@ const FigmaProductUpload: React.FC<FigmaProductUploadProps> = ({
         category: editProduct.category || '',
         brandName: editProduct.brand || '',
         sku: editProduct.sku || '',
-        quantity: editProduct.stock || 0
+        quantity: editProduct.stock || 0,
+        variants: loadedVariants,
+        variantsMandatory: editProduct.variantGroups?.[0]?.isMandatory || false
       }));
     }
   }, [editProduct]);
@@ -408,6 +424,41 @@ const FigmaProductUpload: React.FC<FigmaProductUploadProps> = ({
   const allImages = formData.mainImage 
     ? [formData.mainImage, ...formData.galleryImages] 
     : formData.galleryImages;
+
+  // Handle variant image upload
+  const handleVariantImageUpload = async (variantIdx: number, optionIdx: number, file: File) => {
+    const key = `${variantIdx}-${optionIdx}`;
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+    if (file.size > 4 * 1024 * 1024) {
+      toast.error('Image size should be less than 4MB');
+      return;
+    }
+    
+    setUploadingVariantImage(key);
+    try {
+      const url = await uploadSingleFile(file);
+      if (url) {
+        const newVariants = [...formData.variants];
+        newVariants[variantIdx].options[optionIdx].image = url;
+        updateField('variants', newVariants);
+        toast.success('Variant image uploaded');
+      }
+    } catch (error) {
+      toast.error('Failed to upload variant image');
+    } finally {
+      setUploadingVariantImage(null);
+    }
+  };
+
+  // Remove variant image
+  const handleRemoveVariantImage = (variantIdx: number, optionIdx: number) => {
+    const newVariants = [...formData.variants];
+    newVariants[variantIdx].options[optionIdx].image = undefined;
+    updateField('variants', newVariants);
+  };
 
   // Handle multiple image upload
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -551,6 +602,30 @@ const FigmaProductUpload: React.FC<FigmaProductUploadProps> = ({
   };
 
   // Save new catalog item (category, subcategory, childcategory, brand, tag)
+  const handleCatalogImageUpload = async (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+    if (file.size > 4 * 1024 * 1024) {
+      toast.error('Image size should be less than 4MB');
+      return;
+    }
+    
+    setUploadingCatalogImage(true);
+    try {
+      const url = await uploadSingleFile(file);
+      if (url) {
+        setNewCatalogItem(prev => ({ ...prev, image: url }));
+        toast.success('Image uploaded');
+      }
+    } catch (error) {
+      toast.error('Failed to upload image');
+    } finally {
+      setUploadingCatalogImage(false);
+    }
+  };
+
   const handleSaveCatalogItem = async () => {
     if (!newCatalogItem.name.trim()) {
       toast.error('Name is required');
@@ -588,11 +663,15 @@ const FigmaProductUpload: React.FC<FigmaProductUploadProps> = ({
       } else if (catalogModalTab === 'subcategory') {
         newItem.categoryId = newCatalogItem.parentCategory;
         newItem.categoryName = newCatalogItem.parentCategory;
+        newItem.image = newCatalogItem.image;
       } else if (catalogModalTab === 'childcategory') {
         newItem.subCategoryId = newCatalogItem.parentSubCategory;
         newItem.subCategoryName = newCatalogItem.parentSubCategory;
+        newItem.image = newCatalogItem.image;
       } else if (catalogModalTab === 'brand') {
         newItem.logo = newCatalogItem.image;
+      } else if (catalogModalTab === 'tag') {
+        newItem.image = newCatalogItem.image;
       }
 
       // Add to existing data
@@ -610,6 +689,19 @@ const FigmaProductUpload: React.FC<FigmaProductUploadProps> = ({
       }
 
       toast.success(`${catalogModalTab.charAt(0).toUpperCase() + catalogModalTab.slice(1)} added successfully!`);
+      
+      // Auto-select the newly created item in the form
+      if (catalogModalTab === 'category') {
+        updateField('category', newCatalogItem.name.trim());
+      } else if (catalogModalTab === 'subcategory') {
+        updateField('subCategory', newCatalogItem.name.trim());
+      } else if (catalogModalTab === 'childcategory') {
+        updateField('childCategory', newCatalogItem.name.trim());
+      } else if (catalogModalTab === 'tag') {
+        updateField('tag', newCatalogItem.name.trim());
+      } else if (catalogModalTab === 'brand') {
+        updateField('brandName', newCatalogItem.name.trim());
+      }
       
       // Reset form and close modal
       setNewCatalogItem({
@@ -646,6 +738,21 @@ const FigmaProductUpload: React.FC<FigmaProductUploadProps> = ({
       return;
     }
 
+    // Filter out empty variants and options
+    const validVariants = formData.variants
+      .filter(v => v.title.trim() && v.options.some(o => o.attribute.trim()))
+      .map(v => ({
+        title: v.title.trim(),
+        isMandatory: formData.variantsMandatory,
+        options: v.options
+          .filter(o => o.attribute.trim())
+          .map(o => ({
+            attribute: o.attribute.trim(),
+            extraPrice: o.extraPrice || 0,
+            image: o.image
+          }))
+      }));
+
     const newProduct: Product = {
       id: editProduct?.id || Date.now(),
       name: formData.name,
@@ -665,7 +772,8 @@ const FigmaProductUpload: React.FC<FigmaProductUploadProps> = ({
       status: 'Active',
       tags: formData.tag ? [formData.tag] : [],
       tenantId: tenantId,
-      shopName: formData.shopName
+      shopName: formData.shopName,
+      variantGroups: validVariants.length > 0 ? validVariants : undefined
     };
 
     onAddProduct(newProduct);
@@ -1036,8 +1144,42 @@ const FigmaProductUpload: React.FC<FigmaProductUploadProps> = ({
 
                   {variant.options.map((option, oIdx) => (
                     <div key={oIdx} className="flex items-end gap-2 mt-4">
-                      <div className="w-[67px] h-[67px] bg-[#f9f9f9] rounded-lg flex items-center justify-center cursor-pointer hover:bg-gray-100">
-                        <Upload size={32} className="text-gray-400" />
+                      {/* Variant Image Upload */}
+                      <div className="relative">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          ref={(el) => { variantImageRefs.current[`${vIdx}-${oIdx}`] = el; }}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleVariantImageUpload(vIdx, oIdx, file);
+                            e.target.value = '';
+                          }}
+                          className="hidden"
+                        />
+                        <div 
+                          onClick={() => variantImageRefs.current[`${vIdx}-${oIdx}`]?.click()}
+                          className="w-[67px] h-[67px] bg-[#f9f9f9] rounded-lg flex items-center justify-center cursor-pointer hover:bg-gray-100 overflow-hidden border-2 border-dashed border-gray-300 hover:border-[#38bdf8] transition-colors"
+                        >
+                          {uploadingVariantImage === `${vIdx}-${oIdx}` ? (
+                            <div className="animate-spin w-6 h-6 border-2 border-[#38bdf8] border-t-transparent rounded-full" />
+                          ) : option.image ? (
+                            <img src={option.image} alt="Variant" className="w-full h-full object-cover" />
+                          ) : (
+                            <Upload size={24} className="text-gray-400" />
+                          )}
+                        </div>
+                        {option.image && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRemoveVariantImage(vIdx, oIdx);
+                            }}
+                            className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs hover:bg-red-600"
+                          >
+                            <X size={12} />
+                          </button>
+                        )}
                       </div>
                       <div className="flex-1 grid grid-cols-2 gap-2">
                         <div>
@@ -1512,16 +1654,182 @@ const FigmaProductUpload: React.FC<FigmaProductUploadProps> = ({
               {/* Image Upload - for Category and Brand */}
               {(catalogModalTab === 'category' || catalogModalTab === 'brand') && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {catalogModalTab === 'brand' ? 'Brand Logo' : 'Category Image'} (Optional)
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {catalogModalTab === 'brand' ? 'Brand Logo' : 'Category Icon/Image'} (Optional)
                   </label>
                   <input
-                    type="text"
-                    value={newCatalogItem.image}
-                    onChange={(e) => setNewCatalogItem(prev => ({ ...prev, image: e.target.value }))}
-                    placeholder="Enter image URL"
-                    className="w-full h-11 border rounded-lg px-3 text-sm outline-none focus:border-[#ff6a00]"
+                    ref={catalogImageRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleCatalogImageUpload(file);
+                      e.target.value = '';
+                    }}
+                    className="hidden"
                   />
+                  <div className="flex items-center gap-4">
+                    <div 
+                      onClick={() => catalogImageRef.current?.click()}
+                      className={`w-20 h-20 border-2 border-dashed rounded-xl flex items-center justify-center cursor-pointer transition-colors ${
+                        newCatalogItem.image ? 'border-[#ff6a00] bg-orange-50' : 'border-gray-300 hover:border-[#ff6a00] bg-gray-50'
+                      }`}
+                    >
+                      {uploadingCatalogImage ? (
+                        <div className="animate-spin w-6 h-6 border-2 border-[#ff6a00] border-t-transparent rounded-full" />
+                      ) : newCatalogItem.image ? (
+                        <img src={newCatalogItem.image} alt="Preview" className="w-full h-full object-cover rounded-lg" />
+                      ) : (
+                        <div className="flex flex-col items-center text-gray-400">
+                          <Upload size={24} />
+                          <span className="text-xs mt-1">Upload</span>
+                        </div>
+                      )}
+                    </div>
+                    {newCatalogItem.image && (
+                      <button
+                        onClick={() => setNewCatalogItem(prev => ({ ...prev, image: '' }))}
+                        className="text-sm text-red-500 hover:text-red-700 flex items-center gap-1"
+                      >
+                        <X size={14} /> Remove
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">
+                    Recommended: Square image, 200x200px or larger
+                  </p>
+                </div>
+              )}
+
+              {/* Image Upload - for Sub Category */}
+              {catalogModalTab === 'subcategory' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Sub Category Icon (Optional)
+                  </label>
+                  <input
+                    ref={catalogImageRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleCatalogImageUpload(file);
+                      e.target.value = '';
+                    }}
+                    className="hidden"
+                  />
+                  <div className="flex items-center gap-4">
+                    <div 
+                      onClick={() => catalogImageRef.current?.click()}
+                      className={`w-16 h-16 border-2 border-dashed rounded-lg flex items-center justify-center cursor-pointer transition-colors ${
+                        newCatalogItem.image ? 'border-[#ff6a00] bg-orange-50' : 'border-gray-300 hover:border-[#ff6a00] bg-gray-50'
+                      }`}
+                    >
+                      {uploadingCatalogImage ? (
+                        <div className="animate-spin w-5 h-5 border-2 border-[#ff6a00] border-t-transparent rounded-full" />
+                      ) : newCatalogItem.image ? (
+                        <img src={newCatalogItem.image} alt="Preview" className="w-full h-full object-cover rounded-md" />
+                      ) : (
+                        <Upload size={20} className="text-gray-400" />
+                      )}
+                    </div>
+                    {newCatalogItem.image && (
+                      <button
+                        onClick={() => setNewCatalogItem(prev => ({ ...prev, image: '' }))}
+                        className="text-xs text-red-500 hover:text-red-700"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Image Upload - for Child Category */}
+              {catalogModalTab === 'childcategory' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Child Category Icon (Optional)
+                  </label>
+                  <input
+                    ref={catalogImageRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleCatalogImageUpload(file);
+                      e.target.value = '';
+                    }}
+                    className="hidden"
+                  />
+                  <div className="flex items-center gap-4">
+                    <div 
+                      onClick={() => catalogImageRef.current?.click()}
+                      className={`w-16 h-16 border-2 border-dashed rounded-lg flex items-center justify-center cursor-pointer transition-colors ${
+                        newCatalogItem.image ? 'border-[#ff6a00] bg-orange-50' : 'border-gray-300 hover:border-[#ff6a00] bg-gray-50'
+                      }`}
+                    >
+                      {uploadingCatalogImage ? (
+                        <div className="animate-spin w-5 h-5 border-2 border-[#ff6a00] border-t-transparent rounded-full" />
+                      ) : newCatalogItem.image ? (
+                        <img src={newCatalogItem.image} alt="Preview" className="w-full h-full object-cover rounded-md" />
+                      ) : (
+                        <Upload size={20} className="text-gray-400" />
+                      )}
+                    </div>
+                    {newCatalogItem.image && (
+                      <button
+                        onClick={() => setNewCatalogItem(prev => ({ ...prev, image: '' }))}
+                        className="text-xs text-red-500 hover:text-red-700"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Image Upload - for Tag */}
+              {catalogModalTab === 'tag' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Tag Icon (Optional)
+                  </label>
+                  <input
+                    ref={catalogImageRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleCatalogImageUpload(file);
+                      e.target.value = '';
+                    }}
+                    className="hidden"
+                  />
+                  <div className="flex items-center gap-4">
+                    <div 
+                      onClick={() => catalogImageRef.current?.click()}
+                      className={`w-14 h-14 border-2 border-dashed rounded-lg flex items-center justify-center cursor-pointer transition-colors ${
+                        newCatalogItem.image ? 'border-[#ff6a00] bg-orange-50' : 'border-gray-300 hover:border-[#ff6a00] bg-gray-50'
+                      }`}
+                    >
+                      {uploadingCatalogImage ? (
+                        <div className="animate-spin w-4 h-4 border-2 border-[#ff6a00] border-t-transparent rounded-full" />
+                      ) : newCatalogItem.image ? (
+                        <img src={newCatalogItem.image} alt="Preview" className="w-full h-full object-cover rounded-md" />
+                      ) : (
+                        <Upload size={18} className="text-gray-400" />
+                      )}
+                    </div>
+                    {newCatalogItem.image && (
+                      <button
+                        onClick={() => setNewCatalogItem(prev => ({ ...prev, image: '' }))}
+                        className="text-xs text-red-500 hover:text-red-700"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
                 </div>
               )}
 

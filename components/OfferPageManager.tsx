@@ -56,7 +56,7 @@ export const OfferPageManager: React.FC<OfferPageManagerProps> = ({
       const baseUrl = tenantSubdomain 
         ? `${protocol}//${tenantSubdomain}.localhost:${port}`
         : window.location.origin;
-      return `${baseUrl}/${slug}`;
+      return `${baseUrl}/offer/${slug}`;
     }
     
     // For production: subdomain.maindomain.com
@@ -67,7 +67,7 @@ export const OfferPageManager: React.FC<OfferPageManagerProps> = ({
     const baseUrl = tenantSubdomain 
       ? `${protocol}//${tenantSubdomain}.${mainDomain}`
       : window.location.origin;
-    return `${baseUrl}/${slug}`;
+    return `${baseUrl}/offer/${slug}`;
   };
 
   const fetchPages = async () => {

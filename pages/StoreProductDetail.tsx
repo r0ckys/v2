@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo, lazy, Suspense, memo, useCallback, useRef } from 'react';
-import { Product, User, WebsiteConfig, Order, ProductVariantSelection, Category } from '../types';
+import { Product, User, WebsiteConfig, Order, ProductVariantSelection, Category, ProductVariantGroup, ProductVariantOption } from '../types';
 
 // Lazy load heavy layout components and modals from individual files
 const StoreHeader = lazy(() => import('../components/StoreHeader').then(m => ({ default: m.StoreHeader })));
@@ -321,6 +321,42 @@ const StoreProductDetail = ({
   const [selectedSize, setSelectedSize] = useState(sizeOptions[0]);
   const [variantError, setVariantError] = useState<string | null>(null);
   const [lastAddedVariant, setLastAddedVariant] = useState<ProductVariantSelection | null>(null);
+  
+  // Enhanced variant group selections
+  const [selectedVariantOptions, setSelectedVariantOptions] = useState<Record<string, ProductVariantOption>>({});
+  const hasVariantGroups = product.variantGroups && product.variantGroups.length > 0;
+  
+  // Initialize variant selections when product changes
+  useEffect(() => {
+    if (product.variantGroups) {
+      const initialSelections: Record<string, ProductVariantOption> = {};
+      product.variantGroups.forEach(group => {
+        if (group.options.length > 0) {
+          initialSelections[group.title] = group.options[0];
+        }
+      });
+      setSelectedVariantOptions(initialSelections);
+    }
+  }, [product.id]);
+  
+  // Handle variant option selection with image update
+  const handleVariantOptionSelect = (groupTitle: string, option: ProductVariantOption) => {
+    setSelectedVariantOptions(prev => ({ ...prev, [groupTitle]: option }));
+    // If the option has an image, update the main displayed image
+    if (option.image) {
+      setSelectedImage(normalizeImageUrl(option.image));
+    }
+  };
+  
+  // Calculate extra price from selected variants
+  const variantExtraPrice = useMemo(() => {
+    return Object.values(selectedVariantOptions).reduce((sum, opt) => sum + (opt?.extraPrice || 0), 0);
+  }, [selectedVariantOptions]);
+  
+  // Display price with variant extras
+  const displayPrice = useMemo(() => {
+    return product.price + variantExtraPrice;
+  }, [product.price, variantExtraPrice]);
   const shareBase = typeof window !== 'undefined' ? window.location.origin : 'https://mydomain.com';
   const shareUrl = `${shareBase}/product-details/${product.slug || product.id}`;
 
@@ -388,7 +424,8 @@ const StoreProductDetail = ({
   const isOutOfStock = !Number.isFinite(availableStock) ? false : availableStock <= 0;
   const atStockLimit = Number.isFinite(availableStock) && quantity >= (availableStock as number);
 
-  const formattedPrice = formatCurrency(product.price);
+  // Use displayPrice which includes variant extras
+  const formattedPrice = formatCurrency(hasVariantGroups ? displayPrice : product.price);
   const formattedOriginalPrice = formatCurrency(product.originalPrice, null);
 
   const decreaseQuantity = () => setQuantity(prev => Math.max(1, prev - 1));
@@ -808,6 +845,71 @@ const StoreProductDetail = ({
                     ) : (
                       <p className="text-xs text-gray-500 bg-gray-50 px-3 py-2 rounded-lg">Size: {fallbackSize}</p>
                     )}
+                    
+                    {/* Enhanced Variant Groups with Images */}
+                    {hasVariantGroups && product.variantGroups?.map((group) => (
+                      <div key={group.title}>
+                        <label className="block text-sm font-bold text-gray-800 mb-3">
+                          {group.title}
+                          {group.isMandatory && <span className="text-red-500 ml-1">*</span>}
+                          <span className="text-xs font-normal text-gray-500 ml-2">
+                            {selectedVariantOptions[group.title]?.attribute || ''}
+                            {(selectedVariantOptions[group.title]?.extraPrice || 0) > 0 && (
+                              <span className="text-theme-primary ml-1">
+                                (+৳{selectedVariantOptions[group.title]?.extraPrice})
+                              </span>
+                            )}
+                          </span>
+                        </label>
+                        <div className="flex flex-wrap gap-2 md:gap-3">
+                          {group.options.map((option, idx) => {
+                            const isSelected = selectedVariantOptions[group.title]?.attribute === option.attribute;
+                            return option.image ? (
+                              // Image-based variant option
+                              <button
+                                key={idx}
+                                onClick={() => handleVariantOptionSelect(group.title, option)}
+                                aria-pressed={isSelected}
+                                className={`relative w-14 h-14 md:w-16 md:h-16 rounded-lg border-2 overflow-hidden transition-all transform hover:scale-105 ${
+                                  isSelected 
+                                    ? 'border-theme-primary ring-2 ring-theme-primary/30 shadow-md' 
+                                    : 'border-gray-200 hover:border-theme-primary/70'
+                                }`}
+                                title={`${option.attribute}${option.extraPrice > 0 ? ` (+৳${option.extraPrice})` : ''}`}
+                              >
+                                <img 
+                                  src={normalizeImageUrl(option.image)} 
+                                  alt={option.attribute} 
+                                  className="w-full h-full object-cover"
+                                />
+                                {isSelected && (
+                                  <div className="absolute inset-0 bg-theme-primary/10 flex items-center justify-center">
+                                    <div className="w-5 h-5 bg-theme-primary rounded-full flex items-center justify-center">
+                                      <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                      </svg>
+                                    </div>
+                                  </div>
+                                )}
+                              </button>
+                            ) : (
+                              // Text-based variant option
+                              <button
+                                key={idx}
+                                onClick={() => handleVariantOptionSelect(group.title, option)}
+                                aria-pressed={isSelected}
+                                className={`mobile-variant-option mobile-touch-feedback ${isSelected ? 'selected' : ''}`}
+                              >
+                                {option.attribute}
+                                {option.extraPrice > 0 && (
+                                  <span className="text-xs text-theme-primary ml-1">(+৳{option.extraPrice})</span>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
                   </div>
 
                   {variantError && (

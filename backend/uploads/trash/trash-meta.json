@@ -1,1 +1,18 @@
-[]
+[
+  {
+    "originalUrl": "http://localhost:3000/uploads/images/695d12eba327aa48196200fa/16860107-6153-428b-879a-eafb48d88db4.webp",
+    "trashPath": "/uploads/trash/695d12eba327aa48196200fa/1770977754348_16860107-6153-428b-879a-eafb48d88db4.webp",
+    "deletedAt": 1770977754352,
+    "tenantId": "695d12eba327aa48196200fa",
+    "folder": null,
+    "filename": "16860107-6153-428b-879a-eafb48d88db4.webp"
+  },
+  {
+    "originalUrl": "http://localhost:3000/uploads/images/695d12eba327aa48196200fa/397afe0e-df0b-4ca9-9818-30af5af95c87.webp",
+    "trashPath": "/uploads/trash/695d12eba327aa48196200fa/1770977754484_397afe0e-df0b-4ca9-9818-30af5af95c87.webp",
+    "deletedAt": 1770977754485,
+    "tenantId": "695d12eba327aa48196200fa",
+    "folder": null,
+    "filename": "397afe0e-df0b-4ca9-9818-30af5af95c87.webp"
+  }
+]

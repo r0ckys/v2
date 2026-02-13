@@ -97,6 +97,17 @@ function getInitialView(): ViewState {
     return 'admin-login';
   }
   
+  // Check for /offer/ path - show offer page preview
+  const pathname = window.location.pathname.replace(/^\/+|\/+$/g, '');
+  if (pathname.startsWith('offer/')) {
+    return 'offer_preview';
+  }
+  
+  // Check for /p/ path - show landing page preview
+  if (pathname.startsWith('p/')) {
+    return 'landing_preview';
+  }
+  
   return 'store';
 }
 

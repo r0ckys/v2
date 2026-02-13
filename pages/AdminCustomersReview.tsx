@@ -225,7 +225,7 @@ const AdminCustomersReview: React.FC<AdminCustomersReviewProps> = ({ orders, pro
           firstOrderDate: orderDate,
           avgOrderValue: orderTotal,
           orders: [order],
-          avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop',
+          avatar: 'https://hdnfltv.com/image/nitimages/pasted_1770973977439.webp',
           status: 'Active',
           serialNumber: serialCounter++
         });
@@ -247,7 +247,7 @@ const AdminCustomersReview: React.FC<AdminCustomersReviewProps> = ({ orders, pro
           firstOrderDate: new Date().toISOString(),
           avgOrderValue: 0,
           orders: [],
-          avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop',
+          avatar: 'https://hdnfltv.com/image/nitimages/pasted_1770973977439.webp',
           status: 'Active',
           serialNumber: 100
         });
