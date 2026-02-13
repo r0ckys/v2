@@ -126,6 +126,9 @@ export interface Product {
   stock?: number;
   variantDefaults?: Partial<ProductVariantSelection>;
   variantStock?: ProductVariantStock[];
+  flashSale?: boolean; // Flash sale flag
+  flashSaleStartDate?: string; // ISO date string
+  flashSaleEndDate?: string; // ISO date string
 }
 
 export interface Popup {

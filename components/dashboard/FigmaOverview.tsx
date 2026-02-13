@@ -118,12 +118,12 @@ interface FigmaOverviewProps {
 
 const FigmaOverview: React.FC<FigmaOverviewProps> = ({
   stats = {
-    totalProducts: 45,
-    totalOrders: 6550,
-    totalAmount: '৳8,35,500',
-    lowStock: 5,
-    toReview: 452,
-    totalStock: 1250
+    totalProducts: 0,
+    totalOrders: 0,
+    totalAmount: '৳0',
+    lowStock: 0,
+    toReview: 0,
+    totalStock: 0
   },
   currentLang = 'en',
   onLangChange = () => {},
@@ -146,13 +146,13 @@ const FigmaOverview: React.FC<FigmaOverviewProps> = ({
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-4">
             <StatCard
               title="Total Products"
-              value={stats.totalProducts || 45}
+              value={stats.totalProducts || 0}
               iconUrl={ICON_URLS.totalProduct}
             />
             
             <StatCard
               title="Total Orders"
-              value={(stats.totalOrders || 6550).toLocaleString()}
+              value={(stats.totalOrders || 0).toLocaleString()}
               iconUrl={ICON_URLS.totalOrder}
             />
             
@@ -168,25 +168,25 @@ const FigmaOverview: React.FC<FigmaOverviewProps> = ({
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-4">
             <StatCard
               title="Low Stock"
-              value={stats.lowStock || 5}
+              value={stats.lowStock || 0 }
               iconUrl={ICON_URLS.lowStock}
             />
             
             <StatCard
               title="Total Amount"
-              value={stats.totalAmount || '৳8,35,500'}
+              value={stats.totalAmount || '৳0'}
               iconUrl={ICON_URLS.totalAmount}
             />
             
             {/* <StatCard
               title="Total Stock"
-              value={(stats.totalStock || 1250).toLocaleString()}
+              value={(stats.totalStock ||  0).toLocaleString()}
               iconUrl={ICON_URLS.totalStock}
             /> */}
             
             <StatCard
               title="To be Reviewed"
-              value={stats.toReview || 452}
+              value={stats.toReview || 0}
               iconUrl={ICON_URLS.toReview}
             />
           </div>

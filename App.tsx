@@ -472,6 +472,7 @@ const App = () => {
                   onDeleteProduct={handlers.handleDeleteProduct}
                   onBulkDeleteProducts={handlers.handleBulkDeleteProducts}
                   onBulkUpdateProducts={handlers.handleBulkUpdateProducts}
+                  onBulkFlashSale={handlers.handleBulkFlashSale}
                   onUpdateLogo={handlers.handleUpdateLogo}
                   onUpdateTheme={handlers.handleUpdateTheme}
                   onUpdateWebsiteConfig={handlers.handleUpdateWebsiteConfig}

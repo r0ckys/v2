@@ -23,7 +23,7 @@ interface MetricCardProps {
 const metricsData: MetricCardProps[] = [
   {
     title: "G M V",
-    value: "240",
+    value: "0",
     subtitle: "Last 7 days",
     trend: {
       value: "20%",
@@ -32,7 +32,7 @@ const metricsData: MetricCardProps[] = [
   },
   {
     title: "AVG Order",
-    value: "৳ 17865",
+    value: "৳ 0",
     subtitle: "Per customer spend",
     trend: {
       value: "5%",
@@ -41,15 +41,15 @@ const metricsData: MetricCardProps[] = [
   },
   {
     title: "Courier Return (COD)",
-    value: "",
+    value: "৳0.00",
     additionalInfo: [
       {
         label: "Total Returned",
-        value: "50",
+        value: "0",
       },
       {
         label: "Demurrage charges",
-        value: "৳5,00,000.00",
+        value: "৳0.00",
       },
     ],
     showAction: true,

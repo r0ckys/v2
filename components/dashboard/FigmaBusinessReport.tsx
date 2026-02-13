@@ -513,9 +513,9 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
     }
   }, [tenantId]);
 
-  // Load ALL entities for summary calculation (once when due tab is active)
+  // Load ALL entities for summary calculation on mount (needed for Profit/Loss due graph)
   useEffect(() => {
-    if (activeTab === 'due' && tenantId) {
+    if (tenantId) {
       const loadAllEntities = async () => {
         try {
           // Load all entity types for overall summary
@@ -531,7 +531,7 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
       };
       loadAllEntities();
     }
-  }, [activeTab, tenantId]);
+  }, [tenantId]);
 
   // Load due entities for the selected tab when tab or dueTabType changes
   useEffect(() => {
@@ -659,13 +659,32 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
       netProfit: netProfit,
       netProfitPercent: netProfitPercent,  // Percentage value (e.g., -12.5 or 25.3)
       isProfit: isProfit,                   // true if profit, false if loss
-      businessValue: businessValue || 500000,
-      youWillGive: 30000,
-      youWillGet: 70000,
+      businessValue: businessValue,
       ordersCount: filteredOrders.length,
       deliveredCount: deliveredOrders.length,
     };
   }, [orders, products, incomes, expenses, getDateRangeBoundaries]);
+
+  // Due graph percentages - calculated from actual due data
+  const dueGraphData = useMemo(() => {
+    const totalGet = dueSummary.totalWillGet || 0;
+    const totalGive = dueSummary.totalWillGive || 0;
+    const total = totalGet + totalGive;
+    
+    if (total === 0) {
+      return { getPercent: 50, givePercent: 50, youWillGet: 0, youWillGive: 0 };
+    }
+    
+    const getPercent = Math.round((totalGet / total) * 100);
+    const givePercent = Math.round((totalGive / total) * 100);
+    
+    return {
+      getPercent,
+      givePercent,
+      youWillGet: totalGet,
+      youWillGive: totalGive
+    };
+  }, [dueSummary]);
 
   const tabs = [
     { id: 'profit' as TabType, label: 'Profit/Loss', icon: WaterfallIcon, active: true },
@@ -977,29 +996,47 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
                       <stop stopColor="#3AA600"/>
                       <stop offset="1" stopColor="#00E82A"/>
                     </linearGradient>
-                    {/* Red gradient - for the 30% portion */}
+                    {/* Red gradient - for the Give portion */}
                     <linearGradient id="paint0_linear_red" x1="0" y1="0" x2="85" y2="130" gradientUnits="userSpaceOnUse">
                       <stop stopColor="#E31B23"/>
                       <stop offset="1" stopColor="#8B0000"/>
                     </linearGradient>
                   </defs>
                   
-                  {/* Green arc (You will Get - 70%) - Full semi-circle */}
+                  {/* Green arc (You will Get) - Full semi-circle */}
                   <path 
                     d="M9.15527e-05 130C9.30452e-05 112.928 3.36263 96.0235 9.89574 80.2511C16.4289 64.4788 26.0046 50.1477 38.0762 38.0761C50.1478 26.0045 64.4789 16.4288 80.2512 9.89569C96.0236 3.36258 112.928 4.74315e-05 130 4.96702e-05C147.072 5.19089e-05 163.977 3.36259 179.749 9.8957C195.521 16.4288 209.852 26.0045 221.924 38.0762C233.996 50.1478 243.571 64.4789 250.104 80.2512C256.637 96.0235 260 112.928 260 130L208.165 130C208.165 119.735 206.143 109.571 202.215 100.088C198.287 90.6043 192.529 81.9875 185.271 74.7292C178.013 67.471 169.396 61.7134 159.912 57.7853C150.429 53.8571 140.265 51.8354 130 51.8354C119.735 51.8354 109.571 53.8571 100.088 57.7853C90.6044 61.7134 81.9876 67.471 74.7293 74.7292C67.471 81.9875 61.7135 90.6043 57.7853 100.088C53.8572 109.571 51.8354 119.735 51.8354 130L9.15527e-05 130Z" 
                     fill="url(#paint0_linear_green)"
                   />
                   
-                  {/* Red arc (You will Give - 30%) - Left portion */}
-                  <path 
-                    d="M0 130C0 112.928 3.36254 96.0235 9.89565 80.2511C16.4288 64.4788 26.0045 50.1477 38.0761 38.0761C50.1477 26.0045 64.4788 16.4288 80.2511 9.89569L100.088 57.7853C90.6043 61.7134 81.9875 67.471 74.7292 74.7292C67.471 81.9875 61.7134 90.6043 57.7853 100.088C53.8571 109.571 51.8354 119.735 51.8354 130L0 130Z" 
-                    fill="url(#paint0_linear_red)"
-                  />
+                  {/* Red arc (You will Give) - Left portion based on givePercent */}
+                  {dueGraphData.givePercent >= 50 ? (
+                    // More than half - show larger red arc
+                    <path 
+                      d="M0 130C0 112.928 3.36254 96.0235 9.89565 80.2511C16.4288 64.4788 26.0045 50.1477 38.0761 38.0761C50.1477 26.0045 64.4788 16.4288 80.2511 9.89569C96.0235 3.36258 112.928 0 130 0L130 51.8354C119.735 51.8354 109.571 53.8571 100.088 57.7853C90.6043 61.7134 81.9875 67.471 74.7292 74.7292C67.471 81.9875 61.7134 90.6043 57.7853 100.088C53.8571 109.571 51.8354 119.735 51.8354 130L0 130Z" 
+                      fill="url(#paint0_linear_red)"
+                    />
+                  ) : dueGraphData.givePercent >= 30 ? (
+                    // Around 30-50% - medium red arc
+                    <path 
+                      d="M0 130C0 112.928 3.36254 96.0235 9.89565 80.2511C16.4288 64.4788 26.0045 50.1477 38.0761 38.0761C50.1477 26.0045 64.4788 16.4288 80.2511 9.89569L100.088 57.7853C90.6043 61.7134 81.9875 67.471 74.7292 74.7292C67.471 81.9875 61.7134 90.6043 57.7853 100.088C53.8571 109.571 51.8354 119.735 51.8354 130L0 130Z" 
+                      fill="url(#paint0_linear_red)"
+                    />
+                  ) : dueGraphData.givePercent > 0 ? (
+                    // Less than 30% - small red arc
+                    <path 
+                      d="M0 130C0 112.928 3.36254 96.0235 9.89565 80.2511C16.4288 64.4788 26.0045 50.1477 38.0761 38.0761L74.7292 74.7292C67.471 81.9875 61.7134 90.6043 57.7853 100.088C53.8571 109.571 51.8354 119.735 51.8354 130L0 130Z" 
+                      fill="url(#paint0_linear_red)"
+                    />
+                  ) : null}
                   
-                  {/* 30% label - positioned inside red arc */}
-                  <text x="25" y="90" fill="white" fontSize="11" fontFamily="Lato, sans-serif" fontWeight="500">30%</text>
-                  {/* 70% label - positioned inside green arc */}
-                  <text x="168" y="38" fill="white" fontSize="11" fontFamily="Lato, sans-serif" fontWeight="500">70%</text>
+                  {/* Percentage labels */}
+                  {dueGraphData.givePercent > 5 && (
+                    <text x="25" y="90" fill="white" fontSize="11" fontFamily="Lato, sans-serif" fontWeight="500">{dueGraphData.givePercent}%</text>
+                  )}
+                  {dueGraphData.getPercent > 5 && (
+                    <text x="200" y="50" fill="white" fontSize="11" fontFamily="Lato, sans-serif" fontWeight="500">{dueGraphData.getPercent}%</text>
+                  )}
                 </svg>
               </div>
             </div>
@@ -1016,13 +1053,13 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start', width: '61px' }}>
                 <span style={{ fontFamily: "'Lato', sans-serif", fontSize: '10px', color: '#131313', fontWeight: 400 }}>You will Give</span>
                 <span style={{ fontFamily: "'Lato', 'Noto Sans Bengali', sans-serif", fontSize: '16px', fontWeight: 700, color: '#da0000' }}>
-                  ৳{summary.youWillGive.toLocaleString('en-IN')}
+                  ৳{dueGraphData.youWillGive.toLocaleString('en-IN')}
                 </span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-end', justifyContent: 'center', width: '61px' }}>
                 <span style={{ fontFamily: "'Lato', sans-serif", fontSize: '10px', color: '#131313', fontWeight: 400 }}>You will Get</span>
                 <span style={{ fontFamily: "'Lato', 'Noto Sans Bengali', sans-serif", fontSize: '16px', fontWeight: 700, color: '#008c09' }}>
-                  ৳{summary.youWillGet.toLocaleString('en-IN')}
+                  ৳{dueGraphData.youWillGet.toLocaleString('en-IN')}
                 </span>
               </div>
             </div>

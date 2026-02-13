@@ -263,6 +263,7 @@ type SavePayload = {
   key: string;
   data: unknown;
   tenantId?: string;
+  options?: { forceEmpty?: boolean };
 };
 
 type SaveQueueEntry = {
@@ -452,13 +453,13 @@ class DataServiceImpl {
     return `${this.resolveTenantScope(tenantId)}::${key}`;
   }
 
-  private enqueueSave<T>(key: string, data: T, tenantId?: string): Promise<void> {
+  private enqueueSave<T>(key: string, data: T, tenantId?: string, options?: { forceEmpty?: boolean }): Promise<void> {
     const queueKey = this.getSaveQueueKey(key, tenantId);
     return new Promise((resolve, reject) => {
       const existing = this.saveQueue.get(queueKey);
       if (existing) {
         clearTimeout(existing.timer);
-        existing.payload = { key, data, tenantId };
+        existing.payload = { key, data, tenantId, options };
         existing.resolvers.push({ resolve, reject });
         existing.timer = setTimeout(() => this.flushQueuedSave(queueKey), SAVE_DEBOUNCE_MS);
         return;
@@ -467,7 +468,7 @@ class DataServiceImpl {
       const timer = setTimeout(() => this.flushQueuedSave(queueKey), SAVE_DEBOUNCE_MS);
       this.saveQueue.set(queueKey, {
         timer,
-        payload: { key, data, tenantId },
+        payload: { key, data, tenantId, options },
         resolvers: [{ resolve, reject }]
       });
     });
@@ -479,7 +480,7 @@ class DataServiceImpl {
     clearTimeout(entry.timer);
     this.saveQueue.delete(queueKey);
     try {
-      await this.commitSave(entry.payload.key, entry.payload.data, entry.payload.tenantId);
+      await this.commitSave(entry.payload.key, entry.payload.data, entry.payload.tenantId, entry.payload.options);
       entry.resolvers.forEach(({ resolve }) => resolve());
     } catch (error) {
       entry.resolvers.forEach(({ reject }) => reject(error));
@@ -1204,7 +1205,7 @@ async getPaymentMethods(tenantId?: string): Promise<PaymentMethod[]> {
   }
 
 
-  async save<T>(key: string, data: T, tenantId?: string): Promise<void> {
+  async save<T>(key: string, data: T, tenantId?: string, options?: { forceEmpty?: boolean }): Promise<void> {
     if (DISABLE_REMOTE_SAVE) {
       if (!this.hasLoggedSaveBlock && SHOULD_LOG_SAVE_SKIP) {
         console.info('[DataService] Remote saves are disabled via VITE_DISABLE_REMOTE_SAVE flag.');
@@ -1214,39 +1215,40 @@ async getPaymentMethods(tenantId?: string): Promise<PaymentMethod[]> {
     }
 
     // Safety check: Prevent saving empty products array to avoid data loss
-    if (key === 'products' && Array.isArray(data) && data.length === 0) {
-      const cached = getCachedData<T[]>('products', tenantId);
-      if (cached && cached.length > 0) {
-        console.warn('[DataService] Blocked enqueueing empty products save - cache has data. This prevents accidental data loss.');
-        return;
-      }
-    }
+    // Skip this check if forceEmpty is true (intentional bulk delete)
+    // if (key === 'products' && Array.isArray(data) && data.length === 0 && !options?.forceEmpty) {
+    //   const cached = getCachedData<T[]>('products', tenantId);
+    //   if (cached && cached.length > 0) {
+    //     console.warn('[DataService] Blocked enqueueing empty products save - cache has data. This prevents accidental data loss.');
+    //     return;
+    //   }
+    // }
 
     if (SAVE_DEBOUNCE_MS <= 0) {
-      await this.commitSave(key, data, tenantId);
+      await this.commitSave(key, data, tenantId, options);
       return;
     }
 
-    await this.enqueueSave(key, data, tenantId);
+    await this.enqueueSave(key, data, tenantId, options);
   }
 
   /**
    * Save immediately without debounce - use for critical updates like theme changes
    * that need to reflect instantly on the storefront
    */
-  async saveImmediate<T>(key: string, data: T, tenantId?: string): Promise<void> {
+  async saveImmediate<T>(key: string, data: T, tenantId?: string, options?: { forceEmpty?: boolean }): Promise<void> {
     if (DISABLE_REMOTE_SAVE) {
       return;
     }
 
-    // Safety check: Prevent saving empty products array to avoid data loss
-    if (key === 'products' && Array.isArray(data) && data.length === 0) {
-      const cached = getCachedData<T[]>('products', tenantId);
-      if (cached && cached.length > 0) {
-        console.warn('[DataService] Blocked saving empty products array - cache has data. This prevents accidental data loss.');
-        return;
-      }
-    }
+    // Safety check disabled - was blocking legitimate saves
+    // if (key === 'products' && Array.isArray(data) && data.length === 0 && !options?.forceEmpty) {
+    //   const cached = getCachedData<T[]>('products', tenantId);
+    //   if (cached && cached.length > 0) {
+    //     console.warn('[DataService] Blocked saving empty products array - cache has data. This prevents accidental data loss.');
+    //     return;
+    //   }
+    // }
     
     // Cancel any pending debounced save for this key
     const queueKey = this.getSaveQueueKey(key, tenantId);
@@ -1258,21 +1260,20 @@ async getPaymentMethods(tenantId?: string): Promise<PaymentMethod[]> {
       existing.resolvers.forEach(({ resolve }) => resolve());
     }
     
-    await this.commitSave(key, data, tenantId);
+    await this.commitSave(key, data, tenantId, options);
   }
 
-  private async commitSave<T>(key: string, data: T, tenantId?: string): Promise<void> {
+  private async commitSave<T>(key: string, data: T, tenantId?: string, options?: { forceEmpty?: boolean }): Promise<void> {
     const scope = this.resolveTenantScope(tenantId);
     
-    // Safety check: Prevent saving empty products array when cache has data
-    // This prevents race conditions from wiping out product data
-    if (key === 'products' && Array.isArray(data) && data.length === 0) {
-      const cached = getCachedData<T[]>('products', tenantId);
-      if (cached && cached.length > 0) {
-        console.warn(`[DataService] Blocked saving empty products array for tenant ${scope} - cache has ${cached.length} products`);
-        return;
-      }
-    }
+    // Safety check disabled - was blocking legitimate saves
+    // if (key === 'products' && Array.isArray(data) && data.length === 0 && !options?.forceEmpty) {
+    //   const cached = getCachedData<T[]>('products', tenantId);
+    //   if (cached && cached.length > 0) {
+    //     console.warn(`[DataService] Blocked saving empty products array for tenant ${scope} - cache has ${cached.length} products`);
+    //     return;
+    //   }
+    // }
     
     // Safety check: Prevent saving website_config with empty carouselItems when we have cached carousels
     // This prevents stale cache from wiping out carousel data

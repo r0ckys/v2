@@ -13,12 +13,12 @@ interface FigmaOrderStatusProps {
 
 const FigmaOrderStatus: React.FC<FigmaOrderStatusProps> = ({
   orderStats = {
-    pending: 35,
-    confirmed: 35,
-    courier: 35,
-    delivered: 35,
-    canceled: 35,
-    returns: 35
+    pending: 0,
+    confirmed: 0,
+    courier: 0,
+    delivered: 0,
+    canceled: 0,
+    returns: 0
   }
 }) => {
   const orderItems = [

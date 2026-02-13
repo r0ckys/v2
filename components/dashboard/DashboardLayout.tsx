@@ -56,11 +56,9 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
           {/* Logo + Close Button (mobile) */}
           <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-orange-400 to-orange-500 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">S</span>
-              </div>
+              
               <span className="text-lg font-semibold text-gray-900 dark:text-white font-['Poppins']">
-                System Next IT
+              <img src="https://hdnfltv.com/image/nitimages/04aad350-812e-4678-a009-7d576378b603.webp" alt="System Next IT" className="w-full h-auto" /> 
               </span>
             </div>
             {/* Close button - only on mobile */}
@@ -86,7 +84,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col overflow-hidden min-w-0 bg-[#F8FAFC] dark:bg-gray-900">
+      <div className="flex-1 flex flex-col min-w-0 bg-[#F8FAFC] dark:bg-gray-900">
         {/* Header with burger menu */}
         <div className="flex-shrink-0 flex items-center">
           {/* Burger Menu Button - only on mobile */}
@@ -98,13 +96,15 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
           </button>
           <div className="flex-1">
             <FigmaDashboardHeader
+              searchQuery=""
+              onSearchChange={() => {}}
               {...headerProps}
             />
           </div>
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto overflow-x-hidden">
+        <div className="flex-1 overflow-y-auto">
           <div className="space-y-4 sm:space-y-6">
             {children}
           </div>

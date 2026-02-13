@@ -182,6 +182,26 @@ export function useAppHandlers(props: UseAppHandlersProps) {
     });
   }, [setProducts, activeTenantId]);
 
+  const handleBulkDiscount = useCallback((ids: number[], discountPercent: number) => {
+    setProducts(prev => {
+      const updated = prev.map(p => {
+        if (!ids.includes(p.id)) return p;
+        const originalPrice = p.originalPrice || p.price;
+        const discountedPrice = Math.round(originalPrice * (1 - discountPercent / 100));
+        return {
+          ...p,
+          originalPrice: originalPrice,
+          price: discountedPrice,
+          discount: `${discountPercent}%`
+        };
+      });
+      // Save to backend
+      DataService.save('products', updated, activeTenantId);
+      toast.success(`Applied ${discountPercent}% discount to ${ids.length} products`);
+      return updated;
+    });
+  }, [setProducts, activeTenantId]);
+
   // === ORDER HANDLERS ===
   const handleUpdateOrder = useCallback((orderId: string, updates: Partial<Order>) => {
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, ...updates, tenantId: o.tenantId || activeTenantId } : o));
@@ -507,6 +527,8 @@ export function useAppHandlers(props: UseAppHandlersProps) {
     handleDeleteProduct,
     handleBulkDeleteProducts,
     handleBulkUpdateProducts,
+    handleBulkFlashSale,
+    handleBulkDiscount,
     
     // Order handlers
     handleUpdateOrder,

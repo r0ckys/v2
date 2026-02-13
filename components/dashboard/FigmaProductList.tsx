@@ -869,7 +869,7 @@ const FigmaProductList: React.FC<FigmaProductListProps> = ({
 
       {/* List View - Table */}
       {viewMode === 'list' && (
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto overflow-y-visible">
         <table className="w-full text-sm">
           <thead className="bg-[#E0F2FE]">
             <tr>

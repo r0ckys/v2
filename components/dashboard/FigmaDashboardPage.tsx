@@ -95,20 +95,20 @@ const FigmaDashboardPage: React.FC<FigmaDashboardPageProps> = ({
     onNavigate?.(page);
   };
 
-  // Calculate stats from real data if available
-  const totalProducts = products.length || 45;
-  const totalOrders = orders.length || 6550;
-  const totalAmount = orders.reduce((sum, o) => sum + (o.amount || 0), 0) || 835500;
-  const lowStock = products.filter(p => (p.stock || 0) < 10).length || 5;
-  const toReview = orders.filter(o => o.status === 'Pending').length || 452;
+  // Calculate stats from real data - default to 0
+  const totalProducts = products.length;
+  const totalOrders = orders.length;
+  const totalAmount = orders.reduce((sum, o) => sum + (o.amount || 0), 0);
+  const lowStock = products.filter(p => (p.stock || 0) < 10).length;
+  const toReview = orders.filter(o => o.status === 'Pending').length;
 
-  // Order status stats
-  const pendingOrders = orders.filter(o => o.status === 'Pending').length || 35;
-  const confirmedOrders = orders.filter(o => o.status === 'Confirmed').length || 35;
-  const courierOrders = orders.filter(o => o.status === 'Sent to Courier' || o.status === 'Shipped').length || 35;
-  const deliveredOrders = orders.filter(o => o.status === 'Delivered').length || 35;
-  const canceledOrders = orders.filter(o => o.status === 'Cancelled').length || 35;
-  const returnsOrders = orders.filter(o => o.status === 'Return' || o.status === 'Refund').length || 35;
+  // Order status stats - default to 0
+  const pendingOrders = orders.filter(o => o.status === 'Pending').length;
+  const confirmedOrders = orders.filter(o => o.status === 'Confirmed').length;
+  const courierOrders = orders.filter(o => o.status === 'Sent to Courier' || o.status === 'Shipped').length;
+  const deliveredOrders = orders.filter(o => o.status === 'Delivered').length;
+  const canceledOrders = orders.filter(o => o.status === 'Cancelled').length;
+  const returnsOrders = orders.filter(o => o.status === 'Return' || o.status === 'Refund').length;
 
   // Format currency
   const formattedAmount = `৳${totalAmount.toLocaleString('en-IN')}`;
@@ -185,9 +185,9 @@ const FigmaDashboardPage: React.FC<FigmaDashboardPageProps> = ({
           <div className="md:col-span-4 lg:col-span-3">
             <FigmaVisitorStats
               visitorStats={{
-                onlineNow: 35,
-                todayVisitors: 35,
-                totalVisitors: 35
+                onlineNow: 0,
+                todayVisitors: 0,
+                totalVisitors: 0
               }}
             />
           </div>
