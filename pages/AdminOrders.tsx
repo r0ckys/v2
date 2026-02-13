@@ -779,7 +779,6 @@ footer { text-align: center; margin-top: 32px; font-size: 12px; color: #475569; 
                         paginatedOrders.map((order, index) => {
                           const isSelected = selectedOrderIds.includes(order.id);
                           const rowNumber = (currentPage - 1) * ordersPerPage + index + 1;
-                        const isPaid = (order as Order & { paymentMethod?: string }).paymentMethod?.match(/bKash|Nagad|Card/);
 
                         return (
                           <tr
@@ -827,9 +826,30 @@ footer { text-align: center; margin-top: 32px; font-size: 12px; color: #475569; 
                               {formatCurrency(order.amount)}
                             </td>
                             <td className="p-4">
-                              <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium border ${isPaid ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>
-                                {isPaid ? 'Paid' : 'Unpaid'}
-                              </span>
+                              {(() => {
+                                const orderWithPayment = order as Order & { paymentMethod?: string; transactionId?: string };
+                                const paymentMethod = orderWithPayment.paymentMethod;
+                                const transactionId = orderWithPayment.transactionId;
+                                const isPaid = paymentMethod?.match(/bKash|Nagad|Rocket|UPay|Tap|Card/i);
+                                
+                                return (
+                                  <div className="flex flex-col gap-0.5">
+                                    <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium border w-fit ${isPaid ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>
+                                      {isPaid ? 'Paid' : 'Unpaid'}
+                                    </span>
+                                    {paymentMethod && paymentMethod !== 'Cash On Delivery' && (
+                                      <span className="text-xs text-slate-500 truncate max-w-[100px]" title={paymentMethod}>
+                                        {paymentMethod}
+                                      </span>
+                                    )}
+                                    {transactionId && (
+                                      <span className="text-xs text-emerald-600 font-mono truncate max-w-[100px]" title={`TxID: ${transactionId}`}>
+                                        TxID: {transactionId.slice(0, 8)}...
+                                      </span>
+                                    )}
+                                  </div>
+                                );
+                              })()}
                             </td>
                             <td className="p-4">
                               <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border whitespace-nowrap ${STATUS_COLORS[order.status] || 'bg-gray-100 text-gray-700 border-gray-200'}`}>
@@ -1155,6 +1175,44 @@ footer { text-align: center; margin-top: 32px; font-size: 12px; color: #475569; 
                         </label>
                       </div>
                     </div>
+
+                    {/* Payment Info Section - Show only if payment method is manual */}
+                    {((draftOrder as Order & { paymentMethod?: string; transactionId?: string; customerPaymentPhone?: string }).paymentMethod || 
+                      (draftOrder as Order & { paymentMethod?: string; transactionId?: string; customerPaymentPhone?: string }).transactionId) && (
+                      <>
+                        <div className="border-t border-slate-100" />
+                        <div className="bg-amber-50/50 p-6 rounded-xl border border-amber-200">
+                          <h3 className="text-base font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                            <div className="w-1 h-5 bg-amber-500 rounded-full"></div> Payment Information
+                          </h3>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-1.5">
+                              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Payment Method</span>
+                              <p className="text-sm font-medium text-slate-900 bg-white px-3 py-2 rounded-lg border border-amber-200">
+                                {(draftOrder as Order & { paymentMethod?: string }).paymentMethod || 'Cash On Delivery'}
+                              </p>
+                            </div>
+                            {(draftOrder as Order & { transactionId?: string }).transactionId && (
+                              <div className="space-y-1.5">
+                                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Transaction ID</span>
+                                <p className="text-sm font-medium text-emerald-700 bg-white px-3 py-2 rounded-lg border border-emerald-200 flex items-center gap-2">
+                                  <CheckCircle2 size={14} className="text-emerald-500" />
+                                  {(draftOrder as Order & { transactionId?: string }).transactionId}
+                                </p>
+                              </div>
+                            )}
+                            {(draftOrder as Order & { customerPaymentPhone?: string }).customerPaymentPhone && (
+                              <div className="space-y-1.5">
+                                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Customer Payment Phone</span>
+                                <p className="text-sm font-medium text-slate-900 bg-white px-3 py-2 rounded-lg border border-slate-200">
+                                  {(draftOrder as Order & { customerPaymentPhone?: string }).customerPaymentPhone}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </div>
 
                   {/* Right Column: Cards & Actions */}

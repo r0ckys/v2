@@ -150,6 +150,7 @@ tenantDataRouter.get('/:tenantId/secondary', async (req, res, next) => {
         orders: data.orders || [],
         logo: data.logo || null,
         delivery_config: data.delivery_config || [],
+        payment_methods: data.payment_methods || [],
         chat_messages: data.chat_messages || [],
         landing_pages: data.landing_pages || [],
         categories: data.categories || [],

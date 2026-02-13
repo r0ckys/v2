@@ -1,15 +1,22 @@
-import React, { useState, useCallback, useRef } from 'react';
-import { ArrowLeft, ChevronRight, Upload, X, Check, Info } from 'lucide-react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { ArrowLeft, ChevronRight, Upload, X, Check, Info, Loader2 } from 'lucide-react';
 import { RichTextEditor } from '../components/RichTextEditor';
+import { getAuthHeader } from '../services/authService';
+import { invalidateDataCache } from '../services/DataService';
+import { toast } from 'react-hot-toast';
+import { PaymentMethod } from '../types';
+
+// Use relative URL to leverage Vite proxy (proxies /api -> localhost:5001)
+const API_URL = '/api';
 
 // Payment provider logos
 const PROVIDER_LOGOS = {
   bkash: 'https://www.logo.wine/a/logo/BKash/BKash-Icon-Logo.wine.svg',
-  nagad: 'https://nagad.com.bd/wp-content/uploads/2022/02/nagad-logo.png',
-  rocket: 'https://rocketsalesagent.com/assets/img/logo/logo.png',
-  upay: 'https://www.upaybd.com/assets/images/logo.png',
-  tap: 'https://www.tapbd.com/assets/images/tap-logo.png',
-  aamarpay: 'https://aamarpay.com/images/aamarpay-logo.png',
+  nagad: 'https://hdnfltv.com/image/nitimages/pasted_1770952876471.webp',
+  rocket: 'https://hdnfltv.com/image/nitimages/pasted_1770952937066.webp',
+  upay: 'https://hdnfltv.com/image/nitimages/pasted_1770952990491.webp',
+  tap: 'https://hdnfltv.com/image/nitimages/pasted_1770953059804.webp',
+  aamarpay: 'https://hdnfltv.com/image/nitimages/pasted_1770950390967.webp',
 };
 
 const MFS_PROVIDERS = [
@@ -68,6 +75,7 @@ interface AdminPaymentSettingsNewProps {
   onBack: () => void;
   tenantId?: string;
   onSave?: (settings: PaymentGatewaySettings) => void;
+  onUpdatePaymentMethods?: (methods: PaymentMethod[]) => void;
 }
 
 // Toggle Switch Component
@@ -115,7 +123,8 @@ const PaymentCard: React.FC<{
 const AdminPaymentSettingsNew: React.FC<AdminPaymentSettingsNewProps> = ({ 
   onBack, 
   tenantId,
-  onSave 
+  onSave,
+  onUpdatePaymentMethods
 }) => {
   // State for all payment settings
   const [settings, setSettings] = useState<PaymentGatewaySettings>({
@@ -137,8 +146,72 @@ const AdminPaymentSettingsNew: React.FC<AdminPaymentSettingsNewProps> = ({
     },
     paymentProcessMessage: '',
   });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Load existing payment settings on mount
+  useEffect(() => {
+    const loadSettings = async () => {
+      if (!tenantId) {
+        setLoading(false);
+        return;
+      }
+      
+      try {
+        const response = await fetch(`${API_URL}/tenant-data/${tenantId}/payment_methods`, {
+          headers: {
+            ...getAuthHeader() as Record<string, string>,
+            'X-Tenant-Id': tenantId
+          }
+        });
+        
+        if (!response.ok) {
+          setLoading(false);
+          return;
+        }
+        
+        const data = await response.json();
+        const paymentMethods: PaymentMethod[] = data.data || [];
+        
+        // Convert PaymentMethod[] to local settings format
+        const codMethod = paymentMethods.find(m => m.provider === 'cod');
+        const bkashMerchant = paymentMethods.find(m => m.provider === 'bkash' && m.id.includes('merchant'));
+        
+        // Find all self-mfs methods (saved as self-mfs-bkash, self-mfs-nagad, etc.)
+        const selfMfsMethods = paymentMethods.filter(m => m.id.startsWith('self-mfs-'));
+        const anySelfMfs = selfMfsMethods[0]; // Get the first one for shared settings
+        const enabledProviders = selfMfsMethods.map(m => m.id.replace('self-mfs-', ''));
+        
+        setSettings(prev => ({
+          ...prev,
+          cashOnDelivery: codMethod?.isEnabled ?? true,
+          bkash: {
+            enabled: bkashMerchant?.isEnabled ?? false,
+            appKey: (bkashMerchant as any)?.appKey || '',
+            secretKey: (bkashMerchant as any)?.secretKey || '',
+            username: (bkashMerchant as any)?.username || '',
+            password: (bkashMerchant as any)?.password || '',
+          },
+          selfMfs: anySelfMfs ? {
+            enabled: true,
+            selectedProviders: enabledProviders.length > 0 ? enabledProviders : ['bkash', 'nagad', 'rocket', 'upay', 'tap'],
+            phoneNumber: anySelfMfs.accountNumber || '',
+            mfsType: anySelfMfs.paymentType || 'merchant',
+            paymentInstruction: anySelfMfs.paymentInstruction || '',
+            qrCodeUrl: (anySelfMfs as any)?.qrCodeUrl || anySelfMfs.logo || '',
+          } : prev.selfMfs,
+        }));
+      } catch (error) {
+        console.error('Failed to load payment settings:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadSettings();
+  }, [tenantId]);
 
   const updateSettings = useCallback(<K extends keyof PaymentGatewaySettings>(
     key: K, 
@@ -184,12 +257,149 @@ const AdminPaymentSettingsNew: React.FC<AdminPaymentSettingsNewProps> = ({
     }
   }, [updateNestedSettings]);
 
-  const handleSave = useCallback(() => {
-    onSave?.(settings);
-  }, [settings, onSave]);
+  const handleSave = useCallback(async () => {
+    if (!tenantId) {
+      toast.error('Tenant ID is required');
+      return;
+    }
+    
+    console.log('[PaymentSettings] Saving for tenant:', tenantId);
+    console.log('[PaymentSettings] Settings:', JSON.stringify(settings.selfMfs, null, 2));
+    
+    setSaving(true);
+    
+    try {
+      // Convert local settings to PaymentMethod[] format
+      const paymentMethods: PaymentMethod[] = [];
+      
+      // Cash on Delivery - always include
+      paymentMethods.push({
+        id: 'cod-default',
+        provider: 'cod',
+        name: 'Cash On Delivery',
+        isEnabled: settings.cashOnDelivery,
+      });
+      
+      // bKash Merchant (API integrated)
+      if (settings.bkash.enabled) {
+        paymentMethods.push({
+          id: 'bkash-merchant',
+          provider: 'bkash',
+          name: 'bKash Payment',
+          isEnabled: settings.bkash.enabled,
+          ...({
+            appKey: settings.bkash.appKey,
+            secretKey: settings.bkash.secretKey,
+            username: settings.bkash.username,
+            password: settings.bkash.password,
+          } as any),
+        });
+      }
+      
+      // Self MFS (Manual Payment) - This creates payment methods for each selected provider
+      if (settings.selfMfs.enabled && settings.selfMfs.selectedProviders.length > 0) {
+        // Create individual payment methods for each selected MFS provider
+        settings.selfMfs.selectedProviders.forEach(providerId => {
+          const providerNames: Record<string, string> = {
+            bkash: 'bKash',
+            nagad: 'Nagad',
+            rocket: 'Rocket',
+            upay: 'UPay',
+            tap: 'Tap',
+          };
+          
+          paymentMethods.push({
+            id: `self-mfs-${providerId}`,
+            provider: providerId as any,
+            name: `${providerNames[providerId] || providerId} (Manual)`,
+            isEnabled: true,
+            paymentType: settings.selfMfs.mfsType as any,
+            accountNumber: settings.selfMfs.phoneNumber,
+            paymentInstruction: settings.selfMfs.paymentInstruction,
+            logo: settings.selfMfs.qrCodeUrl,
+            ...({
+              selectedProviders: settings.selfMfs.selectedProviders,
+              qrCodeUrl: settings.selfMfs.qrCodeUrl,
+            } as any),
+          });
+        });
+      }
+      
+      console.log('[PaymentSettings] Saving paymentMethods:', JSON.stringify(paymentMethods, null, 2));
+      
+      // Save to backend using PUT (not POST)
+      const response = await fetch(`${API_URL}/tenant-data/${tenantId}/payment_methods`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAuthHeader() as Record<string, string>,
+          'X-Tenant-Id': tenantId
+        },
+        body: JSON.stringify({ data: paymentMethods })
+      });
+      
+      const responseData = await response.json();
+      console.log('[PaymentSettings] Server response:', responseData);
+      
+      if (!response.ok) {
+        throw new Error('Failed to save payment settings');
+      }
+      
+      // Invalidate cache to force refresh
+      await invalidateDataCache(tenantId, 'payment_methods');
+      
+      // Update App state so Store Checkout gets new payment methods
+      console.log('[PaymentSettings] Calling onUpdatePaymentMethods with:', paymentMethods.length, 'methods');
+      onUpdatePaymentMethods?.(paymentMethods);
+      
+      toast.success('Payment settings saved successfully!');
+      onSave?.(settings);
+    } catch (error) {
+      console.error('Failed to save payment settings:', error);
+      toast.error('Failed to save payment settings');
+    } finally {
+      setSaving(false);
+    }
+  }, [settings, tenantId, onSave, onUpdatePaymentMethods]);
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="w-full max-w-[1146px] mx-auto">
+        <div className="bg-white rounded-lg px-[18px] py-6">
+          <div className="flex items-center gap-3.5 h-[42px] mb-6">
+            <div className="w-4 h-4 bg-gray-200 rounded animate-pulse" />
+            <div className="flex flex-col gap-1">
+              <div className="h-6 w-48 bg-gray-200 rounded animate-pulse" />
+              <div className="h-3 w-64 bg-gray-200 rounded animate-pulse" />
+            </div>
+          </div>
+          <div className="flex flex-col gap-4">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="bg-white rounded-lg shadow-[0_2px_6px_rgba(0,0,0,0.03)] px-3 py-4 h-20 animate-pulse">
+                <div className="flex items-center justify-between">
+                  <div className="flex flex-col gap-2">
+                    <div className="h-5 w-32 bg-gray-200 rounded" />
+                    <div className="h-3 w-48 bg-gray-200 rounded" />
+                  </div>
+                  <div className="h-5 w-10 bg-gray-200 rounded-full" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-[1146px] mx-auto">
+      {/* Debug Info - Remove in production */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="mb-2 p-2 bg-yellow-100 text-yellow-800 text-xs rounded">
+          Debug: tenantId = {tenantId || 'undefined'}
+        </div>
+      )}
       {/* Main Content Card */}
       <div className="bg-white rounded-lg px-[18px] py-6">
         <div className="flex flex-col gap-6">
@@ -210,12 +420,12 @@ const AdminPaymentSettingsNew: React.FC<AdminPaymentSettingsNewProps> = ({
           {/* Payment Options */}
           <div className="flex flex-col gap-4">
             {/* Cash On Delivery */}
-            <PaymentCard
+            {/* <PaymentCard
               title="Cash On Delivery"
               subtitle="Accept cash payments on delivery"
               enabled={settings.cashOnDelivery}
               onToggle={(v) => updateSettings('cashOnDelivery', v)}
-            />
+            /> */}
 
             {/* AamarPay */}
             <PaymentCard
@@ -373,6 +583,7 @@ const AdminPaymentSettingsNew: React.FC<AdminPaymentSettingsNewProps> = ({
                             onChange={(val) => updateNestedSettings('selfMfs', 'paymentInstruction', val)}
                             placeholder="যেমন: ১. এই নম্বরে Send Money করুন: 01XXXXXXXXX। ২. Transaction ID নোট করুন। ৩. Checkout এ TxnID দিন।"
                             minHeight="min-h-[200px]"
+                            hideLabel
                           />
                         </div>
                       </div>
@@ -424,6 +635,24 @@ const AdminPaymentSettingsNew: React.FC<AdminPaymentSettingsNewProps> = ({
                       )}
                     </div>
                   </div>
+                  
+                  {/* Save Manual Payment Settings Button */}
+                  <div className="flex justify-end mt-4">
+                    <button 
+                      onClick={handleSave}
+                      disabled={saving}
+                      className="bg-[#1e90ff] border border-[#1e90ff] rounded-lg px-6 py-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    >
+                      {saving ? (
+                        <>
+                          <Loader2 size={16} className="animate-spin text-white" />
+                          <span className="text-white text-sm font-semibold font-['Lato']">Saving...</span>
+                        </>
+                      ) : (
+                        <span className="text-white text-sm font-semibold font-['Lato']">Save Manual Payment Settings</span>
+                      )}
+                    </button>
+                  </div>
                 </>
               )}
             </div>
@@ -431,92 +660,22 @@ const AdminPaymentSettingsNew: React.FC<AdminPaymentSettingsNewProps> = ({
         </div>
       </div>
 
-      {/* Bottom Section: Advance Payment & Payment Process Message */}
-      <div className="flex gap-5 mt-5">
-        {/* Advance Payment */}
-        <div className="bg-white rounded-lg w-[563px] h-[276px] relative overflow-hidden">
-          {/* Header */}
-          <div className="absolute top-[19px] left-1/2 -translate-x-1/2 w-[525px] bg-white rounded-lg shadow-[0_2px_6px_rgba(0,0,0,0.03)] px-3 py-2 h-[74px] flex items-center justify-between">
-            <div className="flex flex-col gap-0.5 w-[553px]">
-              <h4 className="text-xl font-medium text-black font-['Lato']">Advance payment</h4>
-              <p className="text-xs text-[#6f6f6f] font-['Lato']">Select how much amount you want to get advance from customer.</p>
-            </div>
-            <ToggleSwitch 
-              enabled={settings.advancePayment.enabled} 
-              onChange={(v) => updateNestedSettings('advancePayment', 'enabled', v)} 
-            />
-          </div>
-
-          {/* Options */}
-          {settings.advancePayment.enabled && (
-            <>
-              {ADVANCE_PAYMENT_OPTIONS.map((option, index) => (
-                <div 
-                  key={option.id}
-                  className="absolute flex gap-3 items-center left-[19px]"
-                  style={{ top: 112 + index * 28 + (index >= 2 ? 4 : 0) + (index >= 3 ? 44 : 0) }}
-                >
-                  <input
-                    type="radio"
-                    id={option.id}
-                    name="advancePaymentType"
-                    checked={settings.advancePayment.type === option.id}
-                    onChange={() => updateNestedSettings('advancePayment', 'type', option.id)}
-                    className="w-3.5 h-3.5 border border-black rounded accent-[#1e90ff]"
-                  />
-                  <label htmlFor={option.id} className="text-sm text-black font-['Lato']">{option.label}</label>
-                </div>
-              ))}
-              
-              {/* Percentage Input */}
-              {settings.advancePayment.type === 'percentage' && (
-                <div className="absolute left-[45px] top-[189px]">
-                  <input
-                    type="number"
-                    className="bg-[#f9f9f9] rounded-lg h-[39px] w-[138px] px-[19px] text-sm text-black font-['Lato'] focus:outline-none"
-                    value={settings.advancePayment.percentage || 0}
-                    onChange={(e) => updateNestedSettings('advancePayment', 'percentage', Number(e.target.value))}
-                  />
-                </div>
-              )}
-
-              {/* Fixed Amount Input */}
-              {settings.advancePayment.type === 'fixed' && (
-                <div className="absolute left-[45px] top-[189px]">
-                  <input
-                    type="number"
-                    className="bg-[#f9f9f9] rounded-lg h-[39px] w-[138px] px-[19px] text-sm text-black font-['Lato'] focus:outline-none"
-                    value={settings.advancePayment.fixedAmount || 0}
-                    onChange={(e) => updateNestedSettings('advancePayment', 'fixedAmount', Number(e.target.value))}
-                  />
-                </div>
-              )}
-            </>
-          )}
-        </div>
-
-        {/* Payment Process Message Note */}
-        <div className="bg-white rounded-lg w-[563px] h-[276px] relative overflow-hidden">
-          <p className="absolute left-[31px] top-[36px] text-xl font-medium text-black font-['Lato']">
-            Payment process message note
-          </p>
-          <textarea
-            placeholder="Add a custom message for your customers about the payment process..."
-            className="absolute left-[30px] top-[75px] bg-[#f9f9f9] rounded-lg w-[515px] h-[165px] px-[19px] py-[11px] text-sm text-[#a2a2a2] font-['Lato'] focus:outline-none resize-none"
-            value={settings.paymentProcessMessage || ''}
-            onChange={(e) => updateSettings('paymentProcessMessage', e.target.value)}
-          />
-        </div>
-      </div>
-
       {/* Save Button */}
       <div className="flex items-center justify-end w-full mt-5">
-        <button 
+        {/* <button 
           onClick={handleSave}
-          className="bg-[#1e90ff] border border-[#1e90ff] rounded-lg px-4 py-2"
-        >
-          <span className="text-white text-sm font-medium font-['Lato']">Update delivery Charges</span>
-        </button>
+          disabled={saving || loading}
+          className="bg-[#1e90ff] border border-[#1e90ff] rounded-lg px-4 py-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+        > */}
+          {/* {saving ? (
+            <>
+              <Loader2 size={16} className="animate-spin text-white" />
+              <span className="text-white text-sm font-medium font-['Lato']"></span>
+            </>
+          ) : (
+            <span className="text-white text-sm font-medium font-['Lato']"></span>
+          )}
+        </button> */}
       </div>
     </div>
   );

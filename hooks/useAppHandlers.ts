@@ -197,7 +197,12 @@ export function useAppHandlers(props: UseAppHandlersProps) {
       productName: selectedProduct?.name,
       quantity: formData.quantity || checkoutQuantity,
       deliveryType: formData.deliveryType,
-      deliveryCharge: formData.deliveryCharge
+      deliveryCharge: formData.deliveryCharge,
+      // Payment method info (for manual MFS payments)
+      paymentMethod: formData.paymentMethod,
+      paymentMethodId: formData.paymentMethodId,
+      transactionId: formData.transactionId,
+      customerPaymentPhone: formData.customerPaymentPhone
     };
 
     try {
@@ -316,15 +321,10 @@ export function useAppHandlers(props: UseAppHandlersProps) {
     }
   }, [activeTenantId, setDeliveryConfig]);
   const handleUpdatePaymentMethods = useCallback(async (methods: PaymentMethod[]) => {
+    console.log('[useAppHandlers] handleUpdatePaymentMethods called with', methods.length, 'methods');
     setPaymentMethods(methods);
-    if (activeTenantId) {
-      try {
-        await DataService.save('payment_methods', methods, activeTenantId);
-      } catch (error) {
-        console.error('Failed to save payment methods:', error);
-      }
-    }
-  }, [activeTenantId, setPaymentMethods]);
+    // Note: Data is already saved in AdminPaymentSettingsNew, no need to save again
+  }, [setPaymentMethods]);
 
   // === CATALOG CRUD HANDLERS ===
   // Memoize catalog handlers to prevent re-creation loops

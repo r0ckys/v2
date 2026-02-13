@@ -234,14 +234,14 @@ export const OfferPageManager: React.FC<OfferPageManagerProps> = ({
         </div>
 
         {/* Table */}
-        <div className="bg-white rounded-lg overflow-hidden">
+        <div className="bg-white rounded-lg overflow-hidden flex flex-col min-h-[500px]">
           {isLoading ? (
-            <div className="p-8 text-center">
+            <div className="p-8 text-center flex-1 flex flex-col items-center justify-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#38bdf8] mx-auto"></div>
               <p className="mt-2 text-gray-500">Loading...</p>
             </div>
           ) : filteredPages.length === 0 ? (
-            <div className="p-8 text-center">
+            <div className="p-8 text-center flex-1 flex flex-col items-center justify-center">
               <FileText className="mx-auto h-12 w-12 text-gray-300" />
               <h3 className="mt-2 text-sm font-medium text-gray-900">No landing pages</h3>
               <p className="mt-1 text-sm text-gray-500">Get started by creating a new landing page.</p>
@@ -255,8 +255,8 @@ export const OfferPageManager: React.FC<OfferPageManagerProps> = ({
           ) : (
             <>
               {/* Desktop Table View */}
-              <div className="hidden md:block overflow-x-auto">
-                <table className="w-full">
+              <div className="hidden md:block overflow-x-auto overflow-y-visible flex-1">
+                <table className="w-full table-fixed">
                   <thead className="bg-gradient-to-r from-[rgba(56,189,248,0.15)] to-[rgba(30,144,255,0.15)]">
                     <tr>
                       <th className="px-4 py-3 text-left">
@@ -267,12 +267,12 @@ export const OfferPageManager: React.FC<OfferPageManagerProps> = ({
                           className="w-5 h-5 rounded border-[#eaf8e7] border-[1.5px] bg-white focus:ring-[#38bdf8]"
                         />
                       </th>
-                      <th className="px-4 py-3 text-left text-base font-medium text-black font-['Poppins',sans-serif]">SL</th>
-                      <th className="px-4 py-3 text-left text-base font-medium text-black font-['Poppins',sans-serif]">Product</th>
-                      <th className="px-4 py-3 text-left text-base font-medium text-black font-['Poppins',sans-serif]">Landing Page URL</th>
-                      <th className="px-4 py-3 text-left text-base font-medium text-black font-['Poppins',sans-serif]">Version</th>
-                      <th className="px-4 py-3 text-left text-base font-medium text-black font-['Poppins',sans-serif]">Status</th>
-                      <th className="px-4 py-3 text-left text-base font-medium text-black font-['Poppins',sans-serif]">Action</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 font-['Poppins',sans-serif] w-12">SL</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 font-['Poppins',sans-serif] w-40">Product</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 font-['Poppins',sans-serif]">Landing Page URL</th>
+                      <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700 font-['Poppins',sans-serif] w-24">Version</th>
+                      <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700 font-['Poppins',sans-serif] w-24">Status</th>
+                      <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700 font-['Poppins',sans-serif] w-20">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#b9b9b9]/50">
@@ -339,56 +339,57 @@ export const OfferPageManager: React.FC<OfferPageManagerProps> = ({
                         <td className="px-4 py-3.5 relative" onClick={(e) => e.stopPropagation()}>
                           <button
                             onClick={() => setActionMenuOpen(actionMenuOpen === page._id ? null : page._id)}
-                            className="p-1 hover:bg-gray-100 rounded"
+                            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                            title="Actions"
                           >
-                            <MoreVertical size={20} className="text-gray-500" />
+                            <MoreVertical size={18} className="text-gray-600" />
                           </button>
                           
                           {actionMenuOpen === page._id && (
-                            <div className="absolute right-0 mt-1 w-40 bg-white rounded-lg shadow-lg border z-10">
+                            <div className="absolute right-4 top-full mt-1 w-44 bg-white rounded-xl shadow-xl border border-gray-200 z-50 py-1 animate-in fade-in slide-in-from-top-2 duration-200">
                               <button
                                 onClick={() => {
                                   onPreview(page);
                                   setActionMenuOpen(null);
                                 }}
-                                className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2"
+                                className="w-full px-4 py-2.5 text-left text-sm hover:bg-blue-50 flex items-center gap-3 text-gray-700 font-medium transition-colors"
                               >
-                                <Eye size={16} /> Preview
+                                <Eye size={16} className="text-blue-500" /> Preview
                               </button>
                               <button
                                 onClick={() => {
                                   onEdit(page);
                                   setActionMenuOpen(null);
                                 }}
-                                className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2"
+                                className="w-full px-4 py-2.5 text-left text-sm hover:bg-emerald-50 flex items-center gap-3 text-gray-700 font-medium transition-colors"
                               >
-                                <Edit2 size={16} /> Edit
+                                <Edit2 size={16} className="text-emerald-500" /> Edit
                               </button>
                               <button
                                 onClick={() => {
                                   copyUrl(page.urlSlug);
                                   setActionMenuOpen(null);
                                 }}
-                                className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2"
+                                className="w-full px-4 py-2.5 text-left text-sm hover:bg-purple-50 flex items-center gap-3 text-gray-700 font-medium transition-colors"
                               >
-                                <Copy size={16} /> Copy URL
+                                <Copy size={16} className="text-purple-500" /> Copy URL
                               </button>
                               <button
                                 onClick={() => {
                                   window.open(buildUrl(page.urlSlug), '_blank');
                                   setActionMenuOpen(null);
                                 }}
-                                className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2"
+                                className="w-full px-4 py-2.5 text-left text-sm hover:bg-sky-50 flex items-center gap-3 text-gray-700 font-medium transition-colors"
                               >
-                                <ExternalLink size={16} /> Open Link
+                                <ExternalLink size={16} className="text-sky-500" /> Open Link
                               </button>
-                              <hr className="my-1" />
+                              <hr className="my-1 border-gray-100" />
                               <button
                                 onClick={() => {
                                   setDeleteModal({ open: true, page });
                                   setActionMenuOpen(null);
                                 }}
-                                className="w-full px-4 py-2 text-left text-sm hover:bg-red-50 text-red-600 flex items-center gap-2"
+                                className="w-full px-4 py-2.5 text-left text-sm hover:bg-red-50 text-red-600 flex items-center gap-3 font-medium transition-colors"
                               >
                                 <Trash2 size={16} /> Delete
                               </button>
@@ -402,7 +403,7 @@ export const OfferPageManager: React.FC<OfferPageManagerProps> = ({
               </div>
 
               {/* Mobile Card View */}
-              <div className="md:hidden divide-y divide-[#b9b9b9]/50">
+              <div className="md:hidden divide-y divide-[#b9b9b9]/50 flex-1">
                 {paginatedPages.map((page, index) => (
                   <div
                     key={page._id}
@@ -469,7 +470,7 @@ export const OfferPageManager: React.FC<OfferPageManagerProps> = ({
               </div>
 
               {/* Pagination */}
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-[#b9b9b9]/30 bg-gray-50">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-4 mt-auto border-t border-[#b9b9b9]/30 bg-gray-50 rounded-b-lg">
                 <div className="flex items-center gap-2 text-xs text-gray-600 font-['Poppins',sans-serif]">
                   <span>Show</span>
                   <select
@@ -609,7 +610,7 @@ export const OfferPageManager: React.FC<OfferPageManagerProps> = ({
       {/* Click outside to close action menu */}
       {actionMenuOpen && (
         <div 
-          className="fixed inset-0 z-0" 
+          className="fixed inset-0 z-40" 
           onClick={() => setActionMenuOpen(null)}
         />
       )}

@@ -41,6 +41,11 @@ const orderSchema = z.object({
   pathaoArea: z.number().optional(),
   pathaoZone: z.number().optional(),
   pathaoCity: z.number().optional(),
+  // Payment method info (for manual MFS payments)
+  paymentMethod: z.string().optional(),
+  paymentMethodId: z.string().optional(),
+  transactionId: z.string().optional(),
+  customerPaymentPhone: z.string().optional(),
 });
 // order interface
 export interface Order {
@@ -67,6 +72,11 @@ export interface Order {
   courierMeta?: Record<string, any>;
   source?: 'store' | 'landing_page' | 'admin';
   landingPageId?: string;
+  // Payment method info (for manual MFS payments)
+  paymentMethod?: string;
+  paymentMethodId?: string;
+  transactionId?: string;
+  customerPaymentPhone?: string;
 }
 // type Order = z.infer<typeof orderSchema>;
 

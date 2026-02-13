@@ -169,9 +169,11 @@ const AdminSupport: React.FC<AdminSupportProps> = ({ user, activeTenant }) => {
     try {
       const uploadPromises = Array.from(files).map(async (file: File) => {
         const formData = new FormData();
-        formData.append('image', file);
+        formData.append('file', file);
+        formData.append('tenantId', activeTenant?.id || 'default');
+        formData.append('folder', 'support');
 
-        const response = await fetch(`${API_URL.replace('/api', '')}/upload`, {
+        const response = await fetch(`${API_URL}/upload`, {
           method: 'POST',
           headers: {
             'Authorization': getAuthHeader()['Authorization'] || ''
@@ -181,7 +183,7 @@ const AdminSupport: React.FC<AdminSupportProps> = ({ user, activeTenant }) => {
 
         if (!response.ok) throw new Error('Upload failed');
         const data = await response.json();
-        return data.url || data.path;
+        return data.imageUrl || data.url || data.path;
       });
 
       const uploadedUrls = await Promise.all(uploadPromises);

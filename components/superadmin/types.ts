@@ -330,4 +330,6 @@ export type TabType =
   | 'support-tickets'
   | 'merchant-success'
   | 'tutorials'
-  | 'apk-builds';
+  | 'apk-builds'
+  | 'app-requests'
+  | 'ads-management';

@@ -159,6 +159,11 @@ export interface Order {
   courierMeta?: Record<string, any>;
   source?: 'store' | 'landing_page' | 'admin';
   landingPageId?: string;
+  // Payment method info (for manual MFS payments)
+  paymentMethod?: string; // e.g., 'bKash (Manual)', 'Nagad (Manual)', 'COD'
+  paymentMethodId?: string; // ID of the selected payment method
+  transactionId?: string; // Customer's transaction ID for manual payments
+  customerPaymentPhone?: string; // Customer's payment phone number
 }
 
 export interface User {
@@ -358,10 +363,10 @@ export interface DeliveryConfig {
 
 export interface PaymentMethod {
   id: string;
-  provider: 'cod' | 'bkash' | 'nagad' | 'rocket' | 'sslcommerz' | 'custom';
+  provider: 'cod' | 'bkash' | 'nagad' | 'rocket' | 'upay' | 'tap' | 'sslcommerz' | 'custom';
   name: string;
   isEnabled: boolean;
-  paymentType?: 'send_money' | 'payment' | 'merchant' | 'agent';
+  paymentType?: 'send_money' | 'payment' | 'merchant' | 'agent' | 'personal';
   accountNumber?: string;
   accountName?: string;
   paymentInstruction?: string;

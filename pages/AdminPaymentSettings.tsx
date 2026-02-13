@@ -20,7 +20,7 @@ const PROVIDER_LOGOS: Record<string, string> = {
   cod: '',
   bkash: 'https://www.logo.wine/a/logo/BKash/BKash-Icon-Logo.wine.svg',
   nagad: 'https://nagad.com.bd/wp-content/uploads/2022/02/nagad-logo.png',
-  rocket: 'https://rocketsalesagent.com/assets/img/logo/logo.png',
+  rocket: '',
   sslcommerz: 'https://sslcommerz.com/wp-content/uploads/2021/11/sslcommerz.png',
   custom: ''
 };

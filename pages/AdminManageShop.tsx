@@ -457,7 +457,7 @@ const AdminManageShop: React.FC<ManageShopProps> = ({ onNavigate, tenantId, webs
             >
               <div className="flex items-start justify-between mb-2 sm:mb-3">
                 <div className={`p-2 sm:p-3 rounded-lg sm:rounded-xl ${card.bgColor} ${card.color} group-hover:scale-110 transition-transform`}>
-                  {React.cloneElement(card.icon as React.ReactElement, { size: 20 })}
+                  {card.icon}
                 </div>
                 {getStatusBadge(card.status)}
               </div>

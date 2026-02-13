@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Truck, CreditCard, MessageCircle, Link2, MessageSquare, Coins, Store, User, Camera, RefreshCw, Download, ChevronRight, Lock } from 'lucide-react';
+import { useComingSoon } from '../components/ComingSoonModal';
 
 interface SettingsCardProps {
   title: string;
@@ -497,6 +498,7 @@ const figmaStyles = {
 
 const AdminSettingsNew: React.FC<AdminSettingsNewProps> = ({ onNavigate, currentUser, onUpdateProfile }) => {
   const [activeTab, setActiveTab] = useState<'manage_shop' | 'profile_details'>('manage_shop');
+  const { showComingSoon, ComingSoonPopup } = useComingSoon();
   const [profileForm, setProfileForm] = useState({
     name: currentUser?.name || 'Imam Hoshen Ornob',
     username: currentUser?.username || 'ornob423',
@@ -561,7 +563,8 @@ const AdminSettingsNew: React.FC<AdminSettingsNewProps> = ({ onNavigate, current
       title: 'Marketing Integrations',
       description: "Enhance your shop's visibility by Google Tag Manager, Facebook Pixel, TikTok Pixel, and SEO tools for better engagement.",
       icon: <MarketingIcon />,
-      navigateTo: 'settings_marketing',
+      navigateTo: 'coming_soon', // Special flag for coming soon
+      isComingSoon: true,
     },
     {
       title: 'Shop Domain',
@@ -573,12 +576,14 @@ const AdminSettingsNew: React.FC<AdminSettingsNewProps> = ({ onNavigate, current
       title: 'SMS Support',
       description: 'Enable SMS notifications and support to keep your customers informed with real-time updates.',
       icon: <SMSIcon />,
+      isComingSoon: true,
       navigateTo: 'sms_marketing',
     },
     {
       title: 'Reward Point',
       description: 'Enable SMS notifications and support to keep your customers informed with real-time updates.',
       icon: <RewardIcon />,
+      isComingSoon: true,
       navigateTo: 'settings_rewards',
     },
   ];
@@ -635,9 +640,16 @@ const AdminSettingsNew: React.FC<AdminSettingsNewProps> = ({ onNavigate, current
                 title={card.title}
                 description={card.description}
                 icon={card.icon}
-                onClick={() => onNavigate(card.navigateTo)}
+                onClick={() => {
+                  if (card.isComingSoon) {
+                    showComingSoon(card.title);
+                  } else {
+                    onNavigate(card.navigateTo);
+                  }
+                }}
               />
             ))}
+            {ComingSoonPopup}
           </div>
         </div>
       )}

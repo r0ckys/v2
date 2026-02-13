@@ -15,8 +15,25 @@ import {
   Download,
   RefreshCw,
   Check,
+  Loader2,
 } from 'lucide-react';
 import { Tenant } from '../types';
+import { toast } from 'react-hot-toast';
+import { getAuthHeader } from '../services/authService';
+
+// API URL helper
+const getApiUrl = (): string => {
+  if (typeof window === 'undefined') return 'https://allinbangla.com/api';
+  const hostname = window.location.hostname;
+  if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.endsWith('.localhost')) {
+    return 'http://localhost:5001/api';
+  }
+  const parts = hostname.split('.');
+  const mainDomain = parts.length > 2 ? parts.slice(-2).join('.') : hostname;
+  return `${window.location.protocol}//${mainDomain}/api`;
+};
+
+const API_URL = getApiUrl();
 
 // Figma-based inline styles
 const figmaStyles = {
@@ -441,9 +458,100 @@ const STATUS_STYLES: Record<string, { bg: string; text: string; dot: string }> =
 const AdminBilling: React.FC<AdminBillingProps> = ({ tenant, onUpgrade }) => {
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
   const [platforms, setPlatforms] = useState({ android: false, ios: false });
-  const [priority, setPriority] = useState<string>('');
+  const [priority, setPriority] = useState<string>('Low');
   const [appTitle, setAppTitle] = useState('');
   const [appDescription, setAppDescription] = useState('');
+  const [isSubmittingAppRequest, setIsSubmittingAppRequest] = useState(false);
+  
+  // Ads carousel state
+  const [ads, setAds] = useState<Array<{ id: string; imageUrl: string; linkUrl?: string; title?: string }>>([]);
+  const [currentAdIndex, setCurrentAdIndex] = useState(0);
+
+  // Fetch billing page ads
+  useEffect(() => {
+    const fetchAds = async () => {
+      try {
+        const response = await fetch(`${API_URL}/tenant-data/global/billing_ads`);
+        const data = await response.json();
+        if (data.data && Array.isArray(data.data)) {
+          setAds(data.data.filter((ad: any) => ad.active !== false));
+        }
+      } catch (error) {
+        console.error('Error fetching ads:', error);
+      }
+    };
+    fetchAds();
+  }, []);
+
+  // Auto-rotate ads
+  useEffect(() => {
+    if (ads.length <= 1) return;
+    const interval = setInterval(() => {
+      setCurrentAdIndex(prev => (prev + 1) % ads.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [ads.length]);
+
+  // Handle app request submission
+  const handleAppRequestSubmit = async () => {
+    // Validation
+    if (!appTitle.trim()) {
+      toast.error('Please enter an app title');
+      return;
+    }
+    if (!appDescription.trim()) {
+      toast.error('Please enter a description');
+      return;
+    }
+    if (!platforms.android && !platforms.ios) {
+      toast.error('Please select at least one platform');
+      return;
+    }
+    if (!priority) {
+      toast.error('Please select a priority');
+      return;
+    }
+    if (!tenant?.id) {
+      toast.error('Tenant information not available');
+      return;
+    }
+
+    setIsSubmittingAppRequest(true);
+    try {
+      const authHeader = getAuthHeader();
+      const response = await fetch(`${API_URL}/tenants/${tenant.id}/app-requests`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': (authHeader as Record<string, string>)['Authorization'] || ''
+        },
+        body: JSON.stringify({
+          appTitle: appTitle.trim(),
+          description: appDescription.trim(),
+          platforms,
+          priority
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to submit request');
+      }
+
+      toast.success('App request submitted successfully!');
+      // Reset form
+      setAppTitle('');
+      setAppDescription('');
+      setPlatforms({ android: false, ios: false });
+      setPriority('Low');
+    } catch (error) {
+      console.error('Error submitting app request:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to submit request');
+    } finally {
+      setIsSubmittingAppRequest(false);
+    }
+  };
 
   // Calculate price based on billing cycle
   const getPrice = (monthlyPrice: number) => {
@@ -557,8 +665,8 @@ const AdminBilling: React.FC<AdminBillingProps> = ({ tenant, onUpgrade }) => {
                         : { ...figmaStyles.subscribeButtonFilled, backgroundColor: plan.buttonColor }
                       ),
                     }}
-                    onClick={onUpgrade}
-                  >
+                    onClick={() => window.open('https://systemnextit.com', '_blank')}
+                    >
                     SUBSCRIBE NOW
                   </button>
                 </div>
@@ -569,14 +677,66 @@ const AdminBilling: React.FC<AdminBillingProps> = ({ tenant, onUpgrade }) => {
 
         {/* Ads Section */}
         <div style={figmaStyles.adsSection}>
-          <span style={figmaStyles.adsText}>Ads Section</span>
-          <div style={figmaStyles.adsDots}>
-            <div style={{ ...figmaStyles.dot, ...figmaStyles.dotActive }} />
-            <div style={{ ...figmaStyles.dot, ...figmaStyles.dotInactive }} />
-            <div style={{ ...figmaStyles.dot, ...figmaStyles.dotInactive }} />
-            <div style={{ ...figmaStyles.dot, ...figmaStyles.dotInactive }} />
-            <div style={{ ...figmaStyles.dot, ...figmaStyles.dotInactive }} />
-          </div>
+          {ads.length > 0 ? (
+            <>
+              {ads[currentAdIndex]?.linkUrl ? (
+                <a 
+                  href={ads[currentAdIndex].linkUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  style={{ width: '100%', height: '100%', display: 'block' }}
+                >
+                  <img 
+                    src={ads[currentAdIndex].imageUrl} 
+                    alt={ads[currentAdIndex].title || 'Advertisement'}
+                    style={{ 
+                      width: '100%', 
+                      height: '100%', 
+                      objectFit: 'cover',
+                      borderRadius: '8px'
+                    }}
+                  />
+                </a>
+              ) : (
+                <img 
+                  src={ads[currentAdIndex].imageUrl} 
+                  alt={ads[currentAdIndex].title || 'Advertisement'}
+                  style={{ 
+                    width: '100%', 
+                    height: '100%', 
+                    objectFit: 'cover',
+                    borderRadius: '8px'
+                  }}
+                />
+              )}
+              {ads.length > 1 && (
+                <div style={figmaStyles.adsDots}>
+                  {ads.map((_, index) => (
+                    <div 
+                      key={index}
+                      onClick={() => setCurrentAdIndex(index)}
+                      style={{ 
+                        ...figmaStyles.dot, 
+                        ...(index === currentAdIndex ? figmaStyles.dotActive : figmaStyles.dotInactive),
+                        cursor: 'pointer'
+                      }} 
+                    />
+                  ))}
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              <span style={figmaStyles.adsText}>Ads Section</span>
+              <div style={figmaStyles.adsDots}>
+                <div style={{ ...figmaStyles.dot, ...figmaStyles.dotActive }} />
+                <div style={{ ...figmaStyles.dot, ...figmaStyles.dotInactive }} />
+                <div style={{ ...figmaStyles.dot, ...figmaStyles.dotInactive }} />
+                <div style={{ ...figmaStyles.dot, ...figmaStyles.dotInactive }} />
+                <div style={{ ...figmaStyles.dot, ...figmaStyles.dotInactive }} />
+              </div>
+            </>
+          )}
         </div>
 
         {/* Request a New App */}
@@ -667,8 +827,20 @@ const AdminBilling: React.FC<AdminBillingProps> = ({ tenant, onUpgrade }) => {
             </div>
 
             {/* Request Button */}
-            <button style={figmaStyles.requestButton}>
-              Request App
+            <button 
+              style={{
+                ...figmaStyles.requestButton,
+                opacity: isSubmittingAppRequest ? 0.7 : 1,
+                cursor: isSubmittingAppRequest ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+              onClick={handleAppRequestSubmit}
+              disabled={isSubmittingAppRequest}
+            >
+              {isSubmittingAppRequest && <Loader2 size={18} className="animate-spin" />}
+              {isSubmittingAppRequest ? 'Submitting...' : 'Request App'}
             </button>
           </div>
         </div>

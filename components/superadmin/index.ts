@@ -16,6 +16,8 @@ export { default as SupportTicketsTab } from './SupportTicketsTab';
 export { default as MerchantSuccessTab } from './MerchantSuccessTab';
 export { default as TutorialsTab } from './TutorialsTab';
 export { default as ApkBuildsTab } from './ApkBuildsTab';
+export { default as AppRequestsTab } from './AppRequestsTab';
+export { default as AdsManagementTab } from './AdsManagementTab';
 
 // Export types
 export * from './types';

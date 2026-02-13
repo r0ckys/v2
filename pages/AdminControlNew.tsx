@@ -536,6 +536,19 @@ const AdminControl: React.FC<AdminControlProps> = ({
       color: 'white',
       letterSpacing: '-0.3px',
     },
+    addUserButton: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: '4px',
+      background: 'linear-gradient(to right, #10b981, #059669)',
+      borderRadius: '8px',
+      padding: '6px 16px 6px 12px',
+      height: '48px',
+      width: '142px',
+      border: 'none',
+      cursor: 'pointer',
+    },
     tableHeader: {
       display: 'grid',
       gridTemplateColumns: '40px 50px 70px 1fr 1fr 100px 120px 130px 90px 70px',
@@ -744,6 +757,17 @@ const AdminControl: React.FC<AdminControlProps> = ({
               >
                 <Plus size={24} color="white" />
                 <span style={figmaStyles.addRoleText}>Add Role</span>
+              </button>
+            )}
+            
+            {/* Add User Button */}
+            {canModifyUsers && (
+              <button
+                onClick={() => openUserModal()}
+                style={figmaStyles.addUserButton}
+              >
+                <UserPlus size={20} color="white" />
+                <span style={figmaStyles.addRoleText}>Add User</span>
               </button>
             )}
           </div>

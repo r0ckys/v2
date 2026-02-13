@@ -45,6 +45,8 @@ const SystemHealthTab = React.lazy(() => import('../components/superadmin/System
 const BulkOperationsTab = React.lazy(() => import('../components/superadmin/BulkOperationsTab'));
 const TutorialsTab = React.lazy(() => import('../components/superadmin/TutorialsTab'));
 const ApkBuildsTab = React.lazy(() => import('../components/superadmin/ApkBuildsTab'));
+const AppRequestsTab = React.lazy(() => import('../components/superadmin/AppRequestsTab'));
+const AdsManagementTab = React.lazy(() => import('../components/superadmin/AdsManagementTab'));
 
 // Lazy load AdminTenantManagement
 const AdminTenantManagement = React.lazy(() => import('./AdminTenantManagement'));
@@ -805,9 +807,9 @@ const SuperAdminDashboard: React.FC = () => {
         // First verify DNS is configured
         toast.loading('Verifying DNS configuration...', { id: 'domain-setup' });
         
-        const dnsResult = await DataService.verifyDomainDNS(tenantId, domain);
+        const dnsResult = await DataService.verifyDomainDNS(tenantId, domain) as unknown as { dnsVerified: boolean };
         
-        if (!dnsResult.dnsVerified) {
+        if (!dnsResult?.dnsVerified) {
           toast.error(
             `DNS not configured correctly. Please point ${domain} to our server IP first.`,
             { id: 'domain-setup', duration: 5000 }
@@ -818,7 +820,7 @@ const SuperAdminDashboard: React.FC = () => {
         // DNS verified, now setup the domain with Nginx and SSL
         toast.loading('Setting up domain with SSL certificate...', { id: 'domain-setup' });
         
-        const setupResult = await DataService.setupCustomDomain(tenantId, domain);
+        const setupResult = await DataService.setupCustomDomain(tenantId, domain) as unknown as { success: boolean; message?: string };
         
         if (setupResult.success) {
           // Update local state
@@ -1202,8 +1204,8 @@ const SuperAdminDashboard: React.FC = () => {
         return (
           <React.Suspense fallback={<TabLoadingFallback />}>
             <ChatConfigTab
-              config={chatConfig}
-              onSave={handleSaveChatConfig}
+              chatConfig={chatConfig}
+              onSaveChatConfig={handleSaveChatConfig}
               onApplyToTenant={handleApplyChatToTenant}
               onApplyToAll={handleApplyChatToAll}
               tenants={tenants}
@@ -1391,6 +1393,20 @@ const SuperAdminDashboard: React.FC = () => {
                 }
               }}
             />
+          </React.Suspense>
+        );
+
+      case 'app-requests':
+        return (
+          <React.Suspense fallback={<TabLoadingFallback />}>
+            <AppRequestsTab />
+          </React.Suspense>
+        );
+
+      case 'ads-management':
+        return (
+          <React.Suspense fallback={<TabLoadingFallback />}>
+            <AdsManagementTab />
           </React.Suspense>
         );
 

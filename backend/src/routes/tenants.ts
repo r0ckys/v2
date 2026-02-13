@@ -6,11 +6,13 @@ import {
   listTenants, 
   getTenantById, 
   getTenantBySubdomain,
+  getTenantByCustomDomain,
   updateTenantStatus,
   updateTenant,
   getTenantUsers,
   getTenantStats
 } from '../services/tenantsService';
+import { getTenantData, setTenantData } from '../services/tenantDataService';
 import type { CreateTenantPayload } from '../types/tenant';
 
 const createTenantSchema = z.object({
@@ -170,21 +172,16 @@ tenantsRouter.get('/by-domain/:domain', async (req, res) => {
     }
     
     // Find tenant with this custom domain
-    const { getDatabase } = require('../db/mongo');
-    const db = await getDatabase();
-    const tenant = await db.collection('tenants').findOne({ 
-      customDomain: domain,
-      status: { $ne: 'archived' }
-    });
+    const tenant = await getTenantByCustomDomain(domain);
     
-    if (!tenant) {
+    if (!tenant || tenant.status === 'archived') {
       return res.status(404).json({ error: 'No tenant found for this domain' });
     }
     
     res.json({ 
       tenantId: tenant.subdomain,
       subdomain: tenant.subdomain,
-      name: tenant.name || tenant.storeName
+      name: tenant.name
     });
   } catch (error) {
     console.error('Domain lookup error:', error);
@@ -486,3 +483,150 @@ tenantsRouter.delete('/:id/custom-domain',
     }
   }
 );
+
+// ==================== APP REQUEST ROUTES ====================
+
+// Schema for app request
+const appRequestSchema = z.object({
+  appTitle: z.string().min(2, 'App title must be at least 2 characters'),
+  description: z.string().min(5, 'Description must be at least 5 characters'),
+  platforms: z.object({
+    android: z.boolean(),
+    ios: z.boolean()
+  }),
+  priority: z.enum(['Low', 'Standard', 'High (ASAP)'])
+});
+
+// Interface for app request
+interface AppRequest {
+  id: string;
+  tenantId: string;
+  tenantName?: string;
+  appTitle: string;
+  description: string;
+  platforms: { android: boolean; ios: boolean };
+  priority: 'Low' | 'Standard' | 'High (ASAP)';
+  status: 'pending' | 'in-progress' | 'completed' | 'rejected';
+  createdAt: string;
+  updatedAt: string;
+}
+
+// POST /api/tenants/:id/app-requests - Create new app request
+tenantsRouter.post('/:id/app-requests', async (req, res, next) => {
+  try {
+    const tenantId = req.params.id;
+    const validation = appRequestSchema.safeParse(req.body);
+    
+    if (!validation.success) {
+      return res.status(400).json({ 
+        error: 'Validation failed', 
+        details: validation.error.errors 
+      });
+    }
+    
+    const { appTitle, description, platforms, priority } = validation.data;
+    
+    // Get tenant info
+    const tenant = await getTenantById(tenantId);
+    if (!tenant) {
+      return res.status(404).json({ error: 'Tenant not found' });
+    }
+    
+    // Get existing app requests for this tenant
+    const existingRequests = await getTenantData<AppRequest[]>(tenantId, 'app_requests') || [];
+    
+    // Create new request
+    const newRequest: AppRequest = {
+      id: `apr_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      tenantId,
+      tenantName: tenant.name,
+      appTitle,
+      description,
+      platforms,
+      priority,
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    
+    // Save to tenant's data
+    await setTenantData(tenantId, 'app_requests', [...existingRequests, newRequest]);
+    
+    // Also save to global app requests for super admin view
+    const globalRequests = await getTenantData<AppRequest[]>('global', 'all_app_requests') || [];
+    await setTenantData('global', 'all_app_requests', [...globalRequests, newRequest]);
+    
+    console.log(`[AppRequest] New request created for tenant ${tenantId}:`, newRequest.id);
+    
+    res.status(201).json({ 
+      success: true, 
+      message: 'App request submitted successfully',
+      request: newRequest 
+    });
+  } catch (error) {
+    console.error('Error creating app request:', error);
+    next(error);
+  }
+});
+
+// GET /api/tenants/:id/app-requests - Get app requests for a tenant
+tenantsRouter.get('/:id/app-requests', async (req, res, next) => {
+  try {
+    const tenantId = req.params.id;
+    const requests = await getTenantData<AppRequest[]>(tenantId, 'app_requests') || [];
+    res.json({ success: true, requests });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// GET /api/tenants/app-requests/all - Get ALL app requests (for super admin)
+tenantsRouter.get('/app-requests/all', async (req, res, next) => {
+  try {
+    const allRequests = await getTenantData<AppRequest[]>('global', 'all_app_requests') || [];
+    // Sort by createdAt descending (newest first)
+    allRequests.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    res.json({ success: true, requests: allRequests });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// PATCH /api/tenants/app-requests/:requestId/status - Update app request status (super admin)
+tenantsRouter.patch('/app-requests/:requestId/status', async (req, res, next) => {
+  try {
+    const { requestId } = req.params;
+    const { status } = req.body;
+    
+    if (!['pending', 'in-progress', 'completed', 'rejected'].includes(status)) {
+      return res.status(400).json({ error: 'Invalid status' });
+    }
+    
+    // Update in global list
+    const allRequests = await getTenantData<AppRequest[]>('global', 'all_app_requests') || [];
+    const requestIndex = allRequests.findIndex(r => r.id === requestId);
+    
+    if (requestIndex === -1) {
+      return res.status(404).json({ error: 'Request not found' });
+    }
+    
+    const request = allRequests[requestIndex];
+    request.status = status;
+    request.updatedAt = new Date().toISOString();
+    allRequests[requestIndex] = request;
+    
+    await setTenantData('global', 'all_app_requests', allRequests);
+    
+    // Also update in tenant's data
+    const tenantRequests = await getTenantData<AppRequest[]>(request.tenantId, 'app_requests') || [];
+    const tenantRequestIndex = tenantRequests.findIndex(r => r.id === requestId);
+    if (tenantRequestIndex !== -1) {
+      tenantRequests[tenantRequestIndex] = request;
+      await setTenantData(request.tenantId, 'app_requests', tenantRequests);
+    }
+    
+    res.json({ success: true, request });
+  } catch (error) {
+    next(error);
+  }
+});

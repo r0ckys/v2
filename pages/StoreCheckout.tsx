@@ -98,6 +98,7 @@ const StoreCheckout = ({
   });
   const [selectedDeliveryType, setSelectedDeliveryType] = useState<'Regular' | 'Express' | 'Free'>('Regular');
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('cod-default');
+  const [paymentInfoSaved, setPaymentInfoSaved] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [touchedFields, setTouchedFields] = useState<Record<string, boolean>>({});
   const [promoCode, setPromoCode] = useState('');
@@ -236,6 +237,16 @@ const StoreCheckout = ({
       return;
     }
 
+    // Find the selected payment method details
+    const selectedPayment = paymentMethods?.find(m => m.id === selectedPaymentMethod);
+    const isManualPayment = selectedPayment?.id.startsWith('self-mfs-');
+    
+    // Validate manual payment info is saved
+    if (isManualPayment && (!paymentInfoSaved || !formData.cardName || !formData.cardNumber)) {
+      setAlertState({ type: 'error', message: 'Please fill in your payment number and Transaction ID, then click "Save Payment Info".' });
+      return;
+    }
+    
     onConfirmOrder({
       ...formData,
       amount: grandTotal,
@@ -243,7 +254,12 @@ const StoreCheckout = ({
       quantity,
       variant,
       deliveryType: selectedDeliveryType,
-      deliveryCharge: computedDeliveryCharge
+      deliveryCharge: computedDeliveryCharge,
+      // Payment method info
+      paymentMethod: selectedPayment?.name || 'Cash On Delivery',
+      paymentMethodId: selectedPaymentMethod,
+      transactionId: isManualPayment ? formData.cardNumber : undefined,
+      customerPaymentPhone: isManualPayment ? formData.cardName : undefined
     });
     setAlertState({ type: 'success', message: 'Order details captured successfully.' });
     setShowConfirmationModal(true);
@@ -254,7 +270,6 @@ const StoreCheckout = ({
       <Suspense fallback={null}>
         <StoreHeader
           onHomeClick={onBack}
-          onImageSearchClick={onImageSearchClick}
           onTrackOrder={() => setIsTrackOrderOpen(true)}
           user={user}
           onLoginClick={onLoginClick}
@@ -540,18 +555,22 @@ const StoreCheckout = ({
                     </div>
                     
                     {/* Payment Method Cards */}
+                    {(() => { console.log('[StoreCheckout] paymentMethods:', paymentMethods); return null; })()}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                       {(paymentMethods && paymentMethods.length > 0 ? paymentMethods.filter(m => m.isEnabled) : [
-                        { id: 'cod-default', provider: 'cod', name: 'Cash On Delivery', isEnabled: true }
+                        { id: 'cod-default', provider: 'cod', name: 'Cash On Delivery', isEnabled: true, logo: undefined }
                       ]).map((method) => {
                         const isSelected = selectedPaymentMethod === method.id;
                         const logoMap: Record<string, string> = {
                           bkash: 'https://www.logo.wine/a/logo/BKash/BKash-Icon-Logo.wine.svg',
-                          nagad: 'https://nagad.com.bd/wp-content/uploads/2022/02/nagad-logo.png',
-                          rocket: 'https://rocketsalesagent.com/assets/img/logo/logo.png',
+                          nagad: 'https://hdnfltv.com/image/nitimages/pasted_1770952876471.webp',
+                          rocket: 'https://hdnfltv.com/image/nitimages/pasted_1770952937066.webp',
+                          upay: 'https://hdnfltv.com/image/nitimages/pasted_1770952990491.webp',
+                          tap: 'https://hdnfltv.com/image/nitimages/pasted_1770953059804.webp',
                           sslcommerz: 'https://sslcommerz.com/wp-content/uploads/2021/11/sslcommerz.png'
                         };
-                        const logo = method.logo || logoMap[method.provider] || '';
+                        // Use provider logo for cards, not QR code
+                        const logo = logoMap[method.provider] || '';
                         
                         return (
                           <button
@@ -583,36 +602,80 @@ const StoreCheckout = ({
                     {/* Selected Payment Method Details */}
                     {(() => {
                       const selected = paymentMethods?.find(m => m.id === selectedPaymentMethod);
-                      if (selected && selected.provider !== 'cod' && selected.accountNumber) {
+                      const qrCodeUrl = (selected as any)?.qrCodeUrl || selected?.logo;
+                      // Show details for manual payment methods (self-mfs) or any method with account number
+                      if (selected && selected.provider !== 'cod' && (selected.accountNumber || selected.paymentInstruction || qrCodeUrl)) {
                         return (
                           <div className="mt-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
-                            <div className="flex items-center gap-3 mb-3">
-                              {selected.logo ? (
-                                <img src={selected.logo} alt={selected.name} className="h-6" />
-                              ) : null}
-                              <span className="font-bold text-gray-800 flex items-center gap-2">
-                                {selected.accountNumber}
-                                <button 
-                                  type="button" 
-                                  onClick={() => { navigator.clipboard.writeText(selected.accountNumber || ''); }}
-                                  className="p-1 hover:bg-gray-200 rounded"
-                                >
-                                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-500"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
-                                </button>
-                              </span>
+                            {/* QR Code and Account Info Row */}
+                            <div className="flex flex-col md:flex-row gap-4 mb-4">
+                              {/* QR Code if available */}
+                              {qrCodeUrl && (
+                                <div className="flex-shrink-0">
+                                  <img 
+                                    src={qrCodeUrl} 
+                                    alt="Payment QR Code" 
+                                    className="w-32 h-32 object-contain rounded-lg border border-gray-200 bg-white p-1"
+                                  />
+                                </div>
+                              )}
+                              
+                              <div className="flex-1">
+                                {/* Account Number */}
+                                {selected.accountNumber && (
+                                  <div className="flex items-center gap-3 mb-3">
+                                    <span className="font-bold text-gray-800 flex items-center gap-2">
+                                      +88{selected.accountNumber}
+                                      <button 
+                                        type="button" 
+                                        onClick={() => { 
+                                          navigator.clipboard.writeText(selected.accountNumber || ''); 
+                                          // Show copy feedback
+                                          const btn = document.activeElement as HTMLButtonElement;
+                                          btn.classList.add('bg-green-100');
+                                          setTimeout(() => btn.classList.remove('bg-green-100'), 500);
+                                        }}
+                                        className="p-1 hover:bg-gray-200 rounded transition-colors"
+                                        title="Copy number"
+                                      >
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-500"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                                      </button>
+                                    </span>
+                                  </div>
+                                )}
+                                
+                                {/* Payment Type Badge */}
+                                {selected.paymentType && (
+                                  <span className="inline-block px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded mb-2">
+                                    {selected.paymentType === 'merchant' ? 'Merchant Payment' : 
+                                     selected.paymentType === 'send_money' ? 'Send Money' : 
+                                     selected.paymentType === 'personal' ? 'Personal' : selected.paymentType}
+                                  </span>
+                                )}
+                              </div>
                             </div>
+                            
+                            {/* Payment Instruction (supports HTML from RichTextEditor) */}
                             {selected.paymentInstruction && (
-                              <p className="text-sm text-gray-600 mb-3">{selected.paymentInstruction}</p>
+                              <div 
+                                className="text-sm text-gray-700 mb-4 prose prose-sm max-w-none [&_img]:max-w-full [&_img]:rounded-lg [&_p]:mb-2 [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 bg-white p-3 rounded-lg border border-gray-100"
+                                dangerouslySetInnerHTML={{ __html: selected.paymentInstruction }}
+                              />
                             )}
+                            
+                            {/* Payment Input Fields */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                               <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">{selected.name} Number:</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Your {selected.name} Number:</label>
                                 <input
                                   type="text"
                                   placeholder={`017XXXXXXXX*`}
                                   className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none"
                                   value={formData.cardName || ''}
-                                  onChange={(e) => setFormData(prev => ({ ...prev, cardName: e.target.value }))}
+                                  onChange={(e) => {
+                                    setFormData(prev => ({ ...prev, cardName: e.target.value }));
+                                    setPaymentInfoSaved(false); // Reset saved state when editing
+                                  }}
                                 />
                               </div>
                               <div>
@@ -622,10 +685,33 @@ const StoreCheckout = ({
                                   placeholder="Transaction Id*"
                                   className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none"
                                   value={formData.cardNumber || ''}
-                                  onChange={(e) => setFormData(prev => ({ ...prev, cardNumber: e.target.value }))}
+                                  onChange={(e) => {
+                                    setFormData(prev => ({ ...prev, cardNumber: e.target.value }));
+                                    setPaymentInfoSaved(false); // Reset saved state when editing
+                                  }}
                                 />
                               </div>
                             </div>
+                            
+                            {/* Save Payment Info Button - Only show when both fields are filled */}
+                            {formData.cardName && formData.cardNumber && (
+                              <div className="mt-4">
+                                {paymentInfoSaved ? (
+                                  <div className="flex items-center gap-2 text-green-600 font-medium">
+                                    <CheckCircle2 size={20} />
+                                    <span>Payment information saved!</span>
+                                  </div>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => setPaymentInfoSaved(true)}
+                                    className="w-full py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold rounded-lg hover:from-amber-600 hover:to-orange-600 transition-all shadow-md"
+                                  >
+                                    Save Payment Info
+                                  </button>
+                                )}
+                              </div>
+                            )}
                           </div>
                         );
                       }

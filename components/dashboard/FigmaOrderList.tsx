@@ -1378,6 +1378,36 @@ const FigmaOrderList: React.FC<FigmaOrderListProps> = ({
                 </div>
               </div>
 
+              {/* Payment Information */}
+              {((detailsOrder as any).paymentMethod || (detailsOrder as any).transactionId || (detailsOrder as any).customerPaymentPhone) && (
+                <div style={{ backgroundColor: '#fffbeb', borderRadius: '12px', padding: '20px', marginTop: '16px', border: '1px solid #fde68a' }}>
+                  <h3 style={{ fontFamily: '"Lato", sans-serif', fontWeight: 700, fontSize: '16px', color: '#374151', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ width: '4px', height: '20px', backgroundColor: '#f59e0b', borderRadius: '2px' }}></div>
+                    Payment Information
+                  </h3>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
+                    {(detailsOrder as any).paymentMethod && (
+                      <div>
+                        <p style={{ fontFamily: '"Lato", sans-serif', fontSize: '12px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', marginBottom: '4px' }}>Payment Method</p>
+                        <p style={{ fontFamily: '"Lato", sans-serif', fontSize: '15px', color: '#111827', fontWeight: 500 }}>{(detailsOrder as any).paymentMethod}</p>
+                      </div>
+                    )}
+                    {(detailsOrder as any).customerPaymentPhone && (
+                      <div>
+                        <p style={{ fontFamily: '"Lato", sans-serif', fontSize: '12px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', marginBottom: '4px' }}>Payment Number</p>
+                        <p style={{ fontFamily: '"Lato", sans-serif', fontSize: '15px', color: '#111827', fontWeight: 500 }}>{(detailsOrder as any).customerPaymentPhone}</p>
+                      </div>
+                    )}
+                    {(detailsOrder as any).transactionId && (
+                      <div style={{ gridColumn: 'span 2' }}>
+                        <p style={{ fontFamily: '"Lato", sans-serif', fontSize: '12px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', marginBottom: '4px' }}>Transaction ID</p>
+                        <p style={{ fontFamily: '"Lato", sans-serif', fontSize: '15px', color: '#059669', fontWeight: 600, backgroundColor: '#d1fae5', padding: '8px 12px', borderRadius: '8px', display: 'inline-block' }}>{(detailsOrder as any).transactionId}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Courier Info if available */}
               {detailsOrder.courierProvider && (
                 <div style={{ backgroundColor: '#f9fafb', borderRadius: '12px', padding: '20px', marginTop: '16px' }}>

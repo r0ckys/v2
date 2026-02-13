@@ -182,23 +182,22 @@ const AdminShopDomain: React.FC<AdminShopDomainProps> = ({ onBack, tenantId, cur
 
     setIsSaving(true);
     try {
-      const response = await fetch('/api/tenant/domain', {
+      const response = await fetch(`/api/tenants/${tenantId}/setup-domain`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-Tenant-Id': tenantId,
         },
-        body: JSON.stringify({ domain: domain.trim() }),
+        body: JSON.stringify({ customDomain: domain.trim() }),
       });
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || 'Failed to save domain');
+        throw new Error(error.message || 'Cannot save domain in local development. Please try again in production.');
       }
 
       toast.success('Domain saved successfully! Please configure your DNS settings.');
     } catch (error: any) {
-      toast.error(error.message || 'Failed to save domain');
+      toast.error(error.message || 'HI, Cannot save domain in local development. Please try again in production.');
     } finally {
       setIsSaving(false);
     }
@@ -232,7 +231,7 @@ const AdminShopDomain: React.FC<AdminShopDomainProps> = ({ onBack, tenantId, cur
             <p style={{ margin: '0 0 8px 0' }}>The Steps in the Below:</p>
             
             <p style={{ margin: '0 0 4px 0' }}>
-              1. Point <span style={styles.boldText}>A Record for @:128.199.220.202</span>
+              1. Point <span style={styles.boldText}>A Record for @: 159.198.47.126</span>
             </p>
             <p style={{ margin: '0 0 12px 0' }}>
               2. Point <span style={styles.boldText}>CNAME Record for www:your_domain.com</span>

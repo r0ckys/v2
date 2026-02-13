@@ -44,6 +44,14 @@ export const getTenantBySubdomain = async (subdomain: string) => {
   return normalizeTenantDocument(tenant);
 };
 
+export const getTenantByCustomDomain = async (customDomain: string) => {
+  const db = await getDatabase();
+  const tenant = await db.collection<Tenant>(collectionName).findOne({ 
+    customDomain: customDomain.toLowerCase().trim() 
+  });
+  return normalizeTenantDocument(tenant);
+};
+
 export const createTenant = async (payload: CreateTenantPayload): Promise<Tenant> => {
   const now = new Date().toISOString();
   const subdomain = sanitizeSubdomain(payload.subdomain);
@@ -281,6 +289,7 @@ export const getTenantStats = async (tenantId: string) => {
 export const ensureTenantIndexes = async () => {
   const db = await getDatabase();
   await db.collection<Tenant>(collectionName).createIndex({ subdomain: 1 }, { unique: true });
+  await db.collection<Tenant>(collectionName).createIndex({ customDomain: 1 }, { sparse: true });
   await db.collection<Tenant>(collectionName).createIndex({ adminEmail: 1 });
   await db.collection<Tenant>(collectionName).createIndex({ status: 1 });
   await db.collection('tenant_data').createIndex({ tenantId: 1, key: 1 }, { unique: true });

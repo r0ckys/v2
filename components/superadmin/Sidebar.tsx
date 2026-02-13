@@ -2,7 +2,7 @@ import React from 'react';
 import { 
   LayoutDashboard, Users, Building2, ShoppingCart, CreditCard,
   BarChart3, Server, Database, Shield, Settings, ChevronDown, Crown,
-  Bell, Palette, MessageCircle, Globe, Megaphone, LifeBuoy, Target, Activity, ListChecks, Video, Smartphone
+  Bell, Palette, MessageCircle, Globe, Megaphone, LifeBuoy, Target, Activity, ListChecks, Video, Smartphone, AppWindow, Image
 } from 'lucide-react';
 import NavItem from './NavItem';
 import { TabType } from './types';
@@ -122,6 +122,13 @@ const Sidebar: React.FC<SidebarProps> = ({
           onClick={() => setActiveTab('notifications')} 
           collapsed={!sidebarOpen} 
         />
+        <NavItem 
+          icon={Image} 
+          label="Ads Management" 
+          active={activeTab === 'ads-management'} 
+          onClick={() => setActiveTab('ads-management')} 
+          collapsed={!sidebarOpen} 
+        />
 
         <div className="pt-4 pb-2">
           {sidebarOpen && <p className="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Communication & CRM</p>}
@@ -165,6 +172,13 @@ const Sidebar: React.FC<SidebarProps> = ({
           label="APK Builds" 
           active={activeTab === 'apk-builds'} 
           onClick={() => setActiveTab('apk-builds')} 
+          collapsed={!sidebarOpen} 
+        />
+        <NavItem 
+          icon={AppWindow} 
+          label="App Requests" 
+          active={activeTab === 'app-requests'} 
+          onClick={() => setActiveTab('app-requests')} 
           collapsed={!sidebarOpen} 
         />
         

@@ -6,6 +6,8 @@ interface RichTextEditorProps {
   onChange: (value: string) => void;
   placeholder?: string;
   minHeight?: string;
+  label?: string;
+  hideLabel?: boolean;
 }
 
 type FormatType = 'bold' | 'italic' | 'underline' | 'link' | 'image' | 'h2' | 'ul' | 'ol' | 'code';
@@ -14,7 +16,9 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
   value,
   onChange,
   placeholder = 'Enter product description...',
-  minHeight = 'min-h-[300px]'
+  minHeight = 'min-h-[300px]',
+  label,
+  hideLabel = false
 }) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -198,7 +202,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
 
   return (
     <div className="space-y-2">
-      <label className="text-sm font-medium text-gray-700">Product Description</label>
+      {!hideLabel && <label className="text-sm font-medium text-gray-700">{label || 'Product Description'}</label>}
       
       {/* Toolbar */}
       <div className="flex flex-wrap gap-1 p-3 bg-gray-50 border border-gray-300 rounded-t-lg">

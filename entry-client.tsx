@@ -6,11 +6,30 @@ import { createRoot } from 'react-dom/client';
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
 
 // Get tenant scope from subdomain or cached value
+const KNOWN_BASE_DOMAINS = ['allinbangla.com', 'cartnget.shop', 'localhost'];
+
 const getTenantScope = (): string => {
   if (typeof window === 'undefined') return 'public';
   const hostname = window.location.hostname;
   // Skip for admin/superadmin subdomains
   if (hostname.startsWith('admin.') || hostname.startsWith('superadmin.')) return '';
+  
+  // Check if this is a custom domain (not a subdomain of known base domains)
+  const isKnownBaseDomain = KNOWN_BASE_DOMAINS.some(base => 
+    hostname === base || hostname.endsWith('.' + base) || hostname.endsWith('.' + base.split(':')[0])
+  );
+  
+  // If not a known base domain, check if we have cached custom domain resolution
+  if (!isKnownBaseDomain && !hostname.includes('localhost')) {
+    try {
+      const cachedCustomDomain = localStorage.getItem(`custom_domain_${hostname}`);
+      if (cachedCustomDomain) return cachedCustomDomain;
+      // Mark for async resolution - will be handled by App.tsx
+      (window as any).__CUSTOM_DOMAIN__ = hostname;
+      return ''; // Will be resolved by App.tsx via API
+    } catch {}
+  }
+  
   // Extract subdomain
   const parts = hostname.split('.');
   

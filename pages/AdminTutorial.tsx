@@ -338,7 +338,7 @@ const AdminTutorial: React.FC<AdminTutorialProps> = ({ tutorials = DEFAULT_TUTOR
             </p>
           </div>
           <a
-            href="#"
+            href="https://wa.me/8801410050031"
             className="px-4 sm:px-6 py-2.5 sm:py-3 bg-white text-violet-600 rounded-lg sm:rounded-xl font-semibold hover:bg-gray-50 transition-all flex items-center gap-2 whitespace-nowrap text-sm sm:text-base w-full sm:w-auto justify-center"
           >
             Contact Support

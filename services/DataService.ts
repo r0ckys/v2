@@ -410,6 +410,12 @@ const deduplicateRequest = async <T>(
 };
 
 class DataServiceImpl {
+  setupCustomDomain(tenantId: string, domain: string) {
+    throw new Error('Method not implemented.');
+  }
+  verifyDomainDNS(tenantId: string, domain: string) {
+    throw new Error('Method not implemented.');
+  }
   private saveQueue = new Map<string, SaveQueueEntry>();
   private hasLoggedSaveBlock = false;
 
@@ -809,6 +815,7 @@ class DataServiceImpl {
     orders: Order[];
     logo: string | null;
     deliveryConfig: DeliveryConfig[];
+    paymentMethods: PaymentMethod[];
     chatMessages: ChatMessage[];
     landingPages: LandingPage[];
     categories: Category[];
@@ -824,6 +831,7 @@ class DataServiceImpl {
     const cachedOrders = getCachedData<Order[]>('orders', tenantId);
     const cachedLogo = getCachedData<string | null>('logo', tenantId);
     const cachedDelivery = getCachedData<DeliveryConfig[]>('delivery_config', tenantId);
+    const cachedPaymentMethods = getCachedData<PaymentMethod[]>('payment_methods', tenantId);
     const cachedChat = getCachedData<ChatMessage[]>('chat_messages', tenantId);
     const cachedLanding = getCachedData<LandingPage[]>('landing_pages', tenantId);
     const cachedCategories = getCachedData<Category[]>('categories', tenantId);
@@ -834,6 +842,7 @@ class DataServiceImpl {
 
     const hasCachedSecondary = Boolean(
       (cachedOrders && cachedOrders.length) || cachedLogo || (cachedDelivery && cachedDelivery.length) ||
+      (cachedPaymentMethods && cachedPaymentMethods.length) ||
       (cachedChat && cachedChat.length) || (cachedLanding && cachedLanding.length) ||
       (cachedCategories && cachedCategories.length) || (cachedSubcategories && cachedSubcategories.length) ||
       (cachedChildCategories && cachedChildCategories.length) || (cachedBrands && cachedBrands.length) ||
@@ -847,6 +856,7 @@ class DataServiceImpl {
         orders: cachedOrders || [],
         logo: cachedLogo || null,
         deliveryConfig: cachedDelivery || [],
+        paymentMethods: cachedPaymentMethods || [],
         chatMessages: cachedChat || [],
         landingPages: cachedLanding || [],
         categories: cachedCategories || [],
@@ -940,6 +950,7 @@ class DataServiceImpl {
       setCachedData('orders', data.orders || [], tenantId);
       setCachedData('logo', data.logo || null, tenantId);
       setCachedData('delivery_config', data.delivery_config || [], tenantId);
+      setCachedData('payment_methods', data.payment_methods || [], tenantId);
       setCachedData('chat_messages', data.chat_messages || [], tenantId);
       setCachedData('landing_pages', data.landing_pages || [], tenantId);
       setCachedData('categories', data.categories || [], tenantId);
