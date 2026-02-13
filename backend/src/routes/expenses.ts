@@ -33,12 +33,13 @@ expensesRouter.get('/', async (req, res, next) => {
     }
 
     const total = await col.countDocuments(filter);
-    const items = await col.find(filter)
+    const rawItems = await col.find(filter)
       .sort({ date: -1 })
       .skip((page - 1) * pageSize)
       .limit(pageSize)
       .toArray();
 
+    const items = rawItems.map(({ _id, ...rest }) => ({ id: String(_id), ...rest }));
     res.json({ items, total });
   } catch (e) {
     next(e);

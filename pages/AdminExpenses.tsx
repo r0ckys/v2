@@ -143,8 +143,8 @@ const AdminExpenses: React.FC<AdminExpensesProps> = ({ tenantId }) => {
         }),
         CategoryService.list(),
       ]);
-      setItems(expRes.items as any);
-      setCategories(catRes.items);
+      setItems((expRes.items || []).map((x: any) => ({ ...x, id: x.id || String(x._id) })));
+      setCategories((catRes.items || []).map((c: any) => ({ ...c, id: c.id || String(c._id) })));
     } catch (e: any) {
       setError(e?.message || 'Failed to load expenses');
     } finally {

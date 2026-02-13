@@ -33,12 +33,13 @@ incomesRouter.get('/', async (req, res, next) => {
     }
 
     const total = await col.countDocuments(filter);
-    const items = await col.find(filter)
+    const rawItems = await col.find(filter)
       .sort({ date: -1 })
       .skip((page - 1) * pageSize)
       .limit(pageSize)
       .toArray();
 
+    const items = rawItems.map(({ _id, ...rest }) => ({ id: String(_id), ...rest }));
     res.json({ items, total });
   } catch (e) {
     next(e);
@@ -80,7 +81,8 @@ incomesRouter.get('/categories', async (req, res, next) => {
     const tenantId = getTenantId(req);
     const filter: any = {};
     if (tenantId) filter.tenantId = tenantId;
-    const cats = await col.find(filter).sort({ name: 1 }).toArray();
+    const rawCats = await col.find(filter).sort({ name: 1 }).toArray();
+    const cats = rawCats.map(({ _id, ...rest }) => ({ id: String(_id), ...rest }));
     res.json(cats);
   } catch (e) {
     next(e);
