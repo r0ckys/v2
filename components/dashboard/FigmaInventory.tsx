@@ -141,8 +141,10 @@ const FigmaInventory: React.FC<FigmaInventoryProps> = ({
     const totalUnits = products.reduce((sum, p) => sum + (p.stock || 0), 0);
     const lowStockCount = products.filter(p => (p.stock || 0) < lowStockThreshold).length;
     const outOfStockCount = products.filter(p => (p.stock || 0) === 0).length;
-    const inventoryValue = products.reduce((sum, p) => sum + ((p.price || 0) * (p.stock || 0)), 0);
-    const inventorySaleValue = products.reduce((sum, p) => sum + ((p.originalPrice || p.price || 0) * (p.stock || 0)), 0);
+    // Capital value: Cost Price * Stock (what you paid for inventory)
+    const inventoryValue = products.reduce((sum, p) => sum + ((p.costPrice || 0) * (p.stock || 0)), 0);
+    // Inventory value: Selling Price * Stock (what you can sell inventory for)
+    const inventorySaleValue = products.reduce((sum, p) => sum + ((p.price || 0) * (p.stock || 0)), 0);
 
     return {
       totalProducts,

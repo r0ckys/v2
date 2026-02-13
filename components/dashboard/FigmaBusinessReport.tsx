@@ -287,18 +287,60 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
     }
   }, [tenantId]);
 
-  // Load expenses
+  // Preload all data on mount for faster tab switching
+  useEffect(() => {
+    if (!tenantId) return;
+    
+    const preloadData = async () => {
+      const { start, end } = getDateRangeBoundaries;
+      
+      // Load expenses in background
+      ExpenseService.list({
+        page: 1,
+        pageSize: expensePageSize,
+        from: start.toISOString(),
+        to: end.toISOString(),
+      }).then(res => {
+        setExpenses(res.items as any);
+      }).catch(console.error);
+      
+      // Load categories in background
+      CategoryService.list().then(res => {
+        setExpenseCategories(res.items);
+      }).catch(console.error);
+      
+      // Load incomes in background
+      IncomeService.list({
+        page: 1,
+        pageSize: 10,
+        from: start.toISOString(),
+        to: end.toISOString(),
+      }).then(res => {
+        setIncomes(res.items as any);
+      }).catch(console.error);
+      
+      // Load income categories
+      IncomeService.listCategories().then(res => {
+        setIncomeCategories(res as any);
+      }).catch(console.error);
+    };
+    
+    preloadData();
+  }, [tenantId]); // Only run on mount and tenant change
+
+  // Load expenses when tab is active (for refresh)
   useEffect(() => {
     const loadExpenses = async () => {
       if (activeTab !== 'expense') return;
-      if (!tenantId) return; // Wait for tenant ID
+      if (!tenantId) return;
       
       // Ensure tenant ID is set before API calls
       setExpenseTenantId(tenantId);
       setCategoryTenantId(tenantId);
       
       try {
-        setExpenseLoading(true);
+        // Only show loading if no data yet
+        if (expenses.length === 0) setExpenseLoading(true);
         const { start, end } = getDateRangeBoundaries;
         const [expRes, catRes] = await Promise.all([
           ExpenseService.list({
@@ -354,12 +396,14 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
   const [incomeActionMenuOpen, setIncomeActionMenuOpen] = useState<string | null>(null);
   const incomePageSize = 10;
 
-  // Load incomes
+  // Load incomes when tab is active (for refresh)
   useEffect(() => {
     const loadIncomes = async () => {
       if (activeTab !== 'income') return;
+      if (!tenantId) return;
       try {
-        setIncomeLoading(true);
+        // Only show loading if no data yet
+        if (incomes.length === 0) setIncomeLoading(true);
         const { start, end } = getDateRangeBoundaries;
         const [incRes, catRes] = await Promise.all([
           IncomeService.list({
@@ -543,32 +587,55 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
   const summary = useMemo(() => {
     // Filter orders by date range
     const filteredOrders = orders.filter(o => isWithinDateRange(o.date || o.createdAt));
-    const totalRevenue = filteredOrders.reduce((sum, o) => sum + (o.amount || 0), 0);
-    const totalCost = products.reduce((sum, p) => sum + ((p.costPrice || 0) * (p.stock || 0)), 0);
     const deliveredOrders = filteredOrders.filter(o => o.status === 'Delivered');
-    const deliveredRevenue = deliveredOrders.reduce((sum, o) => sum + (o.amount || 0), 0);
-    const purchaseCost = totalCost * 0.8; // Simulated
-    const profitFromSell = deliveredRevenue - purchaseCost;
-    const otherIncome = 1000; // Simulated
-    const otherExpenses = 500; // Simulated
-    const netProfit = profitFromSell + otherIncome - otherExpenses;
+    
+    // Product Selling Price (Revenue): Total revenue from delivered sales
+    const totalRevenue = deliveredOrders.reduce((sum, o) => sum + (o.amount || 0), 0);
+    
+    // Purchase Cost (COGS): Calculate from delivered orders' products cost price
+    // For each delivered order, sum up the cost price of items sold
+    const purchaseCost = deliveredOrders.reduce((sum, order) => {
+      const orderItems = order.items || [];
+      const orderCost = orderItems.reduce((itemSum: number, item: any) => {
+        // Find product to get cost price, or estimate from item
+        const product = products.find((p: any) => p._id === item.productId || p.name === item.productName);
+        const costPrice = product?.costPrice || (item.price * 0.6); // If no cost price, estimate 60% of selling price
+        return itemSum + (costPrice * (item.quantity || 1));
+      }, 0);
+      return sum + orderCost;
+    }, 0);
+    
+    // Profit From Sell: Selling Price - Purchase Cost
+    const profitFromSell = totalRevenue - purchaseCost;
+    
+    // Filter incomes by date range and sum them
+    const filteredIncomes = incomes.filter(inc => isWithinDateRange(inc.date));
+    const totalIncome = filteredIncomes.reduce((sum, inc) => sum + (inc.amount || 0), 0);
+    
+    // Filter expenses by date range and sum them
+    const filteredExpenses = expenses.filter(exp => isWithinDateRange(exp.date));
+    const totalExpense = filteredExpenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
+    
+    // Net Profit: (Profit From Sell + Income) - Expense
+    const netProfit = profitFromSell + totalIncome - totalExpense;
+    
     const inventoryValue = products.reduce((sum, p) => sum + ((p.price || 0) * (p.stock || 0)), 0);
-    const businessValue = inventoryValue + deliveredRevenue;
+    const businessValue = inventoryValue + totalRevenue;
     
     return {
-      totalRevenue: deliveredRevenue || 10000,
-      purchaseCost: purchaseCost || 8000,
-      profitFromSell: profitFromSell || 2000,
-      otherIncome,
-      otherExpenses,
-      netProfit: netProfit || 2500,
+      totalRevenue: totalRevenue,
+      purchaseCost: purchaseCost,
+      profitFromSell: profitFromSell,
+      otherIncome: totalIncome,
+      otherExpenses: totalExpense,
+      netProfit: netProfit,
       businessValue: businessValue || 500000,
       youWillGive: 30000,
       youWillGet: 70000,
       ordersCount: filteredOrders.length,
       deliveredCount: deliveredOrders.length,
     };
-  }, [orders, products, getDateRangeBoundaries]);
+  }, [orders, products, incomes, expenses, getDateRangeBoundaries]);
 
   const tabs = [
     { id: 'profit' as TabType, label: 'Profit/Loss', icon: WaterfallIcon, active: true },
@@ -618,8 +685,8 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
                 Revenue & Costs
               </p>
               <div className="flex gap-6 mb-3">
-                <span className="text-[14px] font-medium text-[#00c80d] font-['Poppins']">Net Sales</span>
-                <span className="text-[14px] font-bold text-[#f59f0a] font-['Poppins']">Costs</span>
+                <span className="text-[14px] font-medium text-[#00c80d] font-['Poppins']">Selling Price</span>
+                <span className="text-[14px] font-bold text-[#f59f0a] font-['Poppins']">Cost Price</span>
               </div>
               {/* Chart Placeholder */}
               <div className="h-[120px] relative">
@@ -631,12 +698,12 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
                   <span>$0</span>
                 </div>
                 <div className="absolute left-[55px] right-0 top-0 bottom-[20px]">
-                  {/* Green line (Net Sales) */}
+                  {/* Green line (Selling Price) */}
                   <svg width="100%" height="100%" viewBox="0 0 400 100" preserveAspectRatio="none" className="absolute inset-0">
                     <path d="M0,80 C50,70 100,50 150,40 C200,30 250,25 300,20 C350,15 400,10 400,10" 
                           stroke="#00c80d" strokeWidth="2" fill="none" />
                   </svg>
-                  {/* Orange line (Costs) */}
+                  {/* Orange line (Cost Price) */}
                   <svg width="100%" height="100%" viewBox="0 0 400 100" preserveAspectRatio="none" className="absolute inset-0">
                     <path d="M0,90 C50,85 100,70 150,60 C200,50 250,45 300,35 C350,30 400,25 400,20" 
                           stroke="#f59f0a" strokeWidth="2" fill="none" />
@@ -703,12 +770,12 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
 
           {/* Financial Breakdown */}
           <div className="flex flex-col gap-3">
-            {/* Revenue, Purchase Cost, Profit From Sell */}
+            {/* Product Selling Price, Purchase Cost, Profit From Sell */}
             <div className="bg-[#f9f9f9] rounded-lg py-3 px-4">
-              {/* Revenue */}
+              {/* Product Selling Price */}
               <div className="flex items-center justify-between py-2">
                 <div className="flex flex-col gap-0.5">
-                  <span className="text-[14px] font-medium text-black font-['Lato']">Revenue</span>
+                  <span className="text-[14px] font-medium text-black font-['Lato']">Product Selling Price</span>
                   <span className="text-[10px] text-[#bababa] font-['Poppins']">Total revenue from sales</span>
                 </div>
                 <div className="flex flex-col items-end gap-0.5">
@@ -739,10 +806,10 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
               <div className="flex items-center justify-between py-2">
                 <div className="flex flex-col gap-0.5">
                   <span className="text-[14px] font-medium text-black font-['Lato']">Profit From Sell</span>
-                  <span className="text-[10px] text-[#bababa] font-['Poppins']">Profit from selling products</span>
+                  <span className="text-[10px] text-[#bababa] font-['Poppins']">Selling Price - Purchase Cost</span>
                 </div>
                 <div className="flex flex-col items-end gap-0.5">
-                  <span className="text-[16px] font-semibold bg-gradient-to-r from-[#38bdf8] to-[#1e90ff] bg-clip-text text-transparent font-['Lato']">
+                  <span className={`text-[16px] font-semibold font-['Lato'] ${summary.profitFromSell >= 0 ? 'bg-gradient-to-r from-[#38bdf8] to-[#1e90ff] bg-clip-text text-transparent' : 'text-[#da0000]'}`}>
                     ৳{summary.profitFromSell.toLocaleString('en-IN')}
                   </span>
                   <span className="text-[12px] text-[#a1a1a1] font-['Lato']">See Details &gt;</span>
@@ -750,15 +817,15 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
               </div>
             </div>
 
-            {/* Other Income */}
+            {/* Income (+) */}
             <div className="bg-[#f9f9f9] rounded-lg py-3 px-4">
               <div className="flex items-center justify-between">
                 <div className="flex flex-col gap-0.5">
-                  <span className="text-[14px] font-medium text-black font-['Lato']">Other Income</span>
-                  <span className="text-[10px] text-[#bababa] font-['Poppins']">From manual entry</span>
+                  <span className="text-[14px] font-medium text-black font-['Lato']">Income</span>
+                  <span className="text-[10px] text-[#bababa] font-['Poppins']">Adds to profit (+)</span>
                 </div>
                 <div className="flex flex-col items-end gap-0.5">
-                  <span className="text-[16px] font-semibold bg-gradient-to-r from-[#38bdf8] to-[#1e90ff] bg-clip-text text-transparent font-['Lato']">
+                  <span className="text-[16px] font-semibold text-[#008c09] font-['Lato']">
                     ৳{summary.otherIncome.toLocaleString('en-IN')}
                   </span>
                   <span className="text-[12px] text-[#a1a1a1] font-['Lato']">See Details &gt;</span>
@@ -766,12 +833,12 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
               </div>
             </div>
 
-            {/* Other Expenses */}
+            {/* Expense (-) */}
             <div className="bg-[#f9f9f9] rounded-lg py-3 px-4">
               <div className="flex items-center justify-between">
                 <div className="flex flex-col gap-0.5">
-                  <span className="text-[14px] font-medium text-black font-['Lato']">Other Expenses</span>
-                  <span className="text-[10px] text-[#bababa] font-['Poppins']">From manual entry</span>
+                  <span className="text-[14px] font-medium text-black font-['Lato']">Expense</span>
+                  <span className="text-[10px] text-[#bababa] font-['Poppins']">Subtracts from profit (-)</span>
                 </div>
                 <div className="flex flex-col items-end gap-0.5">
                   <span className="text-[16px] font-semibold text-[#da0000] font-['Lato']">
@@ -787,10 +854,10 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
               <div className="flex items-center justify-between">
                 <div className="flex flex-col gap-0.5">
                   <span className="text-[14px] font-medium text-black font-['Lato']">Net Profit</span>
-                  <span className="text-[10px] text-[#bababa] font-['Poppins']">After all calculation</span>
+                  <span className="text-[10px] text-[#bababa] font-['Poppins']">Profit + Income - Expense</span>
                 </div>
                 <div className="flex flex-col items-end gap-0.5">
-                  <span className="text-[16px] font-semibold bg-gradient-to-r from-[#38bdf8] to-[#1e90ff] bg-clip-text text-transparent font-['Lato']">
+                  <span className={`text-[16px] font-semibold font-['Lato'] ${summary.netProfit >= 0 ? 'bg-gradient-to-r from-[#38bdf8] to-[#1e90ff] bg-clip-text text-transparent' : 'text-[#da0000]'}`}>
                     ৳{summary.netProfit.toLocaleString('en-IN')}
                   </span>
                   <span className="text-[12px] text-[#a1a1a1] font-['Lato']">See Details &gt;</span>
@@ -1284,7 +1351,7 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
         </div>
 
         {/* Table Rows */}
-        {incomeLoading ? (
+        {incomeLoading && incomes.length === 0 ? (
           <div className="flex items-center justify-center py-8">
             <RefreshCw className="animate-spin text-[#38bdf8]" size={24} />
           </div>
@@ -2180,11 +2247,11 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
                       <div className="flex flex-col items-end gap-[2px] text-[12px]">
                         <p>
                           <span className="text-black">Give: </span>
-                          <span className="font-semibold text-[#008c09]">৳{(entity.totalIOweThemNumber || 0).toLocaleString('en-IN')}</span>
+                          <span className="font-semibold text-[#da0000]">৳{(entity.totalIOweThemNumber || 0).toLocaleString('en-IN')}</span>
                         </p>
                         <p>
                           <span className="text-black">Get: </span>
-                          <span className="font-semibold text-[#da0000]">৳{(entity.totalOwedToMe || 0).toLocaleString('en-IN')}</span>
+                          <span className="font-semibold text-[#008c09]">৳{(entity.totalOwedToMe || 0).toLocaleString('en-IN')}</span>
                         </p>
                       </div>
                     </div>
@@ -2247,7 +2314,7 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
                         <span className={`text-[16px] font-semibold w-[106px] ${
                           tx.direction === 'INCOME' ? 'text-[#008c09]' : 'text-[#da0000]'
                         }`}>
-                          {tx.direction === 'INCOME' ? '- ' : '+ '}৳{tx.amount.toLocaleString('en-IN')}
+                          {tx.direction === 'INCOME' ? '+ ' : '- '}৳{tx.amount.toLocaleString('en-IN')}
                         </span>
                         <span className={`px-[9px] py-[2px] rounded-[30px] text-[12px] font-medium w-[62px] text-center ${
                           tx.status === 'Paid' 
@@ -2426,7 +2493,7 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
         </div>
 
         {/* Table Rows */}
-        {expenseLoading ? (
+        {expenseLoading && expenses.length === 0 ? (
           <div className="flex items-center justify-center py-8">
             <RefreshCw className="animate-spin text-[#38bdf8]" size={24} />
           </div>

@@ -1,5 +1,5 @@
 // Resolve API base URL from Vite env
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'localhost:5001';
 
 export interface ExpenseDTO {
   id?: string;
