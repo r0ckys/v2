@@ -362,7 +362,7 @@ const FigmaProductList: React.FC<FigmaProductListProps> = ({
   }, [propProducts]);
 
   return (
-    <div className="bg-white rounded-2xl mx-2 sm:mx-4 md:mx-6 p-4 sm:p-6 shadow-sm font-['Poppins']">
+    <div className="bg-white dark:bg-gray-800 rounded-2xl mx-2 sm:mx-4 md:mx-6 p-4 sm:p-6 shadow-sm font-['Poppins']">
       {/* Hidden file input for CSV import */}
       <input
         type="file"
@@ -373,25 +373,25 @@ const FigmaProductList: React.FC<FigmaProductListProps> = ({
       />
       {/* Header Row */}
       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 mb-5">
-        <h1 className="text-[22px] font-bold text-[#023337] tracking-[0.11px] font-['Lato']">Products</h1>
+        <h1 className="text-[22px] font-bold text-[#023337] dark:text-white tracking-[0.11px] font-['Lato']">Products</h1>
         
         <div className="flex flex-wrap items-center gap-4 lg:gap-6">
           {/* Search Bar */}
-          <div className="bg-[#f9f9f9] h-[34px] rounded-lg flex items-center px-2 w-[292px]">
+          <div className="bg-[#f9f9f9] dark:bg-gray-700 h-[34px] rounded-lg flex items-center px-2 w-[292px]">
             <SearchIcon />
             <input
               type="text"
               placeholder="Search products/SKU"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="bg-transparent text-[12px] text-[#7b7b7b] ml-2 flex-1 outline-none"
+              className="bg-transparent text-[12px] text-[#7b7b7b] dark:text-gray-400 ml-2 flex-1 outline-none"
             />
           </div>
 
           {/* Deep Search */}
-          <button className="bg-[#f9f9f9] h-[34px] rounded-lg flex items-center gap-2 px-4">
+          <button className="bg-[#f9f9f9] dark:bg-gray-700 h-[34px] rounded-lg flex items-center gap-2 px-4">
             <SortIcon />
-            <span className="text-[12px] text-black">Deep Search</span>
+            <span className="text-[12px] text-black dark:text-white">Deep Search</span>
           </button>
 
           {/* View Mode */}
@@ -401,28 +401,28 @@ const FigmaProductList: React.FC<FigmaProductListProps> = ({
               className="border border-[#ff6a00] h-[48px] rounded-lg flex items-center justify-between px-3 min-w-[140px]"
             >
               <div className="flex flex-col gap-0.5 items-start overflow-hidden">
-                <span className="text-[11px] font-medium text-[#070707] tracking-[-0.24px]">View</span>
+                <span className="text-[11px] font-medium text-[#070707] dark:text-white tracking-[-0.24px]">View</span>
                 <div className="flex items-center gap-1">
                   <ExpandIcon />
-                  <span className="text-[13px] text-[#070707] tracking-[-0.3px] truncate">
+                  <span className="text-[13px] text-[#070707] dark:text-white tracking-[-0.3px] truncate">
                     {viewMode === 'large' ? 'Large icons' : viewMode === 'small' ? 'Small icons' : 'List view'}
                   </span>
                 </div>
               </div>
-              <ChevronDown size={14} className="text-gray-600 flex-shrink-0 ml-1" />
+              <ChevronDown size={14} className="text-gray-600 dark:text-gray-400 flex-shrink-0 ml-1" />
             </button>
             {showViewDropdown && (
-              <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-lg border z-50 py-1 w-[155px]">
+              <div className="absolute top-full left-0 mt-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg border dark:border-gray-600 z-50 py-1 w-[155px]">
                 <button
                   onClick={() => { setViewMode('large'); setShowViewDropdown(false); }}
-                  className={`w-full px-3 py-2 text-left text-[13px] hover:bg-gray-50 flex items-center gap-2 ${viewMode === 'large' ? 'bg-orange-50 text-[#ff6a00]' : ''}`}
+                  className={`w-full px-3 py-2 text-left text-[13px] hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 ${viewMode === 'large' ? 'bg-orange-50 text-[#ff6a00]' : 'dark:text-gray-200'}`}
                 >
                   <ExpandIcon />
                   Large icons
                 </button>
                 <button
                   onClick={() => { setViewMode('small'); setShowViewDropdown(false); }}
-                  className={`w-full px-3 py-2 text-left text-[13px] hover:bg-gray-50 flex items-center gap-2 ${viewMode === 'small' ? 'bg-orange-50 text-[#ff6a00]' : ''}`}
+                  className={`w-full px-3 py-2 text-left text-[13px] hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 ${viewMode === 'small' ? 'bg-orange-50 text-[#ff6a00]' : 'dark:text-gray-200'}`}
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <rect x="3" y="3" width="7" height="7" />
@@ -434,7 +434,7 @@ const FigmaProductList: React.FC<FigmaProductListProps> = ({
                 </button>
                 <button
                   onClick={() => { setViewMode('list'); setShowViewDropdown(false); }}
-                  className={`w-full px-3 py-2 text-left text-[13px] hover:bg-gray-50 flex items-center gap-2 ${viewMode === 'list' ? 'bg-orange-50 text-[#ff6a00]' : ''}`}
+                  className={`w-full px-3 py-2 text-left text-[13px] hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 ${viewMode === 'list' ? 'bg-orange-50 text-[#ff6a00]' : 'dark:text-gray-200'}`}
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <line x1="3" y1="6" x2="21" y2="6" />
@@ -462,7 +462,7 @@ const FigmaProductList: React.FC<FigmaProductListProps> = ({
       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 mb-5">
         <div className="flex items-center gap-4">
           {/* Import */}
-          <button onClick={() => importInputRef.current?.click()} className="flex items-center gap-1 text-[12px] text-[#161719] hover:text-[#ff6a00] transition-colors">
+          <button onClick={() => importInputRef.current?.click()} className="flex items-center gap-1 text-[12px] text-[#161719] dark:text-gray-300 hover:text-[#ff6a00] transition-colors">
             {/* <Download size={20} className="text-[#161719]" /> */}
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M14.1667 17.5C13.6611 17.0085 11.6667 15.7002 11.6667 15C11.6667 14.2997 13.6611 12.9915 14.1667 12.5M12.5001 15H18.3334" stroke="#FF5500" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round"/>
@@ -473,7 +473,7 @@ const FigmaProductList: React.FC<FigmaProductListProps> = ({
           </button>
 
           {/* Export */}
-          <button onClick={handleExportCSV} className="flex items-center gap-1 text-[12px] text-[#161719] hover:text-[#ff6a00] transition-colors">
+          <button onClick={handleExportCSV} className="flex items-center gap-1 text-[12px] text-[#161719] dark:text-gray-300 hover:text-[#ff6a00] transition-colors">
             {/* <Upload size={20} className="text-[#161719]" /> */}
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M15.8334 17.5C16.3391 17.0085 18.3334 15.7002 18.3334 15C18.3334 14.2997 16.3391 12.9915 15.8334 12.5M17.5001 15H11.6667" stroke="#FF5500" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round"/>
@@ -487,18 +487,18 @@ const FigmaProductList: React.FC<FigmaProductListProps> = ({
           <div className="relative" data-dropdown>
             <button
               onClick={() => setShowPerPageDropdown(!showPerPageDropdown)}
-              className="bg-[#f9f9f9] rounded-lg flex items-center justify-between gap-2 px-3 py-2 w-[119px]"
+              className="bg-[#f9f9f9] dark:bg-gray-700 rounded-lg flex items-center justify-between gap-2 px-3 py-2 w-[119px]"
             >
-              <span className="text-[12px] text-black">{productsPerPage} Products</span>
-              <ChevronDown size={14} className="text-gray-600" />
+              <span className="text-[12px] text-black dark:text-white">{productsPerPage} Products</span>
+              <ChevronDown size={14} className="text-gray-600 dark:text-gray-400" />
             </button>
             {showPerPageDropdown && (
-              <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-lg border z-50 py-1 w-full">
+              <div className="absolute top-full left-0 mt-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg border dark:border-gray-600 z-50 py-1 w-full">
                 {[10, 20, 50, 100].map(num => (
                   <button
                     key={num}
                     onClick={() => { setProductsPerPage(num); setShowPerPageDropdown(false); }}
-                    className="w-full px-3 py-2 text-left text-[12px] hover:bg-gray-50"
+                    className="w-full px-3 py-2 text-left text-[12px] hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-gray-200"
                   >
                     {num} Products
                   </button>
@@ -512,25 +512,25 @@ const FigmaProductList: React.FC<FigmaProductListProps> = ({
           {/* Filter Label */}
           <div className="flex items-center gap-2">
             <SortIcon />
-            <span className="text-[12px] text-black">Filter:</span>
+            <span className="text-[12px] text-black dark:text-white">Filter:</span>
           </div>
 
           {/* Category Filter */}
           <div className="relative" data-dropdown>
             <button
               onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
-              className="bg-[#f9f9f9] rounded-lg flex items-center justify-between gap-2 px-3 py-2 w-[119px]"
+              className="bg-[#f9f9f9] dark:bg-gray-700 rounded-lg flex items-center justify-between gap-2 px-3 py-2 w-[119px]"
             >
-              <span className="text-[12px] text-black truncate">
+              <span className="text-[12px] text-black dark:text-white truncate">
                 {categoryFilter === 'all' ? 'All Category' : categoryFilter}
               </span>
-              <ChevronDown size={14} className="text-gray-600 flex-shrink-0" />
+              <ChevronDown size={14} className="text-gray-600 dark:text-gray-400 flex-shrink-0" />
             </button>
             {showCategoryDropdown && (
-              <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-lg border z-50 py-1 w-[150px] max-h-[200px] overflow-y-auto">
+              <div className="absolute top-full left-0 mt-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg border dark:border-gray-600 z-50 py-1 w-[150px] max-h-[200px] overflow-y-auto">
                 <button
                   onClick={() => { setCategoryFilter('all'); setShowCategoryDropdown(false); }}
-                  className="w-full px-3 py-2 text-left text-[12px] hover:bg-gray-50"
+                  className="w-full px-3 py-2 text-left text-[12px] hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-gray-200"
                 >
                   All Category
                 </button>
@@ -538,7 +538,7 @@ const FigmaProductList: React.FC<FigmaProductListProps> = ({
                   <button
                     key={cat}
                     onClick={() => { setCategoryFilter(cat!); setShowCategoryDropdown(false); }}
-                    className="w-full px-3 py-2 text-left text-[12px] hover:bg-gray-50 truncate"
+                    className="w-full px-3 py-2 text-left text-[12px] hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-gray-200 truncate"
                   >
                     {cat}
                   </button>
@@ -551,18 +551,18 @@ const FigmaProductList: React.FC<FigmaProductListProps> = ({
           <div className="relative" data-dropdown>
             <button
               onClick={() => setShowBrandDropdown(!showBrandDropdown)}
-              className="bg-[#f9f9f9] rounded-lg flex items-center justify-between gap-2 px-3 py-2"
+              className="bg-[#f9f9f9] dark:bg-gray-700 rounded-lg flex items-center justify-between gap-2 px-3 py-2"
             >
-              <span className="text-[12px] text-black truncate">
+              <span className="text-[12px] text-black dark:text-white truncate">
                 {brandFilter === 'all' ? 'All Brands' : brandFilter}
               </span>
-              <ChevronDown size={14} className="text-gray-600 flex-shrink-0" />
+              <ChevronDown size={14} className="text-gray-600 dark:text-gray-400 flex-shrink-0" />
             </button>
             {showBrandDropdown && (
-              <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-lg border z-50 py-1 w-[150px] max-h-[200px] overflow-y-auto">
+              <div className="absolute top-full left-0 mt-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg border dark:border-gray-600 z-50 py-1 w-[150px] max-h-[200px] overflow-y-auto">
                 <button
                   onClick={() => { setBrandFilter('all'); setShowBrandDropdown(false); }}
-                  className="w-full px-3 py-2 text-left text-[12px] hover:bg-gray-50"
+                  className="w-full px-3 py-2 text-left text-[12px] hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-gray-200"
                 >
                   All Brands
                 </button>
@@ -570,7 +570,7 @@ const FigmaProductList: React.FC<FigmaProductListProps> = ({
                   <button
                     key={brand}
                     onClick={() => { setBrandFilter(brand!); setShowBrandDropdown(false); }}
-                    className="w-full px-3 py-2 text-left text-[12px] hover:bg-gray-50 truncate"
+                    className="w-full px-3 py-2 text-left text-[12px] hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-gray-200 truncate"
                   >
                     {brand}
                   </button>
@@ -583,30 +583,30 @@ const FigmaProductList: React.FC<FigmaProductListProps> = ({
           <div className="relative" data-dropdown>
             <button
               onClick={() => setShowStatusDropdown(!showStatusDropdown)}
-              className="bg-[#f9f9f9] rounded-lg flex items-center justify-between gap-2 px-3 py-2"
+              className="bg-[#f9f9f9] dark:bg-gray-700 rounded-lg flex items-center justify-between gap-2 px-3 py-2"
             >
-              <span className="text-[12px] text-black">
+              <span className="text-[12px] text-black dark:text-white">
                 {statusFilter === 'all' ? 'All Status' : statusFilter}
               </span>
-              <ChevronDown size={14} className="text-gray-600" />
+              <ChevronDown size={14} className="text-gray-600 dark:text-gray-400" />
             </button>
             {showStatusDropdown && (
-              <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-lg border z-50 py-1 w-[120px]">
+              <div className="absolute top-full left-0 mt-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg border dark:border-gray-600 z-50 py-1 w-[120px]">
                 <button
                   onClick={() => { setStatusFilter('all'); setShowStatusDropdown(false); }}
-                  className="w-full px-3 py-2 text-left text-[12px] hover:bg-gray-50"
+                  className="w-full px-3 py-2 text-left text-[12px] hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-gray-200"
                 >
                   All Status
                 </button>
                 <button
                   onClick={() => { setStatusFilter('Active'); setShowStatusDropdown(false); }}
-                  className="w-full px-3 py-2 text-left text-[12px] hover:bg-gray-50"
+                  className="w-full px-3 py-2 text-left text-[12px] hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-gray-200"
                 >
                   Publish
                 </button>
                 <button
                   onClick={() => { setStatusFilter('Draft'); setShowStatusDropdown(false); }}
-                  className="w-full px-3 py-2 text-left text-[12px] hover:bg-gray-50"
+                  className="w-full px-3 py-2 text-left text-[12px] hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-gray-200"
                 >
                   Draft
                 </button>
@@ -677,9 +677,9 @@ const FigmaProductList: React.FC<FigmaProductListProps> = ({
       {/* Discount Modal */}
       {showDiscountModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-[400px] shadow-2xl">
-            <h3 className="text-lg font-semibold mb-4">Apply Discount</h3>
-            <p className="text-sm text-gray-600 mb-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 w-[400px] shadow-2xl">
+            <h3 className="text-lg font-semibold mb-4 dark:text-white">Apply Discount</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
               Apply discount to {selectedIds.size} selected product{selectedIds.size > 1 ? 's' : ''}
             </p>
             <div className="flex items-center gap-2 mb-4">
@@ -688,16 +688,16 @@ const FigmaProductList: React.FC<FigmaProductListProps> = ({
                 value={discountValue}
                 onChange={(e) => setDiscountValue(Number(e.target.value))}
                 placeholder="Enter discount %"
-                className="flex-1 h-10 border rounded-lg px-3 text-sm outline-none focus:border-[#ff6a00]"
+                className="flex-1 h-10 border dark:border-gray-600 rounded-lg px-3 text-sm outline-none focus:border-[#ff6a00] bg-white dark:bg-gray-700 dark:text-white"
                 min="0"
                 max="100"
               />
-              <span className="text-gray-500">%</span>
+              <span className="text-gray-500 dark:text-gray-400">%</span>
             </div>
             <div className="flex justify-end gap-2">
               <button
                 onClick={() => { setShowDiscountModal(false); setDiscountValue(0); }}
-                className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg"
+                className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
               >
                 Cancel
               </button>
@@ -718,7 +718,7 @@ const FigmaProductList: React.FC<FigmaProductListProps> = ({
           {paginatedProducts.length > 0 ? paginatedProducts.map((product, idx) => {
             const productKey = getProductKey(product, idx);
             return (
-            <div key={productKey} className="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-lg transition-shadow relative group">
+            <div key={productKey} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl p-4 hover:shadow-lg transition-shadow relative group">
               {/* Checkbox */}
               <div className="absolute top-3 left-3 z-10">
                 <input
@@ -732,34 +732,34 @@ const FigmaProductList: React.FC<FigmaProductListProps> = ({
               <div className="absolute top-3 right-3 z-10" data-dropdown>
                 <button
                   onClick={() => setOpenDropdownId(openDropdownId === productKey ? null : productKey)}
-                  className="p-1.5 bg-white/80 hover:bg-gray-100 rounded-full transition-colors"
+                  className="p-1.5 bg-white/80 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-full transition-colors"
                 >
                   <DotsIcon />
                 </button>
                 {openDropdownId === productKey && (
                   <div className="absolute right-0 top-full mt-1 z-50">
-                    <div className="w-[140px] bg-white rounded-lg shadow-xl border overflow-hidden py-1">
+                    <div className="w-[140px] bg-white dark:bg-gray-800 rounded-lg shadow-xl border dark:border-gray-600 overflow-hidden py-1">
                       <button
                         onClick={() => { onEditProduct?.(product); setOpenDropdownId(null); }}
-                        className="flex items-center gap-2 w-full px-3 py-2 hover:bg-gray-50 text-sm text-gray-700"
+                        className="flex items-center gap-2 w-full px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 text-sm text-gray-700 dark:text-gray-300"
                       >
                         <Edit size={14} /> Edit
                       </button>
                       <button
                         onClick={() => { onCloneProduct?.(product); setOpenDropdownId(null); }}
-                        className="flex items-center gap-2 w-full px-3 py-2 hover:bg-gray-50 text-sm text-gray-700"
+                        className="flex items-center gap-2 w-full px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 text-sm text-gray-700 dark:text-gray-300"
                       >
                         <Copy size={14} /> Duplicate
                       </button>
                       <button
                         onClick={() => { window.open(`/product/${product.slug || product.id}`, '_blank'); setOpenDropdownId(null); }}
-                        className="flex items-center gap-2 w-full px-3 py-2 hover:bg-gray-50 text-sm text-gray-700"
+                        className="flex items-center gap-2 w-full px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 text-sm text-gray-700 dark:text-gray-300"
                       >
                         <Eye size={14} /> View
                       </button>
                       <button
                         onClick={() => { onDeleteProduct?.(product.id); setOpenDropdownId(null); }}
-                        className="flex items-center gap-2 w-full px-3 py-2 hover:bg-gray-50 text-sm text-red-600"
+                        className="flex items-center gap-2 w-full px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 text-sm text-red-600"
                       >
                         <Trash2 size={14} /> Delete
                       </button>
@@ -782,8 +782,8 @@ const FigmaProductList: React.FC<FigmaProductListProps> = ({
                 )}
               </div>
               {/* Info */}
-              <h3 className="text-[14px] font-medium text-gray-900 line-clamp-2 mb-2">{product.name}</h3>
-              <p className="text-[13px] text-gray-500 mb-2">{product.category || 'Uncategorized'}</p>
+              <h3 className="text-[14px] font-medium text-gray-900 dark:text-white line-clamp-2 mb-2">{product.name}</h3>
+              <p className="text-[13px] text-gray-500 dark:text-gray-400 mb-2">{product.category || 'Uncategorized'}</p>
               <div className="flex items-center justify-between">
                 <span className="text-[15px] font-bold text-[#1e90ff]">৳{product.price}</span>
                 <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${
@@ -794,13 +794,13 @@ const FigmaProductList: React.FC<FigmaProductListProps> = ({
                   {product.status === 'Active' ? 'Publish' : 'Draft'}
                 </span>
               </div>
-              {product.sku && <p className="text-[11px] text-gray-400 mt-2">SKU: {product.sku}</p>}
+              {product.sku && <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-2">SKU: {product.sku}</p>}
             </div>
           );}) : (
-            <div className="col-span-full py-12 text-center text-gray-500">
+            <div className="col-span-full py-12 text-center text-gray-500 dark:text-gray-400">
               <div className="flex flex-col items-center">
-                <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-3">
-                  <Search size={24} className="text-gray-400" />
+                <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-600 flex items-center justify-center mb-3">
+                  <Search size={24} className="text-gray-400 dark:text-gray-500" />
                 </div>
                 <p className="font-medium">No products found</p>
                 <p className="text-sm">Try adjusting your search or filters</p>
@@ -810,13 +810,13 @@ const FigmaProductList: React.FC<FigmaProductListProps> = ({
         </div>
       )}
 
-      {/* Grid View - Small Icons */}
+      {/* Grid View - Small Icons */}}
       {viewMode === 'small' && (
         <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-3">
           {paginatedProducts.length > 0 ? paginatedProducts.map((product, idx) => {
             const productKey = getProductKey(product, idx);
             return (
-            <div key={productKey} className="bg-white border border-gray-200 rounded-lg p-2 hover:shadow-md transition-shadow relative group">
+            <div key={productKey} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg p-2 hover:shadow-md transition-shadow relative group">
               {/* Checkbox */}
               <div className="absolute top-1 left-1 z-10">
                 <input
@@ -844,7 +844,7 @@ const FigmaProductList: React.FC<FigmaProductListProps> = ({
                 )}
               </div>
               {/* Info */}
-              <h3 className="text-[11px] font-medium text-gray-900 line-clamp-1">{product.name}</h3>
+              <h3 className="text-[11px] font-medium text-gray-900 dark:text-white line-clamp-1">{product.name}</h3>
               <div className="flex items-center justify-between mt-1">
                 <span className="text-[12px] font-bold text-[#1e90ff]">৳{product.price}</span>
                 <span className={`w-2 h-2 rounded-full ${
@@ -854,10 +854,10 @@ const FigmaProductList: React.FC<FigmaProductListProps> = ({
             </div>
             );
           }) : (
-            <div className="col-span-full py-12 text-center text-gray-500">
+            <div className="col-span-full py-12 text-center text-gray-500 dark:text-gray-400">
               <div className="flex flex-col items-center">
-                <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-3">
-                  <Search size={24} className="text-gray-400" />
+                <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-600 flex items-center justify-center mb-3">
+                  <Search size={24} className="text-gray-400 dark:text-gray-500" />
                 </div>
                 <p className="font-medium">No products found</p>
                 <p className="text-sm">Try adjusting your search or filters</p>
@@ -871,42 +871,42 @@ const FigmaProductList: React.FC<FigmaProductListProps> = ({
       {viewMode === 'list' && (
       <div className="overflow-x-auto overflow-y-visible">
         <table className="w-full text-sm">
-          <thead className="bg-[#E0F2FE]">
+          <thead className="bg-[#E0F2FE] dark:bg-gray-700">
             <tr>
               <th className="px-4 py-3 text-left">
                 <input
                   type="checkbox"
                   checked={selectedIds.length === paginatedProducts.length && paginatedProducts.length > 0}
                   onChange={handleSelectAll}
-                  className="w-5 h-5 rounded border-[1.5px] border-[#050605] bg-white"
+                  className="w-5 h-5 rounded border-[1.5px] border-[#050605] bg-white dark:bg-gray-600"
                 />
               </th>
-              <th className="px-4 py-3 text-left font-medium text-black text-[16px]">SL</th>
-              <th className="px-4 py-3 text-left font-medium text-black text-[16px]">Image</th>
-              <th className="px-4 py-3 text-left font-medium text-black text-[16px]">Name</th>
-              <th className="px-4 py-3 text-left font-medium text-black text-[16px]">Category</th>
-              <th className="px-4 py-3 text-left font-medium text-black text-[16px]">Sub Category</th>
-              <th className="px-4 py-3 text-left font-medium text-black text-[16px]">Priority</th>
-              <th className="px-4 py-3 text-left font-medium text-black text-[16px]">SKU</th>
-              <th className="px-4 py-3 text-left font-medium text-black text-[16px]">Tags</th>
-              <th className="px-4 py-3 text-left font-medium text-black text-[16px]">Status</th>
-              <th className="px-4 py-3 text-center font-medium text-black text-[16px]">Action</th>
+              <th className="px-4 py-3 text-left font-medium text-black dark:text-white text-[16px]">SL</th>
+              <th className="px-4 py-3 text-left font-medium text-black dark:text-white text-[16px]">Image</th>
+              <th className="px-4 py-3 text-left font-medium text-black dark:text-white text-[16px]">Name</th>
+              <th className="px-4 py-3 text-left font-medium text-black dark:text-white text-[16px]">Category</th>
+              <th className="px-4 py-3 text-left font-medium text-black dark:text-white text-[16px]">Sub Category</th>
+              <th className="px-4 py-3 text-left font-medium text-black dark:text-white text-[16px]">Priority</th>
+              <th className="px-4 py-3 text-left font-medium text-black dark:text-white text-[16px]">SKU</th>
+              <th className="px-4 py-3 text-left font-medium text-black dark:text-white text-[16px]">Tags</th>
+              <th className="px-4 py-3 text-left font-medium text-black dark:text-white text-[16px]">Status</th>
+              <th className="px-4 py-3 text-center font-medium text-black dark:text-white text-[16px]">Action</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#b9b9b9]/50">
+          <tbody className="divide-y divide-[#b9b9b9]/50 dark:divide-gray-700">
             {paginatedProducts.length > 0 ? paginatedProducts.map((product, index) => {
               const productKey = getProductKey(product, index);
               return (
-              <tr key={productKey} className="h-[68px] hover:bg-gray-50 transition-colors">
+              <tr key={productKey} className="h-[68px] hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                 <td className="px-4 py-3">
                   <input
                     type="checkbox"
                     checked={selectedIds.has(productKey)}
                     onChange={() => handleSelectProduct(productKey)}
-                    className="w-5 h-5 rounded border-[1.5px] border-[#eaf8e7] bg-white"
+                    className="w-5 h-5 rounded border-[1.5px] border-[#eaf8e7] bg-white dark:bg-gray-600"
                   />
                 </td>
-                <td className="px-4 py-3 text-[12px] text-[#1d1a1a] text-center">
+                <td className="px-4 py-3 text-[12px] text-[#1d1a1a] dark:text-gray-200 text-center">
                   {(currentPage - 1) * productsPerPage + index + 1}
                 </td>
                 <td className="px-4 py-3">
@@ -925,23 +925,23 @@ const FigmaProductList: React.FC<FigmaProductListProps> = ({
                   </div>
                 </td>
                 <td className="px-4 py-3">
-                  <p className="text-[12px] text-[#1d1a1a] max-w-[200px] line-clamp-2">
+                  <p className="text-[12px] text-[#1d1a1a] dark:text-gray-200 max-w-[200px] line-clamp-2">
                     {product.name}
                   </p>
                 </td>
-                <td className="px-4 py-3 text-[12px] text-[#1d1a1a]">
+                <td className="px-4 py-3 text-[12px] text-[#1d1a1a] dark:text-gray-200">
                   {product.category || '-'}
                 </td>
-                <td className="px-4 py-3 text-[12px] text-[#1d1a1a]">
+                <td className="px-4 py-3 text-[12px] text-[#1d1a1a] dark:text-gray-200">
                   {product.subCategory || '-'}
                 </td>
-                <td className="px-4 py-3 text-[12px] text-[#1d1a1a]">
+                <td className="px-4 py-3 text-[12px] text-[#1d1a1a] dark:text-gray-200">
                   {product.rating ? `${Math.round(product.rating * 10)}%` : '-'}
                 </td>
-                <td className="px-4 py-3 text-[12px] text-[#1d1a1a]">
+                <td className="px-4 py-3 text-[12px] text-[#1d1a1a] dark:text-gray-200">
                   {product.sku || '-'}
                 </td>
-                <td className="px-4 py-3 text-[12px] text-[#1d1a1a]">
+                <td className="px-4 py-3 text-[12px] text-[#1d1a1a] dark:text-gray-200">
                   {product.tag || (Array.isArray(product.tags) ? product.tags.join(', ') : '') || '-'}
                 </td>
                 <td className="px-4 py-3">
@@ -957,38 +957,38 @@ const FigmaProductList: React.FC<FigmaProductListProps> = ({
                   <div data-dropdown>
                     <button
                       onClick={() => setOpenDropdownId(openDropdownId === productKey ? null : productKey)}
-                      className="p-1 hover:bg-gray-200 rounded transition-colors"
+                      className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors"
                     >
                       <DotsIcon />
                     </button>
                     {openDropdownId === productKey && (
                       <div className="absolute right-0 top-full mt-1 z-50">
-                        <div className="w-[160px] bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden py-2">
+                        <div className="w-[160px] bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-600 overflow-hidden py-2">
                           <button
                             onClick={() => { onEditProduct?.(product); setOpenDropdownId(null); }}
-                            className="flex items-center gap-3 w-full h-10 px-4 hover:bg-gray-50 text-sm font-medium text-gray-700"
+                            className="flex items-center gap-3 w-full h-10 px-4 hover:bg-gray-50 dark:hover:bg-gray-700 text-sm font-medium text-gray-700 dark:text-gray-300"
                           >
                             <Edit size={16} />
                             Edit
                           </button>
                           <button
                             onClick={() => { onCloneProduct?.(product); setOpenDropdownId(null); }}
-                            className="flex items-center gap-3 w-full h-10 px-4 hover:bg-gray-50 text-sm font-medium text-gray-700"
+                            className="flex items-center gap-3 w-full h-10 px-4 hover:bg-gray-50 dark:hover:bg-gray-700 text-sm font-medium text-gray-700 dark:text-gray-300"
                           >
                             <Copy size={16} />
                             Duplicate
                           </button>
                           <button
                             onClick={() => { window.open(`/product/${product.slug || product.id}`, '_blank'); setOpenDropdownId(null); }}
-                            className="flex items-center gap-3 w-full h-10 px-4 hover:bg-gray-50 text-sm font-medium text-gray-700"
+                            className="flex items-center gap-3 w-full h-10 px-4 hover:bg-gray-50 dark:hover:bg-gray-700 text-sm font-medium text-gray-700 dark:text-gray-300"
                           >
                             <Eye size={16} />
                             View
                           </button>
-                          <div className="my-1 border-t border-gray-100" />
+                          <div className="my-1 border-t border-gray-100 dark:border-gray-700" />
                           <button
                             onClick={() => { onDeleteProduct?.(product.id); setOpenDropdownId(null); }}
-                            className="flex items-center gap-3 w-full h-10 px-4 hover:bg-gray-50 text-sm font-medium text-red-600"
+                            className="flex items-center gap-3 w-full h-10 px-4 hover:bg-gray-50 dark:hover:bg-gray-700 text-sm font-medium text-red-600"
                           >
                             <Trash2 size={16} />
                             Delete
@@ -1001,10 +1001,10 @@ const FigmaProductList: React.FC<FigmaProductListProps> = ({
               </tr>
             );}) : (
               <tr>
-                <td colSpan={11} className="px-4 py-12 text-center text-gray-500">
+                <td colSpan={11} className="px-4 py-12 text-center text-gray-500 dark:text-gray-400">
                   <div className="flex flex-col items-center">
-                    <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-3">
-                      <Search size={24} className="text-gray-400" />
+                    <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-600 flex items-center justify-center mb-3">
+                      <Search size={24} className="text-gray-400 dark:text-gray-500" />
                     </div>
                     <p className="font-medium">No products found</p>
                     <p className="text-sm">Try adjusting your search or filters</p>
@@ -1025,7 +1025,7 @@ const FigmaProductList: React.FC<FigmaProductListProps> = ({
             <button
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className="w-9 h-9 flex items-center justify-center border rounded-lg disabled:opacity-50 hover:bg-gray-50"
+              className="w-9 h-9 flex items-center justify-center border dark:border-gray-600 rounded-lg disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-gray-300"
             >
               <ChevronLeft size={16} />
             </button>
@@ -1039,8 +1039,8 @@ const FigmaProductList: React.FC<FigmaProductListProps> = ({
                   currentPage === page
                     ? 'bg-[#38bdf8] text-white'
                     : page === '...'
-                    ? 'cursor-default'
-                    : 'border hover:bg-gray-50'
+                    ? 'cursor-default dark:text-gray-400'
+                    : 'border dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-gray-300'
                 }`}
               >
                 {page}
@@ -1050,7 +1050,7 @@ const FigmaProductList: React.FC<FigmaProductListProps> = ({
             <button
               onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
-              className="w-9 h-9 flex items-center justify-center border rounded-lg disabled:opacity-50 hover:bg-gray-50"
+              className="w-9 h-9 flex items-center justify-center border dark:border-gray-600 rounded-lg disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-gray-300"
             >
               <ChevronRight size={16} />
             </button>

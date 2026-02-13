@@ -284,27 +284,27 @@ const FigmaCatalogManager: React.FC<FigmaCatalogManagerProps> = ({
   const showImageColumn = view === 'catalog_categories' || view === 'catalog_brands';
 
   return (
-    <div className="bg-white min-h-screen font-['Poppins']">
+    <div className="bg-white dark:bg-gray-800 min-h-screen font-['Poppins']">
       {/* Main Content Container */}
-      <div className="bg-white mx-4 md:mx-6 my-5 py-5">
+      <div className="bg-white dark:bg-gray-800 mx-4 md:mx-6 my-5 py-5">
         {/* Header Row */}
         <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 mb-5">
-          <h1 className="text-[22px] font-bold text-[#023337] tracking-[0.11px] font-['Lato']">
+          <h1 className="text-[22px] font-bold text-[#023337] dark:text-white tracking-[0.11px] font-['Lato']">
             Catalog
           </h1>
           
           <div className="flex flex-wrap items-center gap-4 lg:gap-6">
             {/* Search Bar */}
-            <div className="bg-[#f9f9f9] h-[34px] rounded-lg flex items-center px-2 w-[292px]">
+            <div className="bg-[#f9f9f9] dark:bg-gray-700 h-[34px] rounded-lg flex items-center px-2 w-[292px]">
               <SearchIcon />
               <input
                 type="text"
                 placeholder={`Search ${getTitle()}`}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="bg-transparent text-[12px] text-[#7b7b7b] ml-2 flex-1 outline-none placeholder:text-[#7b7b7b]"
+                className="bg-transparent text-[12px] text-[#7b7b7b] dark:text-gray-400 ml-2 flex-1 outline-none placeholder:text-[#7b7b7b] dark:placeholder-gray-400"
               />
-              <button className="text-[12px] text-black font-medium px-2">
+              <button className="text-[12px] text-black dark:text-white font-medium px-2">
                 Search
               </button>
             </div>
@@ -313,30 +313,30 @@ const FigmaCatalogManager: React.FC<FigmaCatalogManagerProps> = ({
             <div className="relative" data-dropdown>
               <button
                 onClick={() => setShowStatusDropdown(!showStatusDropdown)}
-                className="bg-[#f9f9f9] rounded-lg flex items-center gap-2 px-3 py-2"
+                className="bg-[#f9f9f9] dark:bg-gray-700 rounded-lg flex items-center gap-2 px-3 py-2"
               >
-                <span className="text-[12px] text-black">
+                <span className="text-[12px] text-black dark:text-white">
                   {statusFilter === 'all' ? 'All Status' : statusFilter}
                 </span>
-                <ChevronDown size={14} className="text-gray-600" />
+                <ChevronDown size={14} className="text-gray-600 dark:text-gray-400" />
               </button>
               {showStatusDropdown && (
-                <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-lg border z-50 py-1 w-[120px]">
+                <div className="absolute top-full left-0 mt-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg border dark:border-gray-600 z-50 py-1 w-[120px]">
                   <button
                     onClick={() => { setStatusFilter('all'); setShowStatusDropdown(false); }}
-                    className="w-full px-3 py-2 text-left text-[12px] hover:bg-gray-50"
+                    className="w-full px-3 py-2 text-left text-[12px] text-black dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700"
                   >
                     All Status
                   </button>
                   <button
                     onClick={() => { setStatusFilter('Active'); setShowStatusDropdown(false); }}
-                    className="w-full px-3 py-2 text-left text-[12px] hover:bg-gray-50"
+                    className="w-full px-3 py-2 text-left text-[12px] text-black dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700"
                   >
                     Publish
                   </button>
                   <button
                     onClick={() => { setStatusFilter('Inactive'); setShowStatusDropdown(false); }}
-                    className="w-full px-3 py-2 text-left text-[12px] hover:bg-gray-50"
+                    className="w-full px-3 py-2 text-left text-[12px] text-black dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700"
                   >
                     Inactive
                   </button>
@@ -348,18 +348,18 @@ const FigmaCatalogManager: React.FC<FigmaCatalogManagerProps> = ({
             <div className="relative" data-dropdown>
               <button
                 onClick={() => setShowPerPageDropdown(!showPerPageDropdown)}
-                className="bg-[#f9f9f9] rounded-lg flex items-center gap-2 px-3 py-2 w-[119px]"
+                className="bg-[#f9f9f9] dark:bg-gray-700 rounded-lg flex items-center gap-2 px-3 py-2 w-[119px]"
               >
-                <span className="text-[12px] text-black">{itemsPerPage} {getTitle()}</span>
-                <ChevronDown size={14} className="text-gray-600" />
+                <span className="text-[12px] text-black dark:text-white">{itemsPerPage} {getTitle()}</span>
+                <ChevronDown size={14} className="text-gray-600 dark:text-gray-400" />
               </button>
               {showPerPageDropdown && (
-                <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-lg border z-50 py-1 w-full">
+                <div className="absolute top-full left-0 mt-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg border dark:border-gray-600 z-50 py-1 w-full">
                   {[10, 20, 50, 100].map(num => (
                     <button
                       key={num}
                       onClick={() => { setItemsPerPage(num); setShowPerPageDropdown(false); setCurrentPage(1); }}
-                      className="w-full px-3 py-2 text-left text-[12px] hover:bg-gray-50"
+                      className="w-full px-3 py-2 text-left text-[12px] text-black dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700"
                     >
                       {num} {getTitle()}
                     </button>
@@ -382,7 +382,7 @@ const FigmaCatalogManager: React.FC<FigmaCatalogManagerProps> = ({
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex gap-0 border-b border-gray-200 mb-5 overflow-x-auto">
+        <div className="flex gap-0 border-b border-gray-200 dark:border-gray-600 mb-5 overflow-x-auto">
           {catalogTabs.map((tab) => {
             const isActive = view === tab.id;
             return (
@@ -395,12 +395,12 @@ const FigmaCatalogManager: React.FC<FigmaCatalogManagerProps> = ({
                     : ''
                 }`}
               >
-                <span className={isActive ? 'text-[#38bdf8]' : 'text-black'}>{tab.icon}</span>
+                <span className={isActive ? 'text-[#38bdf8]' : 'text-black dark:text-white'}>{tab.icon}</span>
                 <span 
                   className={`text-[16px] font-medium ${
                     isActive 
                       ? 'bg-gradient-to-r from-[#38bdf8] to-[#1e90ff] bg-clip-text text-transparent' 
-                      : 'text-black'
+                      : 'text-black dark:text-white'
                   }`}
                 >
                   {tab.label}
@@ -412,48 +412,48 @@ const FigmaCatalogManager: React.FC<FigmaCatalogManagerProps> = ({
         </div>
 
         {/* Data Table */}
-        <div className="bg-white">
+        <div className="bg-white dark:bg-gray-800 overflow-visible">
           <div className="overflow-x-auto overflow-y-visible">
             <table className="w-full text-sm">
               {/* Table Header - Gradient Background */}
-              <thead className="bg-[#E0F2FE]">
+              <thead className="bg-[#E0F2FE] dark:bg-gray-700">
                 <tr>
                   <th className="px-4 py-3 text-left w-[50px]">
                     <input
                       type="checkbox"
                       checked={selectedIds.length === paginatedData.length && paginatedData.length > 0}
                       onChange={handleSelectAll}
-                      className="w-5 h-5 rounded border-[1.5px] border-[#050605] bg-white"
+                      className="w-5 h-5 rounded border-[1.5px] border-[#050605] dark:border-gray-500 bg-white dark:bg-gray-600"
                     />
                   </th>
-                  <th className="px-4 py-3 text-left font-medium text-black text-[16px]">SL</th>
+                  <th className="px-4 py-3 text-left font-medium text-black dark:text-white text-[16px]">SL</th>
                   {showImageColumn && (
-                    <th className="px-4 py-3 text-left font-medium text-black text-[16px]">Image/icon</th>
+                    <th className="px-4 py-3 text-left font-medium text-black dark:text-white text-[16px]">Image/icon</th>
                   )}
-                  <th className="px-4 py-3 text-left font-medium text-black text-[16px]">Name</th>
+                  <th className="px-4 py-3 text-left font-medium text-black dark:text-white text-[16px]">Name</th>
                   {view === 'catalog_subcategories' && (
-                    <th className="px-4 py-3 text-left font-medium text-black text-[16px]">Parent Category</th>
+                    <th className="px-4 py-3 text-left font-medium text-black dark:text-white text-[16px]">Parent Category</th>
                   )}
                   {view === 'catalog_childcategories' && (
-                    <th className="px-4 py-3 text-left font-medium text-black text-[16px]">Parent Sub Category</th>
+                    <th className="px-4 py-3 text-left font-medium text-black dark:text-white text-[16px]">Parent Sub Category</th>
                   )}
-                  <th className="px-4 py-3 text-center font-medium text-black text-[16px]">Products</th>
-                  <th className="px-4 py-3 text-center font-medium text-black text-[16px]">Status</th>
-                  <th className="px-4 py-3 text-center font-medium text-black text-[16px]">Action</th>
+                  <th className="px-4 py-3 text-center font-medium text-black dark:text-white text-[16px]">Products</th>
+                  <th className="px-4 py-3 text-center font-medium text-black dark:text-white text-[16px]">Status</th>
+                  <th className="px-4 py-3 text-center font-medium text-black dark:text-white text-[16px]">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#b9b9b9]/50">
+              <tbody className="divide-y divide-[#b9b9b9]/50 dark:divide-gray-600">
                 {paginatedData.length > 0 ? paginatedData.map((item, index) => (
-                  <tr key={item.id} className="h-[68px] hover:bg-gray-50 transition-colors">
+                  <tr key={item.id} className="h-[68px] hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                     <td className="px-4 py-3">
                       <input
                         type="checkbox"
                         checked={selectedIds.includes(item.id)}
                         onChange={() => handleSelectItem(item.id)}
-                        className="w-5 h-5 rounded border-[1.5px] border-[#eaf8e7] bg-white"
+                        className="w-5 h-5 rounded border-[1.5px] border-[#eaf8e7] dark:border-gray-500 bg-white dark:bg-gray-600"
                       />
                     </td>
-                    <td className="px-4 py-3 text-[12px] text-[#1d1a1a] text-center">
+                    <td className="px-4 py-3 text-[12px] text-[#1d1a1a] dark:text-gray-200 text-center">
                       {(currentPage - 1) * itemsPerPage + index + 1}
                     </td>
                     {showImageColumn && (
@@ -473,20 +473,20 @@ const FigmaCatalogManager: React.FC<FigmaCatalogManagerProps> = ({
                         </div>
                       </td>
                     )}
-                    <td className="px-4 py-3 text-[12px] text-[#1d1a1a]">
+                    <td className="px-4 py-3 text-[12px] text-[#1d1a1a] dark:text-gray-200">
                       {item.name}
                     </td>
                     {view === 'catalog_subcategories' && (
-                      <td className="px-4 py-3 text-[12px] text-[#1d1a1a]">
+                      <td className="px-4 py-3 text-[12px] text-[#1d1a1a] dark:text-gray-200">
                         {categories.find(c => c.id === item.categoryId)?.name || '-'}
                       </td>
                     )}
                     {view === 'catalog_childcategories' && (
-                      <td className="px-4 py-3 text-[12px] text-[#1d1a1a]">
+                      <td className="px-4 py-3 text-[12px] text-[#1d1a1a] dark:text-gray-200">
                         {subCategories.find(s => s.id === item.subCategoryId)?.name || '-'}
                       </td>
                     )}
-                    <td className="px-4 py-3 text-[12px] text-[#1d1a1a] text-center">
+                    <td className="px-4 py-3 text-[12px] text-[#1d1a1a] dark:text-gray-200 text-center">
                       {item.productCount || 5}
                     </td>
                     <td className="px-4 py-3 text-center">
@@ -502,24 +502,24 @@ const FigmaCatalogManager: React.FC<FigmaCatalogManagerProps> = ({
                       <div data-dropdown>
                         <button
                           onClick={(e) => { e.stopPropagation(); setOpenActionMenu(openActionMenu === item.id ? null : item.id); }}
-                          className="p-1 hover:bg-gray-200 rounded transition-colors inline-flex"
+                          className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors inline-flex"
                         >
                           <DotsIcon />
                         </button>
                         {openActionMenu === item.id && (
-                          <div className="absolute right-0 top-full mt-1 z-50">
-                            <div className="w-[140px] bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden py-1">
+                          <div className="absolute right-4 top-full mt-1 z-[100]">
+                            <div className="w-[160px] bg-white dark:bg-gray-800 rounded-lg shadow-2xl border border-gray-200 dark:border-gray-600 py-2" style={{ boxShadow: '0 10px 40px rgba(0,0,0,0.2)' }}>
                               <button
                                 onClick={() => { handleOpenModal(item); setOpenActionMenu(null); }}
-                                className="flex items-center gap-2 w-full px-3 py-2 hover:bg-gray-50 text-sm text-gray-700"
+                                className="flex items-center gap-3 w-full px-4 py-2.5 hover:bg-blue-50 dark:hover:bg-gray-700 text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors"
                               >
-                                <Edit size={14} /> Edit
+                                <Edit size={16} className="text-blue-500" /> Edit
                               </button>
                               <button
                                 onClick={() => handleDelete(item.id)}
-                                className="flex items-center gap-2 w-full px-3 py-2 hover:bg-gray-50 text-sm text-red-600"
+                                className="flex items-center gap-3 w-full px-4 py-2.5 hover:bg-red-50 dark:hover:bg-red-900/30 text-sm font-medium text-red-600 transition-colors"
                               >
-                                <Trash2 size={14} /> Delete
+                                <Trash2 size={16} /> Delete
                               </button>
                             </div>
                           </div>
@@ -529,10 +529,10 @@ const FigmaCatalogManager: React.FC<FigmaCatalogManagerProps> = ({
                   </tr>
                 )) : (
                   <tr>
-                    <td colSpan={10} className="px-4 py-12 text-center text-gray-500">
+                    <td colSpan={10} className="px-4 py-12 text-center text-gray-500 dark:text-gray-400">
                       <div className="flex flex-col items-center">
-                        <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-3">
-                          <Search size={24} className="text-gray-400" />
+                        <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-600 flex items-center justify-center mb-3">
+                          <Search size={24} className="text-gray-400 dark:text-gray-500" />
                         </div>
                         <p className="font-medium">No {getTitle().toLowerCase()}s found</p>
                         <p className="text-sm">Try adjusting your search or add a new {getTitle().toLowerCase()}</p>
@@ -552,10 +552,10 @@ const FigmaCatalogManager: React.FC<FigmaCatalogManagerProps> = ({
             <button
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className="bg-white h-[42px] rounded-lg flex items-center gap-1 px-3 shadow-[0px_1px_3px_0px_rgba(0,0,0,0.2)] disabled:opacity-50 hover:bg-gray-50"
+              className="bg-white dark:bg-gray-800 h-[42px] rounded-lg flex items-center gap-1 px-3 shadow-[0px_1px_3px_0px_rgba(0,0,0,0.2)] dark:shadow-[0px_1px_3px_0px_rgba(0,0,0,0.5)] disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-gray-700"
             >
               <ArrowLeftIcon />
-              <span className="text-[15px] font-medium text-black font-['Lato']">Previous</span>
+              <span className="text-[15px] font-medium text-black dark:text-white font-['Lato']">Previous</span>
             </button>
 
             {/* Page Numbers */}
@@ -567,10 +567,10 @@ const FigmaCatalogManager: React.FC<FigmaCatalogManagerProps> = ({
                   disabled={page === '...'}
                   className={`w-[36px] h-[36px] flex items-center justify-center rounded text-[15px] font-medium transition-colors ${
                     currentPage === page
-                      ? 'bg-[#dff5ff] text-[#1e90ff] font-bold'
+                      ? 'bg-[#dff5ff] dark:bg-gray-600 text-[#1e90ff] font-bold'
                       : page === '...'
-                      ? 'cursor-default text-[#023337] font-bold'
-                      : 'border border-[#d1d5db] text-[#023337] hover:bg-gray-50'
+                      ? 'cursor-default text-[#023337] dark:text-white font-bold'
+                      : 'border border-[#d1d5db] dark:border-gray-600 text-[#023337] dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700'
                   }`}
                 >
                   {page === '...' ? '.....' : page}
@@ -582,9 +582,9 @@ const FigmaCatalogManager: React.FC<FigmaCatalogManagerProps> = ({
             <button
               onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages || totalPages === 0}
-              className="bg-white h-[42px] rounded-lg flex items-center gap-1 px-3 shadow-[0px_1px_3px_0px_rgba(0,0,0,0.2)] disabled:opacity-50 hover:bg-gray-50"
+              className="bg-white dark:bg-gray-800 h-[42px] rounded-lg flex items-center gap-1 px-3 shadow-[0px_1px_3px_0px_rgba(0,0,0,0.2)] dark:shadow-[0px_1px_3px_0px_rgba(0,0,0,0.5)] disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-gray-700"
             >
-              <span className="text-[15px] font-medium text-black font-['Lato']">Next</span>
+              <span className="text-[15px] font-medium text-black dark:text-white font-['Lato']">Next</span>
               <div className="rotate-180">
                 <ArrowLeftIcon />
               </div>
@@ -596,12 +596,12 @@ const FigmaCatalogManager: React.FC<FigmaCatalogManagerProps> = ({
       {/* Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl w-full max-w-md p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-xl w-full max-w-md p-6">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-bold text-gray-900">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white">
                 {editItem ? 'Edit' : 'Add'} {getTitle()}
               </h2>
-              <button onClick={() => setIsModalOpen(false)} className="p-1 hover:bg-gray-100 rounded">
+              <button onClick={() => setIsModalOpen(false)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-900 dark:text-white">
                 <X size={20} />
               </button>
             </div>
@@ -609,13 +609,13 @@ const FigmaCatalogManager: React.FC<FigmaCatalogManagerProps> = ({
             <form onSubmit={handleSave} className="space-y-4">
               {/* Name */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name *</label>
                 <input
                   type="text"
                   required
                   value={formData.name || ''}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-400 focus:border-transparent outline-none"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-cyan-400 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-400"
                   placeholder={`Enter ${getTitle().toLowerCase()} name`}
                 />
               </div>
@@ -623,12 +623,12 @@ const FigmaCatalogManager: React.FC<FigmaCatalogManagerProps> = ({
               {/* Parent Category for Sub Category */}
               {view === 'catalog_subcategories' && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Parent Category *</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Parent Category *</label>
                   <select
                     required
                     value={formData.categoryId || ''}
                     onChange={(e) => setFormData({ ...formData, categoryId: e.target.value, categoryName: categories.find(c => c.id === e.target.value)?.name })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-400 focus:border-transparent outline-none"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-cyan-400 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   >
                     <option value="">Select Category</option>
                     {categories.map(cat => (
@@ -641,12 +641,12 @@ const FigmaCatalogManager: React.FC<FigmaCatalogManagerProps> = ({
               {/* Parent Sub Category for Child Category */}
               {view === 'catalog_childcategories' && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Parent Sub Category *</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Parent Sub Category *</label>
                   <select
                     required
                     value={formData.subCategoryId || ''}
                     onChange={(e) => setFormData({ ...formData, subCategoryId: e.target.value, subCategoryName: subCategories.find(s => s.id === e.target.value)?.name })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-400 focus:border-transparent outline-none"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-cyan-400 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   >
                     <option value="">Select Sub Category</option>
                     {subCategories.map(sub => (
@@ -659,11 +659,11 @@ const FigmaCatalogManager: React.FC<FigmaCatalogManagerProps> = ({
               {/* Image Upload for Category and Brand */}
               {showImageColumn && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     {view === 'catalog_brands' ? 'Logo' : 'Icon'}
                   </label>
                   <div className="flex items-center gap-3">
-                    <div className="w-16 h-16 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center overflow-hidden bg-gray-50">
+                    <div className="w-16 h-16 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center overflow-hidden bg-gray-50 dark:bg-gray-700">
                       {(formData.icon || formData.logo) ? (
                         <img 
                           src={formData.icon || formData.logo} 
@@ -671,13 +671,13 @@ const FigmaCatalogManager: React.FC<FigmaCatalogManagerProps> = ({
                           className="w-full h-full object-cover" 
                         />
                       ) : (
-                        <ImageIcon size={24} className="text-gray-400" />
+                        <ImageIcon size={24} className="text-gray-400 dark:text-gray-500" />
                       )}
                     </div>
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm"
+                      className="px-4 py-2 bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-500 text-sm"
                     >
                       Upload Image
                     </button>
@@ -694,22 +694,22 @@ const FigmaCatalogManager: React.FC<FigmaCatalogManagerProps> = ({
 
               {/* Priority */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Priority</label>
                 <input
                   type="number"
                   value={formData.priority || 100}
                   onChange={(e) => setFormData({ ...formData, priority: parseInt(e.target.value) })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-400 focus:border-transparent outline-none"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-cyan-400 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 />
               </div>
 
               {/* Status */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
                 <select
                   value={formData.status || 'Active'}
                   onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-400 focus:border-transparent outline-none"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-cyan-400 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 >
                   <option value="Active">Publish</option>
                   <option value="Inactive">Inactive</option>
@@ -721,7 +721,7 @@ const FigmaCatalogManager: React.FC<FigmaCatalogManagerProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                  className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
                 >
                   Cancel
                 </button>

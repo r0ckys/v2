@@ -271,7 +271,7 @@ const AdminCatalog: React.FC<AdminCatalogProps> = ({
 
       {/* Data Table */}
       <div className="p-3 sm:p-4 md:p-6">
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-visible">
           {/* Desktop Table View */}
           <div className="hidden md:block overflow-x-auto overflow-y-visible">
             <table className="w-full">
@@ -348,18 +348,18 @@ const AdminCatalog: React.FC<AdminCatalogProps> = ({
                             <MoreVertical size={16} className="text-gray-400" />
                           </button>
                           {openActionMenu === item.id && (
-                            <div className="absolute right-0 top-full mt-1 w-28 bg-white border border-gray-200 rounded-lg shadow-lg z-20 py-1">
+                            <div className="absolute right-0 top-full mt-1 w-36 bg-white border border-gray-200 rounded-lg z-[100] py-2" style={{ boxShadow: '0 10px 40px rgba(0,0,0,0.2)' }}>
                               <button
                                 onClick={() => { handleOpenModal(item); setOpenActionMenu(null); }}
-                                className="w-full px-3 py-1.5 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                                className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-blue-50 flex items-center gap-3 font-medium transition-colors"
                               >
-                                <Edit size={13} /> Edit
+                                <Edit size={15} className="text-blue-500" /> Edit
                               </button>
                               <button
                                 onClick={() => handleDelete(item.id)}
-                                className="w-full px-3 py-1.5 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                                className="w-full px-4 py-2.5 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-3 font-medium transition-colors"
                               >
-                                <Trash2 size={13} /> Delete
+                                <Trash2 size={15} /> Delete
                               </button>
                             </div>
                           )}
@@ -429,18 +429,18 @@ const AdminCatalog: React.FC<AdminCatalogProps> = ({
                                 <MoreVertical size={16} className="text-gray-400" />
                               </button>
                               {openActionMenu === item.id && (
-                                <div className="absolute right-0 top-full mt-1 w-28 bg-white border border-gray-200 rounded-lg shadow-lg z-20 py-1">
+                                <div className="absolute right-0 top-full mt-1 w-36 bg-white border border-gray-200 rounded-lg z-[100] py-2" style={{ boxShadow: '0 10px 40px rgba(0,0,0,0.2)' }}>
                                   <button
                                     onClick={() => { handleOpenModal(item); setOpenActionMenu(null); }}
-                                    className="w-full px-3 py-1.5 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                                    className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-blue-50 flex items-center gap-3 font-medium transition-colors"
                                   >
-                                    <Edit size={13} /> Edit
+                                    <Edit size={15} className="text-blue-500" /> Edit
                                   </button>
                                   <button
                                     onClick={() => handleDelete(item.id)}
-                                    className="w-full px-3 py-1.5 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                                    className="w-full px-4 py-2.5 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-3 font-medium transition-colors"
                                   >
-                                    <Trash2 size={13} /> Delete
+                                    <Trash2 size={15} /> Delete
                                   </button>
                                 </div>
                               )}
