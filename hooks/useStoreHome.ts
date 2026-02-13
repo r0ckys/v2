@@ -140,20 +140,31 @@ export const useStoreHome = ({
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
     const loadAndShowPopups = async () => {
-      if (!isMounted) return;
+      if (!isMounted || !tenantId) return;
       
       let popupList: Popup[] = [];
-      try {
-        const cachedPopups = getInitialCachedData<Popup[]>('popups', []);
-        if (cachedPopups.length > 0) {
-          popupList = cachedPopups.filter((p: Popup) => p.status?.toLowerCase() === 'publish');
-        }
-      } catch {}
+      
+      // First try to get popups from websiteConfig (set by PopupTab)
+      if (websiteConfig?.popups && Array.isArray(websiteConfig.popups) && websiteConfig.popups.length > 0) {
+        popupList = websiteConfig.popups.filter((p: Popup) => p.status?.toLowerCase() === 'publish');
+      }
+      
+      // If no popups in websiteConfig, try DataService (set by AdminPopups)
+      if (popupList.length === 0) {
+        try {
+          const cachedPopups = getInitialCachedData<Popup[]>('popups', []);
+          if (cachedPopups.length > 0) {
+            popupList = cachedPopups.filter((p: Popup) => p.status?.toLowerCase() === 'publish');
+          }
+        } catch {}
 
-      try {
-        const allPopups = await DataService.get<Popup[]>('popups', []);
-        popupList = allPopups.filter(p => p.status?.toLowerCase() === 'publish');
-      } catch {}
+        try {
+          const allPopups = await DataService.get<Popup[]>('popups', [], tenantId);
+          if (allPopups.length > 0) {
+            popupList = allPopups.filter(p => p.status?.toLowerCase() === 'publish');
+          }
+        } catch {}
+      }
 
       if (!isMounted || popupList.length === 0) return;
       
@@ -183,7 +194,7 @@ export const useStoreHome = ({
         (window as any).cancelIdleCallback(idleId);
       }
     };
-  }, []);
+  }, [tenantId, websiteConfig?.popups]);
 
   const handleClosePopup = useCallback(() => {
     setActivePopup(null);

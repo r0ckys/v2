@@ -714,7 +714,7 @@ const AdminApp: React.FC<AdminAppProps> = ({
                   adminSection === 'landing_pages' ? <AdminLandingPage tenantSubdomain={selectedTenantRecord?.subdomain || ''} products={products} landingPages={landingPages} onCreateLandingPage={onCreateLandingPage} onUpdateLandingPage={onUpsertLandingPage} onTogglePublish={onToggleLandingPublish} onPreviewLandingPage={handlePreviewLandingPage} /> :
                     adminSection === 'due_list' ? <AdminDueList user={user} onLogout={onLogout} /> :
                       adminSection === 'inventory' ? <FigmaInventory products={products} tenantId={activeTenantId} /> :
-                        adminSection === 'popups' ? <AdminPopups onBack={() => setAdminSection('dashboard')} /> :
+                        adminSection === 'popups' ? <AdminPopups onBack={() => setAdminSection('dashboard')} tenantId={activeTenantId} /> :
                           adminSection === 'customers_reviews' ? <AdminCustomers orders={orders} products={products} activeTenantId={activeTenantId} /> :
                             adminSection === 'daily_target' ? <AdminDailyTarget /> :
                               adminSection === 'gallery' ? <AdminGallery /> :

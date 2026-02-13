@@ -6,9 +6,10 @@ import { normalizeImageUrl } from '../utils/imageUrlHelper';
 
 interface AdminPopupsProps {
   onBack: () => void;
+  tenantId: string;
 }
 
-const AdminPopups: React.FC<AdminPopupsProps> = ({ onBack }) => {
+const AdminPopups: React.FC<AdminPopupsProps> = ({ onBack, tenantId }) => {
   const [popups, setPopups] = useState<Popup[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPopup, setEditingPopup] = useState<Popup | null>(null);
@@ -27,16 +28,18 @@ const AdminPopups: React.FC<AdminPopupsProps> = ({ onBack }) => {
   });
 
   useEffect(() => {
-    loadPopups();
-  }, []);
+    if (tenantId) {
+      loadPopups();
+    }
+  }, [tenantId]);
 
   const loadPopups = async () => {
-    const data = await DataService.get<Popup[]>('popups', []);
+    const data = await DataService.get<Popup[]>('popups', [], tenantId);
     setPopups(data);
   };
 
   const savePopups = async (newPopups: Popup[]) => {
-    await DataService.save('popups', newPopups);
+    await DataService.save('popups', newPopups, tenantId);
     setPopups(newPopups);
   };
 
@@ -75,16 +78,21 @@ const AdminPopups: React.FC<AdminPopupsProps> = ({ onBack }) => {
     if (editingPopup) {
       updatedPopups = popups.map((p) =>
         p.id === editingPopup.id
-          ? { ...formData, id: editingPopup.id, updatedAt: new Date().toISOString() } as Popup
+          ? { ...p, ...formData, updatedAt: new Date().toISOString(), status: (formData.status || 'Draft') as 'Draft' | 'Publish' } as Popup
           : p
       );
     } else {
       const newPopup: Popup = {
-        ...formData,
+        name: formData.name || '',
+        image: formData.image || '',
+        url: formData.url || '',
+        urlType: (formData.urlType || 'Internal') as 'Internal' | 'External',
+        priority: formData.priority || 0,
+        status: (formData.status || 'Draft') as 'Draft' | 'Publish',
         id: Date.now(),
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-      } as Popup;
+      };
       updatedPopups = [...popups, newPopup];
     }
 

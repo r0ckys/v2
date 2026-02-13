@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { X, Search, Image as ImageIcon, Check, FolderOpen, Grid3X3, LayoutGrid, ZoomIn, ChevronLeft, ChevronRight, Filter, SortAsc, SortDesc } from 'lucide-react';
+import { X, Search, Image as ImageIcon, Check, FolderOpen, Grid, LayoutGrid, ZoomIn, ChevronLeft, ChevronRight, Filter, ArrowUpAZ, ArrowDownAZ } from 'lucide-react';
 import { GalleryItem } from '../types';
 import { DataService } from '../services/DataService';
 
@@ -196,7 +196,7 @@ export const GalleryPicker: React.FC<GalleryPickerProps> = ({
                     className={`p-3 transition-colors ${viewMode === 'grid' ? 'bg-purple-100 text-purple-600' : 'text-gray-500 hover:bg-gray-50'}`}
                     title="Compact Grid"
                   >
-                    <Grid3X3 size={18} />
+                    <Grid size={18} />
                   </button>
                   <button
                     onClick={() => setViewMode('large')}
@@ -213,7 +213,7 @@ export const GalleryPicker: React.FC<GalleryPickerProps> = ({
                     onClick={(e) => { e.stopPropagation(); setShowSortMenu(!showSortMenu); }}
                     className="flex items-center gap-2 px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50 shadow-sm"
                   >
-                    {sortMode.includes('asc') || sortMode === 'oldest' ? <SortAsc size={16} /> : <SortDesc size={16} />}
+                    {sortMode.includes('asc') || sortMode === 'oldest' ? <ArrowUpAZ size={16} /> : <ArrowDownAZ size={16} />}
                     <span className="hidden sm:inline">Sort</span>
                   </button>
                   
@@ -297,12 +297,12 @@ export const GalleryPicker: React.FC<GalleryPickerProps> = ({
               <div className={`grid ${gridCols} gap-4`}>
                 {filteredImages.map((img, index) => {
                   const isSelected = selectedUrls.includes(img.imageUrl);
-                  const isHovered = hoveredImage === img.id;
+                  const isHovered = hoveredImage === String(img.id);
                   return (
                     <div
                       key={img.id}
                       onClick={() => handleImageClick(img.imageUrl)}
-                      onMouseEnter={() => setHoveredImage(img.id)}
+                      onMouseEnter={() => setHoveredImage(String(img.id))}
                       onMouseLeave={() => setHoveredImage(null)}
                       className={`group relative aspect-square rounded-xl overflow-hidden cursor-pointer transition-all duration-300 ${
                         isSelected
