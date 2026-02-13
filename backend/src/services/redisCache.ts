@@ -3,36 +3,58 @@ import IORedis from 'ioredis';
 // Singleton Redis client
 let redis: IORedis | null = null;
 let redisReady = false;
+let redisInitializing = false;
 
 const getRedis = (): IORedis | null => {
+  // Return connected client
   if (redis && redisReady) return redis;
-  
-  // Check for Upstash (cloud) first, then local Redis
-  const localUrl = process.env.REDIS_URL || 'redis://127.0.0.1:6379';
   
   // Skip if explicitly disabled
   if (process.env.REDIS_DISABLED === 'true') return null;
   
+  // Return null if not ready (don't return disconnected client)
+  if (redis && !redisReady) {
+    // Client exists but not ready - return null to gracefully degrade
+    return null;
+  }
+  
+  // Prevent multiple simultaneous initialization attempts
+  if (redisInitializing) return null;
+  
+  // Check for Upstash (cloud) first, then local Redis
+  const localUrl = process.env.REDIS_URL || 'redis://127.0.0.1:6379';
+  
   if (!redis) {
     try {
+      redisInitializing = true;
       redis = new IORedis(localUrl, {
         maxRetriesPerRequest: 3,
         connectTimeout: 5000,
         retryStrategy: (times) => {
-          if (times > 5) {
-            console.warn('[Redis] Max retries reached, giving up');
+          if (times > 10) {
+            console.warn('[Redis] Max retries reached, will retry later');
+            // Reset so we can try again later
+            redis = null;
+            redisReady = false;
+            redisInitializing = false;
             return null;
           }
-          const delay = Math.min(times * 200, 2000);
+          const delay = Math.min(times * 500, 5000);
           console.log(`[Redis] Retrying connection in ${delay}ms (attempt ${times})`);
           return delay;
         },
         enableReadyCheck: true,
         lazyConnect: false,
+        reconnectOnError: (err) => {
+          // Reconnect on specific errors
+          const targetErrors = ['READONLY', 'ECONNRESET', 'ECONNREFUSED'];
+          return targetErrors.some(e => err.message.includes(e));
+        },
       });
       
       redis.on('ready', () => {
         redisReady = true;
+        redisInitializing = false;
         console.log('[Redis] ✓ Connected to local Redis');
       });
       
@@ -52,17 +74,27 @@ const getRedis = (): IORedis | null => {
         redisReady = false;
       });
       
+      redis.on('end', () => {
+        console.log('[Redis] Connection ended, will recreate on next request');
+        redis = null;
+        redisReady = false;
+        redisInitializing = false;
+      });
+      
       redis.on('reconnecting', () => {
         console.log('[Redis] Reconnecting...');
+        redisReady = false;
       });
       
     } catch (err) {
       console.warn('[Redis] Failed to initialize:', err);
+      redisInitializing = false;
       return null;
     }
   }
   
-  return redis;
+  // Only return if ready
+  return redisReady ? redis : null;
 };
 
 // Check if Redis is actually connected
@@ -136,8 +168,11 @@ export async function getCached<T>(key: string): Promise<T | null> {
       L1.set(key, { data, expires: Date.now() + TTL.MEMORY_MS });
       return data;
     }
-  } catch (e) {
-    console.error('[Redis] GET error:', e);
+  } catch (e: any) {
+    // Only log non-connection errors (connection errors are expected during reconnection)
+    if (!e?.message?.includes('Connection is closed') && !e?.message?.includes('ECONNREFUSED')) {
+      console.error('[Redis] GET error:', e);
+    }
   }
   
   return null;
@@ -153,7 +188,11 @@ export async function setCached<T>(key: string, data: T): Promise<void> {
   // L2: Set Redis (fire and forget for speed)
   const client = getRedis();
   if (client) {
-    client.set(key, JSON.stringify(data), 'EX', TTL.REDIS_SEC).catch(e => console.error('[Redis] SET error:', e));
+    client.set(key, JSON.stringify(data), 'EX', TTL.REDIS_SEC).catch((e: any) => {
+      if (!e?.message?.includes('Connection is closed') && !e?.message?.includes('ECONNREFUSED')) {
+        console.error('[Redis] SET error:', e);
+      }
+    });
   }
 }
 
@@ -164,7 +203,11 @@ export async function deleteCached(key: string): Promise<void> {
   L1.delete(key);
   const client = getRedis();
   if (client) {
-    await client.del(key).catch(e => console.error('[Redis] DEL error:', e));
+    await client.del(key).catch((e: any) => {
+      if (!e?.message?.includes('Connection is closed') && !e?.message?.includes('ECONNREFUSED')) {
+        console.error('[Redis] DEL error:', e);
+      }
+    });
   }
 }
 
@@ -185,8 +228,10 @@ export async function invalidateTenantCache(tenantId: string): Promise<void> {
     try {
       const keys = await client.keys(`${pattern}*`);
       if (keys.length) await client.del(...keys);
-    } catch (e) {
-      console.error('[Redis] Invalidate error:', e);
+    } catch (e: any) {
+      if (!e?.message?.includes('Connection is closed') && !e?.message?.includes('ECONNREFUSED')) {
+        console.error('[Redis] Invalidate error:', e);
+      }
     }
   }
 }
@@ -212,7 +257,11 @@ export async function setCachedWithTTL<T>(
   const client = getRedis();
   if (client) {
     client.set(key, JSON.stringify(data), 'EX', ttlMap[type])
-      .catch(e => console.error('[Redis] SET error:', e));
+      .catch((e: any) => {
+        if (!e?.message?.includes('Connection is closed') && !e?.message?.includes('ECONNREFUSED')) {
+          console.error('[Redis] SET error:', e);
+        }
+      });
   }
 }
 

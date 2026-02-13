@@ -1059,6 +1059,7 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
       date: newIncome.date!,
       status: (newIncome.status as any) || 'Published',
       note: newIncome.note,
+      imageUrl: newIncome.imageUrl,
     };
     try {
       if (editingIncomeId) {
@@ -1245,7 +1246,7 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
               >
                 <option value="">All Categories</option>
                 {incomeCategories.map(cat => (
-                  <option key={cat.id} value={cat.name}>{cat.name}</option>
+                  <option key={cat.id || cat.name} value={cat.name}>{cat.name}</option>
                 ))}
               </select>
               <ChevronDown size={18} className="text-gray-400" />
@@ -1293,7 +1294,7 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
         ) : (
           incomes.map((income, index) => (
             <div
-              key={income.id}
+              key={income.id || `income-${index}`}
               className="h-[68px] flex items-center border-b border-[#b9b9b9]/50 hover:bg-gray-50"
             >
               <div className="w-[60px] text-center">
@@ -1323,12 +1324,15 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
               </div>
               <div className="w-[80px] flex justify-center relative">
                 <button
-                  onClick={() => setIncomeActionMenuOpen(incomeActionMenuOpen === income.id ? null : income.id)}
+                  onClick={() => {
+                    const menuId = income.id || `income-${index}`;
+                    setIncomeActionMenuOpen(incomeActionMenuOpen === menuId ? null : menuId);
+                  }}
                   className="p-1 hover:bg-gray-100 rounded"
                 >
                   <DotsIcon />
                 </button>
-                {incomeActionMenuOpen === income.id && (
+                {incomeActionMenuOpen === (income.id || `income-${index}`) && (
                   <div className="absolute right-0 top-8 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-[120px]">
                     <button
                       onClick={() => {
@@ -1410,74 +1414,165 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
       {/* Add/Edit Income Modal */}
       {isAddIncomeOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-[18px] font-bold text-[#023337] font-['Lato']">
-                {editingIncomeId ? 'Edit Income' : 'Add New Income'}
+          <div className="bg-white rounded-[8px] p-5 w-full max-w-[548px] overflow-y-auto max-h-[90vh]">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-[16px] font-semibold text-black font-['Poppins']">
+                {editingIncomeId ? 'Edit Income' : 'Add Income'}
               </h3>
               <button onClick={() => { setIsAddIncomeOpen(false); setEditingIncomeId(null); }} className="text-gray-500 hover:text-gray-700">
                 <X size={20} />
               </button>
             </div>
+            
             <div className="flex flex-col gap-4">
-              <div>
-                <label className="text-[12px] text-gray-600 font-['Poppins']">Name</label>
+              {/* Income Name */}
+              <div className="flex flex-col gap-3">
+                <label className="text-[15px] font-bold text-[#023337] font-['Lato']">
+                  Income Name<span className="text-[#da0000]">*</span>
+                </label>
                 <input
                   type="text"
                   value={newIncome.name || ''}
                   onChange={(e) => setNewIncome(prev => ({ ...prev, name: e.target.value }))}
-                  className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg text-[14px] font-['Poppins']"
+                  className="w-full h-[48px] px-3 py-[10px] bg-[#f9fafb] border border-[#e5e7eb] rounded-[8px] text-[15px] text-[#023337] font-['Lato'] placeholder:text-[#aeaeae] outline-none focus:border-[#38bdf8]"
                   placeholder="Enter income name"
                 />
               </div>
-              <div>
-                <label className="text-[12px] text-gray-600 font-['Poppins']">Category</label>
-                <select
-                  value={newIncome.category || ''}
-                  onChange={(e) => setNewIncome(prev => ({ ...prev, category: e.target.value }))}
-                  className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg text-[14px] font-['Poppins']"
+
+              {/* Category */}
+              <div className="flex flex-col gap-3">
+                <label className="text-[15px] font-bold text-[#023337] font-['Lato']">
+                  Category<span className="text-[#da0000]">*</span>
+                </label>
+                <div className="relative">
+                  <select
+                    value={newIncome.category || ''}
+                    onChange={(e) => setNewIncome(prev => ({ ...prev, category: e.target.value }))}
+                    className="w-full h-[48px] px-3 py-[10px] bg-[#f9fafb] border border-[#e5e7eb] rounded-[8px] text-[15px] text-[#023337] font-['Lato'] appearance-none cursor-pointer outline-none focus:border-[#38bdf8]"
+                  >
+                    <option value="" className="text-[#aeaeae]">Select Category</option>
+                    {incomeCategories.map(cat => (
+                      <option key={cat.id || cat.name} value={cat.name}>{cat.name}</option>
+                    ))}
+                  </select>
+                  <ChevronDown size={20} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#023337] pointer-events-none" />
+                </div>
+              </div>
+
+              {/* Amount and Date Row */}
+              <div className="flex gap-4">
+                {/* Amount */}
+                <div className="flex-1 flex flex-col gap-3">
+                  <label className="text-[15px] font-bold text-[#023337] font-['Lato']">
+                    Amount<span className="text-[#da0000]">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    value={newIncome.amount || ''}
+                    onChange={(e) => setNewIncome(prev => ({ ...prev, amount: Number(e.target.value) }))}
+                    className="w-full h-[48px] px-3 py-[10px] bg-[#f9fafb] border border-[#e5e7eb] rounded-[8px] text-[15px] text-[#023337] font-['Lato'] placeholder:text-[#aeaeae] outline-none focus:border-[#38bdf8]"
+                    placeholder="0.00"
+                  />
+                </div>
+
+                {/* Date */}
+                <div className="flex-1 flex flex-col gap-3">
+                  <label className="text-[15px] font-bold text-[#023337] font-['Lato']">
+                    Date<span className="text-[#da0000]">*</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="date"
+                      value={newIncome.date || ''}
+                      onChange={(e) => setNewIncome(prev => ({ ...prev, date: e.target.value }))}
+                      className="w-full h-[48px] px-3 py-[10px] bg-[#f9fafb] border border-[#e5e7eb] rounded-[8px] text-[15px] text-[#023337] font-['Lato'] placeholder:text-[#aeaeae] outline-none focus:border-[#38bdf8]"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Image Upload */}
+              <div className="flex flex-col gap-3">
+                <label className="text-[15px] font-bold text-[#023337] font-['Lato']">
+                  Image Upload
+                </label>
+                <div 
+                  className="w-full h-[153px] bg-[#f9fafb] border border-[#e5e7eb] rounded-[8px] flex flex-col items-center justify-center gap-4 cursor-pointer hover:border-[#38bdf8] transition-colors"
+                  onClick={() => document.getElementById('income-image-upload')?.click()}
                 >
-                  <option value="">Select Category</option>
-                  {incomeCategories.map(cat => (
-                    <option key={cat.id} value={cat.name}>{cat.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="text-[12px] text-gray-600 font-['Poppins']">Amount (৳)</label>
+                  {newIncome.imageUrl ? (
+                    <div className="relative w-full h-full p-2">
+                      <img 
+                        src={newIncome.imageUrl} 
+                        alt="Income" 
+                        className="w-full h-full object-contain rounded"
+                      />
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); setNewIncome(prev => ({ ...prev, imageUrl: undefined })); }}
+                        className="absolute top-3 right-3 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-[15px] text-[#aeaeae] font-['Lato']">Upload Doc</p>
+                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#aeaeae" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="17 8 12 3 7 8" />
+                        <line x1="12" y1="3" x2="12" y2="15" />
+                      </svg>
+                    </>
+                  )}
+                </div>
                 <input
-                  type="number"
-                  value={newIncome.amount || ''}
-                  onChange={(e) => setNewIncome(prev => ({ ...prev, amount: Number(e.target.value) }))}
-                  className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg text-[14px] font-['Poppins']"
-                  placeholder="Enter amount"
+                  id="income-image-upload"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onloadend = () => {
+                        setNewIncome(prev => ({ ...prev, imageUrl: reader.result as string }));
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                  }}
                 />
               </div>
-              <div>
-                <label className="text-[12px] text-gray-600 font-['Poppins']">Date</label>
+
+              {/* Note */}
+              <div className="flex flex-col gap-3">
+                <label className="text-[15px] font-bold text-[#023337] font-['Lato']">
+                  Note
+                </label>
                 <input
-                  type="date"
-                  value={newIncome.date || ''}
-                  onChange={(e) => setNewIncome(prev => ({ ...prev, date: e.target.value }))}
-                  className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg text-[14px] font-['Poppins']"
-                />
-              </div>
-              <div>
-                <label className="text-[12px] text-gray-600 font-['Poppins']">Note (Optional)</label>
-                <textarea
+                  type="text"
                   value={newIncome.note || ''}
                   onChange={(e) => setNewIncome(prev => ({ ...prev, note: e.target.value }))}
-                  className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg text-[14px] font-['Poppins']"
-                  placeholder="Add a note"
-                  rows={2}
+                  className="w-full h-[48px] px-3 py-[10px] bg-[#f9fafb] border border-[#e5e7eb] rounded-[8px] text-[15px] text-[#023337] font-['Lato'] placeholder:text-[#aeaeae] outline-none focus:border-[#38bdf8]"
+                  placeholder="Add any notes..."
                 />
               </div>
-              <button
-                onClick={handleAddIncome}
-                className="bg-gradient-to-r from-[#38bdf8] to-[#1e90ff] text-white py-3 rounded-lg text-[15px] font-bold font-['Lato']"
-              >
-                {editingIncomeId ? 'Update Income' : 'Add Income'}
-              </button>
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-end gap-3 mt-2">
+                <button
+                  onClick={() => { setIsAddIncomeOpen(false); setEditingIncomeId(null); }}
+                  className="h-[40px] px-4 py-2 bg-white border border-[#e5e7eb] rounded-[8px] text-[15px] font-bold text-[#023337] font-['Lato'] tracking-[-0.3px] hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleAddIncome}
+                  className="h-[40px] px-4 py-2 bg-gradient-to-r from-[#38bdf8] to-[#1e90ff] rounded-[8px] text-[15px] font-bold text-white font-['Lato'] tracking-[-0.3px] hover:opacity-90"
+                >
+                  {editingIncomeId ? 'Update Income' : 'Save Income'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1782,7 +1877,7 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
               >
                 <option value="">Category</option>
                 {expenseCategories.map(cat => (
-                  <option key={cat.id} value={cat.name}>{cat.name}</option>
+                  <option key={cat.id || cat.name} value={cat.name}>{cat.name}</option>
                 ))}
               </select>
               <ChevronDown size={18} className="text-gray-400" />
@@ -2265,7 +2360,7 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
               >
                 <option value="">All Categories</option>
                 {expenseCategories.map(cat => (
-                  <option key={cat.id} value={cat.name}>{cat.name}</option>
+                  <option key={cat.id || cat.name} value={cat.name}>{cat.name}</option>
                 ))}
               </select>
               <ChevronDown size={18} className="text-gray-400" />
@@ -2313,7 +2408,7 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
         ) : (
           expenses.map((expense, index) => (
             <div
-              key={expense.id}
+              key={expense.id || `expense-${index}`}
               className="h-[68px] flex items-center border-b border-[#b9b9b9]/50 hover:bg-gray-50"
             >
               <div className="w-[60px] text-center">
@@ -2343,12 +2438,15 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
               </div>
               <div className="w-[80px] flex justify-center relative">
                 <button
-                  onClick={() => setActionMenuOpen(actionMenuOpen === expense.id ? null : expense.id)}
+                  onClick={() => {
+                    const menuId = expense.id || `expense-${index}`;
+                    setActionMenuOpen(actionMenuOpen === menuId ? null : menuId);
+                  }}
                   className="p-1 hover:bg-gray-100 rounded"
                 >
                   <DotsIcon />
                 </button>
-                {actionMenuOpen === expense.id && (
+                {actionMenuOpen === (expense.id || `expense-${index}`) && (
                   <div className="absolute right-0 top-8 bg-white rounded-[8px] shadow-[0px_3px_19.5px_0px_rgba(0,0,0,0.13)] z-10 overflow-hidden py-2">
                     {/* Details */}
                     <button
@@ -2503,7 +2601,7 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
                     <div className="p-4 flex flex-col gap-2 max-h-[200px] overflow-y-auto">
                       {expenseCategories.map(cat => (
                         <div 
-                          key={cat.id}
+                          key={cat.id || cat.name}
                           onClick={() => { setNewExpense(prev => ({ ...prev, category: cat.name })); setIsCategoryDropdownOpen(false); }}
                           className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1 rounded"
                         >
