@@ -82,6 +82,9 @@ function buildUrl(path: string, params?: Record<string, string | number | boolea
 function headers(extra?: Record<string, string>): Record<string, string> {
   const h: Record<string, string> = { ...extra };
   if (_tenantId) h['X-Tenant-Id'] = _tenantId;
+  // Add Authorization token from localStorage
+  const token = localStorage.getItem('admin_auth_token');
+  if (token) h['Authorization'] = `Bearer ${token}`;
   return h;
 }
 

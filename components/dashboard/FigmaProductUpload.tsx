@@ -326,6 +326,7 @@ const FigmaProductUpload: React.FC<FigmaProductUploadProps> = ({
         galleryImages: editProduct.galleryImages || [],
         salesPrice: editProduct.price || 0,
         regularPrice: editProduct.originalPrice || 0,
+        costPrice: editProduct.costPrice || 0,
         category: editProduct.category || '',
         brandName: editProduct.brand || '',
         sku: editProduct.sku || '',

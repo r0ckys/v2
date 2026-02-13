@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { getDatabase } from '../db/mongo';
 import { getCached, setCachedWithTTL, CacheKeys } from '../services/redisCache';
+import { getTenantData } from '../services/tenantDataService';
 
 export const profitLossRouter = Router();
 
@@ -44,13 +45,16 @@ profitLossRouter.get('/summary', async (req, res, next) => {
     if (tenantId && tenantId !== 'global') incomeFilter.tenantId = tenantId;
 
     // Run all queries in parallel for speed
-    const [orders, expenses, incomes, products] = await Promise.all([
+    const [orders, expenses, incomes, tenantProducts] = await Promise.all([
       db.collection('orders').find(orderFilter).toArray(),
       db.collection('expenses').find(expenseFilter).toArray(),
       db.collection('incomes').find(incomeFilter).toArray().catch(() => []),
-      db.collection('products').find({}).toArray()
+      // Get products from tenant_data collection (where products are actually stored)
+      getTenantData<any[]>(tenantId, 'products').catch(() => [])
     ]);
 
+    // Ensure products is an array
+    const products = Array.isArray(tenantProducts) ? tenantProducts : [];
     const productMap = new Map(products.map((p: any) => [p.id?.toString(), p]));
 
     // Calculate selling price (order amount minus delivery)

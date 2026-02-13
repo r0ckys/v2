@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Download, RefreshCw, ChevronDown, TrendingUp, Plus, Printer, MoreHorizontal, ChevronLeft, ChevronRight, X, Edit2, Trash2, Search, Package } from 'lucide-react';
+import { Download, RefreshCw, ChevronDown, TrendingUp, TrendingDown, Plus, Printer, MoreHorizontal, ChevronLeft, ChevronRight, X, Edit2, Trash2, Search, Package, Calendar } from 'lucide-react';
 
 // Import existing sub-components
 import AdminNote from '../../pages/AdminNote';
@@ -294,10 +294,10 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
     const preloadData = async () => {
       const { start, end } = getDateRangeBoundaries;
       
-      // Load expenses in background
+      // Load expenses in background - use larger page size for summary calculation
       ExpenseService.list({
         page: 1,
-        pageSize: expensePageSize,
+        pageSize: 500,
         from: start.toISOString(),
         to: end.toISOString(),
       }).then(res => {
@@ -309,10 +309,10 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
         setExpenseCategories(res.items);
       }).catch(console.error);
       
-      // Load incomes in background
+      // Load incomes in background - use larger page size
       IncomeService.list({
         page: 1,
-        pageSize: 10,
+        pageSize: 500,
         from: start.toISOString(),
         to: end.toISOString(),
       }).then(res => {
@@ -326,11 +326,11 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
     };
     
     preloadData();
-  }, [tenantId]); // Only run on mount and tenant change
+  }, [tenantId, getDateRangeBoundaries]); // Run on mount, tenant change, AND date range change
 
-  // Load expenses when tab is active (for refresh)
+  // Load expenses when tab is active (for refresh) - only refetch categories, don't replace expense data
   useEffect(() => {
-    const loadExpenses = async () => {
+    const loadExpenseCategories = async () => {
       if (activeTab !== 'expense') return;
       if (!tenantId) return;
       
@@ -339,29 +339,17 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
       setCategoryTenantId(tenantId);
       
       try {
-        // Only show loading if no data yet
-        if (expenses.length === 0) setExpenseLoading(true);
-        const { start, end } = getDateRangeBoundaries;
-        const [expRes, catRes] = await Promise.all([
-          ExpenseService.list({
-            category: selectedExpenseCategory || undefined,
-            page: expensePage,
-            pageSize: expensePageSize,
-            from: start.toISOString(),
-            to: end.toISOString(),
-          }),
-          CategoryService.list(),
-        ]);
-        setExpenses(expRes.items as any);
-        setExpenseCategories(catRes.items);
+        // Only load categories if we don't have them yet
+        if (expenseCategories.length === 0) {
+          const catRes = await CategoryService.list();
+          setExpenseCategories(catRes.items);
+        }
       } catch (e) {
-        console.error('Failed to load expenses:', e);
-      } finally {
-        setExpenseLoading(false);
+        console.error('Failed to load expense categories:', e);
       }
     };
-    loadExpenses();
-  }, [activeTab, selectedExpenseCategory, expensePage, getDateRangeBoundaries, tenantId]);
+    loadExpenseCategories();
+  }, [activeTab, tenantId, expenseCategories.length]);
 
   // Expense calculations
   const expenseStats = useMemo(() => {
@@ -396,35 +384,23 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
   const [incomeActionMenuOpen, setIncomeActionMenuOpen] = useState<string | null>(null);
   const incomePageSize = 10;
 
-  // Load incomes when tab is active (for refresh)
+  // Load income categories when tab is active (for refresh) - don't replace income data
   useEffect(() => {
-    const loadIncomes = async () => {
+    const loadIncomeCategories = async () => {
       if (activeTab !== 'income') return;
       if (!tenantId) return;
       try {
-        // Only show loading if no data yet
-        if (incomes.length === 0) setIncomeLoading(true);
-        const { start, end } = getDateRangeBoundaries;
-        const [incRes, catRes] = await Promise.all([
-          IncomeService.list({
-            category: selectedIncomeCategory || undefined,
-            page: incomePage,
-            pageSize: incomePageSize,
-            from: start.toISOString(),
-            to: end.toISOString(),
-          }),
-          IncomeService.listCategories(),
-        ]);
-        setIncomes(incRes.items as any);
-        setIncomeCategories(catRes as any);
+        // Only load categories if we don't have them yet
+        if (incomeCategories.length === 0) {
+          const catRes = await IncomeService.listCategories();
+          setIncomeCategories(catRes as any);
+        }
       } catch (e) {
-        console.error('Failed to load incomes:', e);
-      } finally {
-        setIncomeLoading(false);
+        console.error('Failed to load income categories:', e);
       }
     };
-    loadIncomes();
-  }, [activeTab, selectedIncomeCategory, incomePage, getDateRangeBoundaries, tenantId]);
+    loadIncomeCategories();
+  }, [activeTab, tenantId, incomeCategories.length]);
 
   // Income calculations
   const incomeStats = useMemo(() => {
@@ -464,7 +440,9 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
         });
         if (response.ok) {
           const data = await response.json();
-          setPurchases(data || []);
+          // Handle both array response and {items: []} response format
+          const purchaseList = Array.isArray(data) ? data : (data?.items || data?.purchases || []);
+          setPurchases(purchaseList);
         }
       } catch (e) {
         console.error('Failed to load purchases:', e);
@@ -477,7 +455,8 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
 
   // Purchase calculations - now filtered by date
   const purchaseStats = useMemo(() => {
-    const filteredByDate = purchases.filter(p => isWithinDateRange(p.createdAt));
+    const purchaseArray = Array.isArray(purchases) ? purchases : [];
+    const filteredByDate = purchaseArray.filter(p => isWithinDateRange(p.createdAt));
     const totalAmount = filteredByDate.reduce((sum, p) => sum + (p.totalAmount || 0), 0);
     const uniqueSuppliers = new Set(filteredByDate.map(p => p.supplierName)).size;
     return {
@@ -489,7 +468,8 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
 
   // Filtered and sorted purchases
   const filteredPurchases = useMemo(() => {
-    let result = [...purchases];
+    const purchaseArray = Array.isArray(purchases) ? purchases : [];
+    let result = [...purchaseArray];
     if (purchaseSearch.trim()) {
       const q = purchaseSearch.toLowerCase();
       result = result.filter(p =>
@@ -517,6 +497,7 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
 
   // ========== DUE BOOK STATE ==========
   const [dueEntities, setDueEntities] = useState<DueEntity[]>([]);
+  const [allDueEntities, setAllDueEntities] = useState<DueEntity[]>([]); // All entities for summary
   const [dueTransactions, setDueTransactions] = useState<DueTransaction[]>([]);
   const [dueLoading, setDueLoading] = useState(false);
   const [dueTabType, setDueTabType] = useState<EntityType>('Customer');
@@ -532,7 +513,27 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
     }
   }, [tenantId]);
 
-  // Load due entities when tab or dueTabType changes
+  // Load ALL entities for summary calculation (once when due tab is active)
+  useEffect(() => {
+    if (activeTab === 'due' && tenantId) {
+      const loadAllEntities = async () => {
+        try {
+          // Load all entity types for overall summary
+          const [customers, suppliers, employees] = await Promise.all([
+            dueListService.getEntities('Customer'),
+            dueListService.getEntities('Supplier'),
+            dueListService.getEntities('Employee')
+          ]);
+          setAllDueEntities([...customers, ...suppliers, ...employees]);
+        } catch (error) {
+          console.error('Error loading all entities for summary:', error);
+        }
+      };
+      loadAllEntities();
+    }
+  }, [activeTab, tenantId]);
+
+  // Load due entities for the selected tab when tab or dueTabType changes
   useEffect(() => {
     if (activeTab === 'due' && tenantId) {
       const loadDueEntities = async () => {
@@ -571,17 +572,33 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
     }
   }, [activeTab, selectedEntityId, tenantId]);
 
-  // Due summary calculations
+  // Due summary calculations - uses ALL entities (not just current tab)
   const dueSummary = useMemo(() => {
-    const totalWillGet = dueEntities.reduce((sum, e) => sum + (e.totalOwedToMe || 0), 0);
-    const totalWillGive = dueEntities.reduce((sum, e) => sum + (e.totalIOweThemNumber || 0), 0);
+    const totalWillGet = allDueEntities.reduce((sum, e) => sum + (e.totalOwedToMe || 0), 0);
+    const totalWillGive = allDueEntities.reduce((sum, e) => sum + (e.totalIOweThemNumber || 0), 0);
     return { totalWillGet, totalWillGive };
-  }, [dueEntities]);
+  }, [allDueEntities]);
 
   // Get selected entity
   const selectedEntity = useMemo(() => {
     return dueEntities.find(e => e._id === selectedEntityId) || null;
   }, [dueEntities, selectedEntityId]);
+
+  // Filter due transactions by date range
+  const filteredDueTransactions = useMemo(() => {
+    return dueTransactions.filter(tx => isWithinDateRange(tx.transactionDate));
+  }, [dueTransactions, getDateRangeBoundaries]);
+
+  // Calculate due summary from filtered transactions (for date-specific view)
+  const filteredDueSummary = useMemo(() => {
+    const totalWillGet = filteredDueTransactions
+      .filter(tx => tx.direction === 'INCOME')
+      .reduce((sum, tx) => sum + tx.amount, 0);
+    const totalWillGive = filteredDueTransactions
+      .filter(tx => tx.direction === 'EXPENSE')
+      .reduce((sum, tx) => sum + tx.amount, 0);
+    return { totalWillGet, totalWillGive };
+  }, [filteredDueTransactions]);
 
   // Calculate summary stats - now filtered by date range
   const summary = useMemo(() => {
@@ -595,11 +612,20 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
     // Purchase Cost (COGS): Calculate from delivered orders' products cost price
     // For each delivered order, sum up the cost price of items sold
     const purchaseCost = deliveredOrders.reduce((sum, order) => {
-      const orderItems = order.items || [];
+      // Check if order has items array (multi-item order) or direct productId (single-item order)
+      const orderItems = Array.isArray(order.items) && order.items.length > 0 
+        ? order.items 
+        : [{ productId: order.productId, productName: order.productName, quantity: order.quantity || 1, price: (order.amount || 0) - (order.deliveryCharge || 0) }];
+      
       const orderCost = orderItems.reduce((itemSum: number, item: any) => {
-        // Find product to get cost price, or estimate from item
-        const product = products.find((p: any) => p._id === item.productId || p.name === item.productName);
-        const costPrice = product?.costPrice || (item.price * 0.6); // If no cost price, estimate 60% of selling price
+        // Find product to get cost price
+        const product = products.find((p: any) => 
+          String(p.id) === String(item.productId) || 
+          p._id === item.productId || 
+          p.name === item.productName
+        );
+        // Use costPrice if available, else estimate as 60% of selling price
+        const costPrice = product?.costPrice || (item.price * 0.6);
         return itemSum + (costPrice * (item.quantity || 1));
       }, 0);
       return sum + orderCost;
@@ -608,16 +634,18 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
     // Profit From Sell: Selling Price - Purchase Cost
     const profitFromSell = totalRevenue - purchaseCost;
     
-    // Filter incomes by date range and sum them
-    const filteredIncomes = incomes.filter(inc => isWithinDateRange(inc.date));
-    const totalIncome = filteredIncomes.reduce((sum, inc) => sum + (inc.amount || 0), 0);
+    // Sum incomes - already filtered by date range when loaded
+    const totalIncome = incomes.reduce((sum, inc) => sum + (inc.amount || 0), 0);
     
-    // Filter expenses by date range and sum them
-    const filteredExpenses = expenses.filter(exp => isWithinDateRange(exp.date));
-    const totalExpense = filteredExpenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
+    // Sum expenses - already filtered by date range when loaded
+    const totalExpense = expenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
     
     // Net Profit: (Profit From Sell + Income) - Expense
     const netProfit = profitFromSell + totalIncome - totalExpense;
+    
+    // Net Profit Percentage (based on revenue) - reusable value
+    const netProfitPercent = totalRevenue > 0 ? ((netProfit / totalRevenue) * 100) : 0;
+    const isProfit = netProfit >= 0;
     
     const inventoryValue = products.reduce((sum, p) => sum + ((p.price || 0) * (p.stock || 0)), 0);
     const businessValue = inventoryValue + totalRevenue;
@@ -629,6 +657,8 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
       otherIncome: totalIncome,
       otherExpenses: totalExpense,
       netProfit: netProfit,
+      netProfitPercent: netProfitPercent,  // Percentage value (e.g., -12.5 or 25.3)
+      isProfit: isProfit,                   // true if profit, false if loss
       businessValue: businessValue || 500000,
       youWillGive: 30000,
       youWillGet: 70000,
@@ -857,9 +887,19 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
                   <span className="text-[10px] text-[#bababa] font-['Poppins']">Profit + Income - Expense</span>
                 </div>
                 <div className="flex flex-col items-end gap-0.5">
-                  <span className={`text-[16px] font-semibold font-['Lato'] ${summary.netProfit >= 0 ? 'bg-gradient-to-r from-[#38bdf8] to-[#1e90ff] bg-clip-text text-transparent' : 'text-[#da0000]'}`}>
-                    ৳{summary.netProfit.toLocaleString('en-IN')}
-                  </span>
+                  <div className="flex items-center gap-1">
+                    {summary.isProfit ? (
+                      <TrendingUp size={18} className="text-[#21c45d]" />
+                    ) : (
+                      <TrendingDown size={18} className="text-[#da0000]" />
+                    )}
+                    <span className={`text-[16px] font-semibold font-['Lato'] ${summary.isProfit ? 'text-[#21c45d]' : 'text-[#da0000]'}`}>
+                      ৳{Math.abs(summary.netProfit).toLocaleString('en-IN')}
+                    </span>
+                    <span className={`text-[12px] font-medium font-['Lato'] ${summary.isProfit ? 'text-[#21c45d]' : 'text-[#da0000]'}`}>
+                      ({summary.netProfitPercent.toFixed(1)}%)
+                    </span>
+                  </div>
                   <span className="text-[12px] text-[#a1a1a1] font-['Lato']">See Details &gt;</span>
                 </div>
               </div>
@@ -877,8 +917,15 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
                 <span className="text-[10px] text-[#bababa] font-['Poppins']">Including Dues and Inventory Value</span>
               </div>
               <div className="flex items-center">
-                <TrendingUp size={16} className="text-[#21c45d]" />
-                <span className="text-[14px] font-medium text-[#21c45d] font-['Lato'] ml-0.5">20%</span>
+                {summary.isProfit ? (
+                  <TrendingUp size={16} className="text-[#21c45d]" />
+                ) : (
+                  <TrendingDown size={16} className="text-[#da0000]" />
+                )}
+                
+                <span className={`text-[14px] font-medium font-['Lato'] ml-0.5 ${summary.isProfit ? 'text-[#21c45d]' : 'text-[#da0000]'}`}>
+                  {summary.netProfitPercent.toFixed(1)}%
+                </span>
               </div>
             </div>
             <div className="bg-white rounded-lg px-2 py-3 mt-2">
@@ -1047,20 +1094,30 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
   };
 
   const handleAddCategory = async () => {
-    if (!newCategoryName.trim()) return;
-    
-    // Ensure tenant ID is set before API call
-    if (tenantId) {
-      setCategoryTenantId(tenantId);
+    if (!newCategoryName.trim()) {
+      alert('Please enter a category name');
+      return;
     }
     
+    // Ensure tenant ID is set before API call
+    const effectiveTenantId = tenantId || localStorage.getItem('tenantId') || '';
+    if (!effectiveTenantId) {
+      console.error('No tenant ID available for category creation');
+      alert('Error: No tenant ID available. Please refresh the page and try again.');
+      return;
+    }
+    setCategoryTenantId(effectiveTenantId);
+    
     try {
+      console.log('Creating category:', newCategoryName, 'for tenant:', effectiveTenantId);
       const created = await CategoryService.create({ name: newCategoryName });
+      console.log('Category created:', created);
       setExpenseCategories(prev => [...prev, created]);
       setNewCategoryName('');
       setIsCategoryModalOpen(false);
-    } catch (e) {
-      alert('Failed to add category');
+    } catch (e: any) {
+      console.error('Failed to add category:', e);
+      alert('Failed to add category: ' + (e?.message || e?.response?.data?.error || 'Unknown error'));
     }
   };
 
@@ -1071,6 +1128,40 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
       else next.add(id);
       return next;
     });
+  };
+
+  const handleBulkDeleteExpenses = async () => {
+    if (!window.confirm(`Delete ${selectedExpenses.size} selected expenses? This action cannot be undone.`)) {
+      return;
+    }
+    
+    // Ensure tenant ID is set
+    if (tenantId) {
+      setExpenseTenantId(tenantId);
+    }
+    
+    let successCount = 0;
+    let failCount = 0;
+    
+    for (const id of selectedExpenses) {
+      try {
+        await ExpenseService.remove(id);
+        successCount++;
+      } catch (e) {
+        console.error(`Failed to delete expense ${id}:`, e);
+        failCount++;
+      }
+    }
+    
+    // Update local state - remove all deleted expenses
+    setExpenses(prev => prev.filter(e => !selectedExpenses.has(e.id)));
+    setSelectedExpenses(new Set());
+    
+    if (successCount > 0) {
+      alert(`${successCount} expense(s) deleted successfully${failCount > 0 ? `, ${failCount} failed` : ''}`);
+    } else if (failCount > 0) {
+      alert(`Failed to delete ${failCount} expense(s)`);
+    }
   };
 
   const handlePrintExpenses = () => {
@@ -1182,6 +1273,40 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
       else next.add(id);
       return next;
     });
+  };
+
+  const handleBulkDeleteIncomes = async () => {
+    if (!window.confirm(`Delete ${selectedIncomes.size} selected incomes? This action cannot be undone.`)) {
+      return;
+    }
+    
+    // Ensure tenant ID is set
+    if (tenantId) {
+      setIncomeTenantId(tenantId);
+    }
+    
+    let successCount = 0;
+    let failCount = 0;
+    
+    for (const id of selectedIncomes) {
+      try {
+        await IncomeService.remove(id);
+        successCount++;
+      } catch (e) {
+        console.error(`Failed to delete income ${id}:`, e);
+        failCount++;
+      }
+    }
+    
+    // Update local state - remove all deleted incomes
+    setIncomes(prev => prev.filter(i => !selectedIncomes.has(i.id)));
+    setSelectedIncomes(new Set());
+    
+    if (successCount > 0) {
+      alert(`${successCount} income(s) deleted successfully${failCount > 0 ? `, ${failCount} failed` : ''}`);
+    } else if (failCount > 0) {
+      alert(`Failed to delete ${failCount} income(s)`);
+    }
   };
 
   const handlePrintIncomes = () => {
@@ -1342,7 +1467,29 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
               }}
             />
           </div>
-          <div className="w-[80px]"><p className="text-[16px] font-medium text-black font-['Poppins']">SL</p></div>
+
+          {/* Bulk Actions Bar */}
+          {selectedIncomes.size > 0 && (
+            <div className="flex items-center gap-2 ml-4">
+              <span className="text-[12px] text-blue-700 font-medium">{selectedIncomes.size} selected</span>
+              <button
+                onClick={handleBulkDeleteIncomes}
+                className="flex items-center gap-1 px-2 py-1 bg-red-500 text-white rounded text-[12px] font-medium hover:bg-red-600"
+              >
+                <Trash2 size={14} />
+                Delete
+              </button>
+              <button
+                onClick={() => setSelectedIncomes(new Set())}
+                className="flex items-center gap-1 px-2 py-1 bg-gray-200 text-gray-700 rounded text-[12px] font-medium hover:bg-gray-300"
+              >
+                <X size={14} />
+                Clear
+              </button>
+            </div>
+          )}
+
+          <div className={`w-[80px] ${selectedIncomes.size === 0 ? '' : 'ml-auto'}`}><p className="text-[16px] font-medium text-black font-['Poppins']">SL</p></div>
           <div className="flex-1"><p className="text-[16px] font-medium text-black font-['Poppins']">Name</p></div>
           <div className="w-[150px]"><p className="text-[16px] font-medium text-black font-['Poppins']">Category</p></div>
           <div className="w-[120px] text-center"><p className="text-[16px] font-medium text-black font-['Poppins']">Amount</p></div>
@@ -1688,6 +1835,38 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
     });
   };
 
+  const handleBulkDeletePurchases = async () => {
+    if (!window.confirm(`Delete ${selectedPurchases.size} selected purchases? This action cannot be undone.`)) {
+      return;
+    }
+    
+    let successCount = 0;
+    let failCount = 0;
+    
+    for (const id of selectedPurchases) {
+      try {
+        await fetch(`/api/purchases/${id}`, {
+          method: 'DELETE',
+          headers: { 'X-Tenant-Id': tenantId || '' },
+        });
+        successCount++;
+      } catch (e) {
+        console.error(`Failed to delete purchase ${id}:`, e);
+        failCount++;
+      }
+    }
+    
+    // Update local state - remove all deleted purchases
+    setPurchases(prev => prev.filter(p => !selectedPurchases.has(p._id)));
+    setSelectedPurchases(new Set());
+    
+    if (successCount > 0) {
+      alert(`${successCount} purchase(s) deleted successfully${failCount > 0 ? `, ${failCount} failed` : ''}`);
+    } else if (failCount > 0) {
+      alert(`Failed to delete ${failCount} purchase(s)`);
+    }
+  };
+
   const handleDeletePurchase = async (id: string) => {
     if (!window.confirm('Delete this purchase?')) return;
     try {
@@ -1824,6 +2003,57 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
     setDueTabType(type);
     setSelectedEntityId(null);
     setDueTransactions([]);
+  };
+
+  // Handle refresh data for current tab
+  const handleRefreshData = async () => {
+    const { start, end } = getDateRangeBoundaries;
+    
+    if (activeTab === 'due') {
+      // Refresh all entities for summary
+      try {
+        const [customers, suppliers, employees] = await Promise.all([
+          dueListService.getEntities('Customer'),
+          dueListService.getEntities('Supplier'),
+          dueListService.getEntities('Employee')
+        ]);
+        setAllDueEntities([...customers, ...suppliers, ...employees]);
+        // Refresh current tab entities
+        const entities = await dueListService.getEntities(dueTabType, dueSearch || undefined);
+        setDueEntities(entities);
+        // Refresh transactions for selected entity
+        if (selectedEntityId) {
+          const txns = await dueListService.getTransactions(selectedEntityId);
+          setDueTransactions(txns);
+        }
+      } catch (error) {
+        console.error('Error refreshing due data:', error);
+      }
+    } else if (activeTab === 'expense') {
+      try {
+        const res = await ExpenseService.list({
+          page: 1,
+          pageSize: 500,
+          from: start.toISOString(),
+          to: end.toISOString(),
+        });
+        setExpenses(res.items as any);
+      } catch (error) {
+        console.error('Error refreshing expenses:', error);
+      }
+    } else if (activeTab === 'income') {
+      try {
+        const res = await IncomeService.list({
+          page: 1,
+          pageSize: 500,
+          from: start.toISOString(),
+          to: end.toISOString(),
+        });
+        setIncomes(res.items as any);
+      } catch (error) {
+        console.error('Error refreshing incomes:', error);
+      }
+    }
   };
 
   const renderPurchaseContent = () => (
@@ -2166,14 +2396,36 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
           <p className="text-[32px] font-bold text-[#008c09] tracking-[0.16px]">
             ৳{dueSummary.totalWillGet.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </p>
-          <p className="text-[12px] text-black">You will Get</p>
+          <p className="text-[12px] text-black">You will Get (Total)</p>
         </div>
         {/* You will Give - Red */}
         <div className="flex-1 bg-[#f9f9f9] rounded-lg h-[80px] px-[18px] py-5 flex flex-col justify-center">
           <p className="text-[32px] font-bold text-[#da0000] tracking-[0.16px]">
             ৳{dueSummary.totalWillGive.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </p>
-          <p className="text-[12px] text-black">You will Give</p>
+          <p className="text-[12px] text-black">You will Give (Total)</p>
+        </div>
+      </div>
+
+      {/* Date Range Info - For filtered transactions */}
+      <div className="px-5 pb-3">
+        <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-2 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Calendar size={16} className="text-blue-600" />
+            <span className="text-sm text-blue-700">
+              Showing transactions: <span className="font-semibold">{getDateRangeDisplayText()}</span>
+            </span>
+          </div>
+          {selectedEntity && filteredDueTransactions.length > 0 && (
+            <div className="flex items-center gap-4 text-sm">
+              <span className="text-[#008c09]">
+                Get: ৳{filteredDueSummary.totalWillGet.toLocaleString('en-IN')}
+              </span>
+              <span className="text-[#da0000]">
+                Give: ৳{filteredDueSummary.totalWillGive.toLocaleString('en-IN')}
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -2285,15 +2537,15 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
           {/* Transaction List Panel */}
           <div className="flex-1 mx-5 mb-5 bg-[#f9f9f9] rounded-lg overflow-auto">
             {selectedEntity ? (
-              dueTransactions.length === 0 ? (
+              filteredDueTransactions.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-[#888]">
                   <Package size={40} className="mb-2 opacity-50" />
-                  <span className="text-[13px]">No transactions yet</span>
+                  <span className="text-[13px]">No transactions in this date range</span>
                 </div>
               ) : (
                 <div className="p-4">
-                  {dueTransactions.map((tx, idx) => (
-                    <div key={tx._id} className={`flex items-center justify-between py-3 ${idx !== dueTransactions.length - 1 ? 'border-b border-[#e5e5e5]' : ''}`}>
+                  {filteredDueTransactions.map((tx, idx) => (
+                    <div key={tx._id} className={`flex items-center justify-between py-3 ${idx !== filteredDueTransactions.length - 1 ? 'border-b border-[#e5e5e5]' : ''}`}>
                       {/* Left: Title & Date */}
                       <div className="flex flex-col gap-[2px] w-[145px]">
                         <span className="text-[14px] font-medium text-black">
@@ -2348,10 +2600,17 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
         onSave={async (data) => {
           try {
             await dueListService.createTransaction(data);
-            // Refresh entities and transactions
-            const entityType = dueTabType === 'Customer' ? 'Customer' : 'Supplier';
-            const entities = await dueListService.getEntities(entityType);
-            setDueEntities(entities);
+            // Refresh ALL entities for summary
+            const [customers, suppliers, employees] = await Promise.all([
+              dueListService.getEntities('Customer'),
+              dueListService.getEntities('Supplier'),
+              dueListService.getEntities('Employee')
+            ]);
+            setAllDueEntities([...customers, ...suppliers, ...employees]);
+            // Refresh current tab entities
+            const tabEntities = await dueListService.getEntities(dueTabType);
+            setDueEntities(tabEntities);
+            // Refresh transactions if entity selected
             if (selectedEntity) {
               const txns = await dueListService.getTransactions(selectedEntity._id);
               setDueTransactions(txns);
@@ -2484,7 +2743,29 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
               }}
             />
           </div>
-          <div className="w-[80px]"><p className="text-[16px] font-medium text-black font-['Poppins']">SL</p></div>
+
+          {/* Bulk Actions Bar */}
+          {selectedExpenses.size > 0 && (
+            <div className="flex items-center gap-2 ml-4">
+              <span className="text-[12px] text-blue-700 font-medium">{selectedExpenses.size} selected</span>
+              <button
+                onClick={handleBulkDeleteExpenses}
+                className="flex items-center gap-1 px-2 py-1 bg-red-500 text-white rounded text-[12px] font-medium hover:bg-red-600"
+              >
+                <Trash2 size={14} />
+                Delete
+              </button>
+              <button
+                onClick={() => setSelectedExpenses(new Set())}
+                className="flex items-center gap-1 px-2 py-1 bg-gray-200 text-gray-700 rounded text-[12px] font-medium hover:bg-gray-300"
+              >
+                <X size={14} />
+                Clear
+              </button>
+            </div>
+          )}
+
+          <div className={`w-[80px] ${selectedExpenses.size === 0 ? '' : 'ml-auto'}`}><p className="text-[16px] font-medium text-black font-['Poppins']">SL</p></div>
           <div className="flex-1"><p className="text-[16px] font-medium text-black font-['Poppins']">Name</p></div>
           <div className="w-[150px]"><p className="text-[16px] font-medium text-black font-['Poppins']">Category</p></div>
           <div className="w-[120px] text-center"><p className="text-[16px] font-medium text-black font-['Poppins']">Amount</p></div>
@@ -3005,7 +3286,10 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
           </h1>
           <div className="flex items-center gap-6">
             {/* Refresh Button */}
-            <button className="flex items-center gap-2 px-2 py-2">
+            <button 
+              onClick={handleRefreshData}
+              className="flex items-center gap-2 px-2 py-2 hover:bg-gray-100 rounded-lg transition-colors"
+            >
               <span className="text-[12px] text-black font-['Poppins']">Refresh</span>
               <RefreshCw size={16} className="text-gray-600" />
             </button>

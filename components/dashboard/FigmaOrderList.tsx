@@ -6,6 +6,7 @@ import GmvStats from './order/GmvStats';
 import { toast } from 'react-hot-toast';
 import { Order, CourierConfig, PathaoConfig, Product } from '../../types';
 import { CourierService, FraudCheckResult } from '../../services/CourierService';
+import { OrderService } from '../../services/OrderService';
 import { normalizeImageUrl } from '../../utils/imageUrlHelper';
 import { printInvoice } from '../InvoicePrintTemplate';
 
@@ -140,6 +141,8 @@ const FigmaOrderList: React.FC<FigmaOrderListProps> = ({
   const [isSendingToPathao, setIsSendingToPathao] = useState(false);
   const [fraudResult, setFraudResult] = useState<FraudCheckResult | null>(null);
   const [pathaoConfig, setPathaoConfig] = useState<PathaoConfig | null>(null);
+  const [isDeleting, setIsDeleting] = useState<string | null>(null); // Stores orderId being deleted
+  const [isBulkProcessing, setIsBulkProcessing] = useState(false);
 
   const ordersPerPage = 8;
 
@@ -383,11 +386,28 @@ const FigmaOrderList: React.FC<FigmaOrderListProps> = ({
     setOpenDropdownId(null);
   };
 
-  const handleDeleteOrder = (orderId: string) => {
-    if (window.confirm('Delete this order?')) {
-      toast.success('Order deleted');
-      setOpenDropdownId(null);
+  const handleDeleteOrder = async (orderId: string) => {
+    if (!window.confirm('Delete this order? This action cannot be undone.')) {
+      return;
     }
+    
+    setIsDeleting(orderId);
+    try {
+      const result = await OrderService.deleteOrder(tenantId, orderId);
+      
+      if (result.success) {
+        toast.success('Order deleted successfully');
+        window.location.reload();
+      } else {
+        toast.error(`Failed to delete order: ${result.error}`);
+        setIsDeleting(null);
+      }
+    } catch (error) {
+      toast.error('Failed to delete order');
+      setIsDeleting(null);
+    }
+    
+    setOpenDropdownId(null);
   };
 
   const handleOpenDetails = (order: Order) => {
@@ -395,11 +415,18 @@ const FigmaOrderList: React.FC<FigmaOrderListProps> = ({
     setOpenDropdownId(null);
   };
 
-  const handleStatusChange = (orderId: string, newStatus: Order['status']) => {
-    if (onUpdateOrder) {
-      onUpdateOrder(orderId, { status: newStatus });
+  const handleStatusChange = async (orderId: string, newStatus: Order['status']) => {
+    const result = await OrderService.updateStatus(tenantId, orderId, newStatus);
+    
+    if (result.success) {
+      if (onUpdateOrder) {
+        onUpdateOrder(orderId, { status: newStatus });
+      }
       toast.success(`Status updated to ${newStatus}`);
+    } else {
+      toast.error(`Failed to update status: ${result.error}`);
     }
+    
     setShowStatusMenu(null);
     setOpenDropdownId(null);
   };
@@ -437,20 +464,53 @@ const FigmaOrderList: React.FC<FigmaOrderListProps> = ({
     clearSelection();
   };
 
-  const handleBulkDelete = () => {
-    if (window.confirm(`Delete ${selectedOrders.size} selected orders?`)) {
-      // Implement bulk delete logic
-      toast.success(`${selectedOrders.size} orders deleted`);
-      clearSelection();
+  const handleBulkDelete = async () => {
+    if (!window.confirm(`Delete ${selectedOrders.size} selected orders? This action cannot be undone.`)) {
+      return;
     }
+    
+    setIsBulkProcessing(true);
+    try {
+      const result = await OrderService.bulkDelete(tenantId, Array.from(selectedOrders));
+      
+      if (result.successCount > 0) {
+        toast.success(`${result.successCount} order(s) deleted successfully`);
+        window.location.reload();
+      }
+      if (result.failCount > 0) {
+        toast.error(`Failed to delete ${result.failCount} order(s)`);
+        setIsBulkProcessing(false);
+      }
+    } catch (error) {
+      toast.error('Failed to delete orders');
+      setIsBulkProcessing(false);
+    }
+    
+    clearSelection();
   };
 
-  const handleBulkStatusChange = (newStatus: Order['status']) => {
-    if (!onUpdateOrder) return;
-    selectedOrders.forEach(orderId => {
-      onUpdateOrder(orderId, { status: newStatus });
-    });
-    toast.success(`${selectedOrders.size} orders updated to ${newStatus}`);
+  const handleBulkStatusChange = async (newStatus: Order['status']) => {
+    setIsBulkProcessing(true);
+    try {
+      const result = await OrderService.bulkUpdateStatus(tenantId, Array.from(selectedOrders), newStatus);
+      
+      if (result.successCount > 0) {
+        // Update local state for successful updates
+        result.results.forEach(r => {
+          if (r.success && onUpdateOrder) {
+            onUpdateOrder(r.orderId, { status: newStatus });
+          }
+        });
+        toast.success(`${result.successCount} order(s) updated to ${newStatus}`);
+      }
+      if (result.failCount > 0) {
+        toast.error(`Failed to update ${result.failCount} order(s)`);
+      }
+    } catch (error) {
+      toast.error('Failed to update orders');
+    }
+    
+    setIsBulkProcessing(false);
     clearSelection();
   };
 
@@ -470,6 +530,7 @@ const FigmaOrderList: React.FC<FigmaOrderListProps> = ({
     setIsCreatingOrder(true);
     const orderId = `#${Math.floor(1000 + Math.random() * 9000)}`;
     const orderAmount = (selectedProductForOrder.price || 0) * newOrderForm.quantity;
+    const totalAmount = orderAmount + newOrderForm.deliveryCharge;
     
     const newOrder: Order = {
       id: orderId,
@@ -477,8 +538,11 @@ const FigmaOrderList: React.FC<FigmaOrderListProps> = ({
       customer: newOrderForm.customer.trim(),
       location: newOrderForm.address.trim(),
       phone: newOrderForm.phone.trim(),
+      customerPhone: newOrderForm.phone.trim(),
       division: newOrderForm.division,
-      amount: orderAmount + newOrderForm.deliveryCharge,
+      amount: totalAmount,
+      total: totalAmount,
+      grandTotal: totalAmount,
       date: new Date().toLocaleString('en-US', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
       status: 'Pending',
       productId: selectedProductForOrder.id,
@@ -690,30 +754,34 @@ const FigmaOrderList: React.FC<FigmaOrderListProps> = ({
             </button>
             <button
               onClick={() => handleBulkStatusChange('Confirmed')}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 text-white rounded-md text-sm font-medium hover:bg-emerald-600 transition-colors"
+              disabled={isBulkProcessing}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 text-white rounded-md text-sm font-medium hover:bg-emerald-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <CheckCircle2 size={16} />
+              {isBulkProcessing ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
               Confirm
             </button>
             <button
               onClick={() => handleBulkStatusChange('Sent to Courier')}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-500 text-white rounded-md text-sm font-medium hover:bg-purple-600 transition-colors"
+              disabled={isBulkProcessing}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-500 text-white rounded-md text-sm font-medium hover:bg-purple-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Send size={16} />
+              {isBulkProcessing ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
               Send to Courier
             </button>
             <button
               onClick={() => handleBulkStatusChange('Cancelled')}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-500 text-white rounded-md text-sm font-medium hover:bg-orange-600 transition-colors"
+              disabled={isBulkProcessing}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-500 text-white rounded-md text-sm font-medium hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <X size={16} />
+              {isBulkProcessing ? <Loader2 size={16} className="animate-spin" /> : <X size={16} />}
               Cancel
             </button>
             <button
               onClick={handleBulkDelete}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500 text-white rounded-md text-sm font-medium hover:bg-red-600 transition-colors"
+              disabled={isBulkProcessing}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500 text-white rounded-md text-sm font-medium hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Trash2 size={16} />
+              {isBulkProcessing ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
               Delete
             </button>
             <button
@@ -893,12 +961,13 @@ const FigmaOrderList: React.FC<FigmaOrderListProps> = ({
                           {/* Delete */}
                           <button 
                             onClick={() => handleDeleteOrder(order.id)}
-                            style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', height: '48px', padding: '0 24px', backgroundColor: 'white', border: 'none', cursor: 'pointer', fontFamily: '"Lato", sans-serif', fontWeight: 600, fontSize: '16px', color: '#da0000', whiteSpace: 'nowrap' }}
-                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9f9f9'}
+                            disabled={isDeleting === order.id}
+                            style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', height: '48px', padding: '0 24px', backgroundColor: 'white', border: 'none', cursor: isDeleting === order.id ? 'wait' : 'pointer', fontFamily: '"Lato", sans-serif', fontWeight: 600, fontSize: '16px', color: '#da0000', whiteSpace: 'nowrap', opacity: isDeleting === order.id ? 0.7 : 1 }}
+                            onMouseEnter={(e) => !isDeleting && (e.currentTarget.style.backgroundColor = '#f9f9f9')}
                             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
                           >
-                            <Trash2 size={24} color="#da0000" />
-                            Delete
+                            {isDeleting === order.id ? <Loader2 size={24} color="#da0000" className="animate-spin" /> : <Trash2 size={24} color="#da0000" />}
+                            {isDeleting === order.id ? 'Deleting...' : 'Delete'}
                           </button>
                         </div>
                       </div>

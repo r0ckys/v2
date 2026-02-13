@@ -123,17 +123,64 @@ export function useAppHandlers(props: UseAppHandlersProps) {
   }, [activeTenantId, products, setProducts]);
 
   const handleDeleteProduct = useCallback((id: number) => {
-    setProducts(prev => prev.filter(p => p.id !== id));
-  }, [setProducts]);
+    setProducts(prev => {
+      const updated = prev.filter(p => p.id !== id);
+      // Save to backend
+      DataService.save('products', updated, activeTenantId);
+      return updated;
+    });
+  }, [setProducts, activeTenantId]);
 
   const handleBulkDeleteProducts = useCallback((ids: number[]) => {
-    setProducts(prev => prev.filter(p => !ids.includes(p.id)));
-  }, [setProducts]);
+    setProducts(prev => {
+      const updated = prev.filter(p => !ids.includes(p.id));
+      // Save to backend
+      DataService.save('products', updated, activeTenantId);
+      toast.success(`Deleted ${ids.length} products`);
+      return updated;
+    });
+  }, [setProducts, activeTenantId]);
 
   const handleBulkUpdateProducts = useCallback((ids: number[], updates: Partial<Product>) => {
     const { slug, ...restUpdates } = updates;
-    setProducts(prev => prev.map(p => ids.includes(p.id) ? { ...p, ...restUpdates } : p));
-  }, [setProducts]);
+    setProducts(prev => {
+      const updated = prev.map(p => ids.includes(p.id) ? { ...p, ...restUpdates } : p);
+      // Save to backend
+      DataService.save('products', updated, activeTenantId);
+      return updated;
+    });
+  }, [setProducts, activeTenantId]);
+
+  const handleBulkFlashSale = useCallback((ids: number[], action: 'add' | 'remove') => {
+    setProducts(prev => {
+      const now = new Date();
+      const endDate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days from now
+      const updated = prev.map(p => {
+        if (!ids.includes(p.id)) return p;
+        if (action === 'add') {
+          return {
+            ...p,
+            flashSale: true,
+            flashSaleStartDate: now.toISOString(),
+            flashSaleEndDate: endDate.toISOString()
+          };
+        } else {
+          return {
+            ...p,
+            flashSale: false,
+            flashSaleStartDate: undefined,
+            flashSaleEndDate: undefined
+          };
+        }
+      });
+      // Save to backend
+      DataService.save('products', updated, activeTenantId);
+      toast.success(action === 'add' 
+        ? `Added ${ids.length} products to Flash Sale` 
+        : `Removed ${ids.length} products from Flash Sale`);
+      return updated;
+    });
+  }, [setProducts, activeTenantId]);
 
   // === ORDER HANDLERS ===
   const handleUpdateOrder = useCallback((orderId: string, updates: Partial<Order>) => {
