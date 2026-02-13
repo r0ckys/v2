@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { GoogleGenerativeAI, HarmBlockThreshold, HarmCategory } from '@google/generative-ai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { getTenantData } from '../services/tenantDataService';
 import multer from 'multer';
 
@@ -63,17 +63,7 @@ async function analyzeImageWithGemini(imageBase64: string, mimeType: string): Pr
   }
 
   const model = genAI.getGenerativeModel({ 
-    model: 'gemini-2.0-flash-exp',
-    safetySettings: [
-      {
-        category: HarmCategory.HARM_CATEGORY_HARASSMENT,
-        threshold: HarmBlockThreshold.BLOCK_NONE,
-      },
-      {
-        category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-        threshold: HarmBlockThreshold.BLOCK_NONE,
-      },
-    ],
+    model: 'gemini-2.5-flash',
   });
 
   const prompt = `Analyze this product image and provide detailed information in JSON format. 
