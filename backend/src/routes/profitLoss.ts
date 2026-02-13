@@ -1,13 +1,26 @@
 import { Router } from 'express';
 import { getDatabase } from '../db/mongo';
+import { getCached, setCachedWithTTL, CacheKeys } from '../services/redisCache';
 
 export const profitLossRouter = Router();
 
-// Get profit/loss summary
+// Cache key for profit/loss summary
+const getProfitLossCacheKey = (tenantId: string, from?: string, to?: string) => 
+  `profitloss:${tenantId}:summary:f=${from || ''}&t=${to || ''}`;
+
+// Get profit/loss summary (with caching)
 profitLossRouter.get('/summary', async (req, res, next) => {
   try {
     const db = await getDatabase();
-    const { from, to, tenantId } = req.query as any;
+    const { from, to, tenantId: queryTenantId } = req.query as any;
+    const tenantId = queryTenantId || req.headers['x-tenant-id'] || 'global';
+
+    // Check cache first
+    const cacheKey = getProfitLossCacheKey(tenantId, from, to);
+    const cached = await getCached<any>(cacheKey);
+    if (cached) {
+      return res.json(cached);
+    }
 
     // Build date filter
     const dateFilter: any = {};
@@ -17,39 +30,27 @@ profitLossRouter.get('/summary', async (req, res, next) => {
       if (to) dateFilter.date.$lte = to;
     }
 
-    // Get orders
-    const ordersCol = db.collection('orders');
-    const orderFilter: any = { ...dateFilter };
-    if (tenantId) orderFilter.tenantId = tenantId;
-    
-    const orders = await ordersCol.find({
-      ...orderFilter,
+    // Build filters
+    const orderFilter: any = { 
+      ...dateFilter,
       status: { $in: ['Pending', 'Confirmed', 'Shipped', 'Delivered'] }
-    }).toArray();
-
-    // Get expenses
-    const expensesCol = db.collection('expenses');
-    const expenseFilter: any = { ...dateFilter };
-    if (tenantId) expenseFilter.tenantId = tenantId;
-    expenseFilter.status = 'Published';
+    };
+    if (tenantId && tenantId !== 'global') orderFilter.tenantId = tenantId;
     
-    const expenses = await expensesCol.find(expenseFilter).toArray();
+    const expenseFilter: any = { ...dateFilter, status: 'Published' };
+    if (tenantId && tenantId !== 'global') expenseFilter.tenantId = tenantId;
+    
+    const incomeFilter: any = { ...dateFilter, status: 'Published' };
+    if (tenantId && tenantId !== 'global') incomeFilter.tenantId = tenantId;
 
-    // Get incomes (if collection exists)
-    let incomes: any[] = [];
-    try {
-      const incomesCol = db.collection('incomes');
-      const incomeFilter: any = { ...dateFilter };
-      if (tenantId) incomeFilter.tenantId = tenantId;
-      incomeFilter.status = 'Published';
-      incomes = await incomesCol.find(incomeFilter).toArray();
-    } catch (e) {
-      // Incomes collection may not exist
-    }
+    // Run all queries in parallel for speed
+    const [orders, expenses, incomes, products] = await Promise.all([
+      db.collection('orders').find(orderFilter).toArray(),
+      db.collection('expenses').find(expenseFilter).toArray(),
+      db.collection('incomes').find(incomeFilter).toArray().catch(() => []),
+      db.collection('products').find({}).toArray()
+    ]);
 
-    // Get products for cost calculation
-    const productsCol = db.collection('products');
-    const products = await productsCol.find({}).toArray();
     const productMap = new Map(products.map((p: any) => [p.id?.toString(), p]));
 
     // Calculate selling price (order amount minus delivery)
@@ -89,7 +90,7 @@ profitLossRouter.get('/summary', async (req, res, next) => {
     // Total profit/loss
     const totalProfitLoss = profitFromSale + otherIncome - otherExpense;
 
-    res.json({
+    const result = {
       profitFromSale: {
         sellingPrice,
         purchasePrice,
@@ -102,7 +103,12 @@ profitLossRouter.get('/summary', async (req, res, next) => {
       orderCount: orders.length,
       expenseCount: expenses.length,
       incomeCount: incomes.length,
-    });
+    };
+
+    // Cache for 2 minutes
+    setCachedWithTTL(cacheKey, result, 'short');
+
+    res.json(result);
   } catch (e) {
     next(e);
   }

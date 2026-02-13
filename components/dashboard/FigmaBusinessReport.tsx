@@ -7,8 +7,10 @@ import { ExpenseService, ExpenseDTO, setExpenseTenantId } from '../../services/E
 import { IncomeService, IncomeDTO, setIncomeTenantId } from '../../services/IncomeService';
 import { CategoryService, CategoryDTO, setCategoryTenantId } from '../../services/CategoryService';
 import { dueListService } from '../../services/DueListService';
-import { DueEntity, DueTransaction, EntityType } from '../../types';
+import { DueEntity, DueTransaction, EntityType, CreateDueTransactionPayload } from '../../types';
 import CustomDateRangePicker, { DateRange, QuickSelectOption } from './CustomDateRangePicker';
+import AddNewDueModal from '../AddNewDueModal';
+import DueHistoryModal from '../DueHistoryModal';
 
 // SVG Assets
 const WaterfallIcon = () => (
@@ -2271,6 +2273,34 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Add Due Modal */}
+      <AddNewDueModal
+        isOpen={showAddDueModal}
+        onClose={() => setShowAddDueModal(false)}
+        onSave={async (data) => {
+          try {
+            await dueListService.createTransaction(data);
+            // Refresh entities and transactions
+            const entityType = dueTabType === 'Customer' ? 'Customer' : 'Supplier';
+            const entities = await dueListService.getEntities(entityType);
+            setDueEntities(entities);
+            if (selectedEntity) {
+              const txns = await dueListService.getTransactions(selectedEntity._id);
+              setDueTransactions(txns);
+            }
+            setShowAddDueModal(false);
+          } catch (error) {
+            console.error('Error creating due transaction:', error);
+          }
+        }}
+      />
+
+      {/* Due History Modal */}
+      <DueHistoryModal
+        isOpen={showDueHistoryModal}
+        onClose={() => setShowDueHistoryModal(false)}
+      />
     </div>
   );
 

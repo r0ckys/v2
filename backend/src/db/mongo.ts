@@ -33,7 +33,28 @@ const ensureIndexes = async (db: Db) => {
       { tenantId: 1, key: 1 },
       { unique: true, background: true }
     );
-    console.log('[mongo] Indexes ensured for tenant_data');
+    
+    // Indexes for expenses collection - faster business report queries
+    await db.collection('expenses').createIndex(
+      { tenantId: 1, date: -1 },
+      { background: true }
+    );
+    await db.collection('expenses').createIndex(
+      { tenantId: 1, status: 1, category: 1 },
+      { background: true }
+    );
+    
+    // Indexes for incomes collection - faster business report queries  
+    await db.collection('incomes').createIndex(
+      { tenantId: 1, date: -1 },
+      { background: true }
+    );
+    await db.collection('incomes').createIndex(
+      { tenantId: 1, status: 1, category: 1 },
+      { background: true }
+    );
+    
+    console.log('[mongo] Indexes ensured for tenant_data, expenses, incomes');
   } catch (error) {
     // Index might already exist, that's fine
     console.log('[mongo] Index creation skipped (may already exist)');

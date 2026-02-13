@@ -132,6 +132,14 @@ export const CacheKeys = {
   // System data
   tenantList: () => 'system:tenants:active',
   visitorStats: (date: string) => `stats:visitors:${date}`,
+  
+  // Expenses and Incomes (business reports)
+  expensesList: (tenantId: string, params: string) => `expenses:${tenantId}:list:${params}`,
+  expensesSummary: (tenantId: string, params: string) => `expenses:${tenantId}:summary:${params}`,
+  expensesCategories: (tenantId: string) => `expenses:${tenantId}:categories`,
+  incomesList: (tenantId: string, params: string) => `incomes:${tenantId}:list:${params}`,
+  incomesSummary: (tenantId: string, params: string) => `incomes:${tenantId}:summary:${params}`,
+  incomesCategories: (tenantId: string) => `incomes:${tenantId}:categories`,
 };
 
 // L1: In-memory cache (instant, no network)

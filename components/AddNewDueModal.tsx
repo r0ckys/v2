@@ -19,8 +19,8 @@ const AddNewDueModal: React.FC<AddNewDueModalProps> = ({ isOpen, onClose, onSave
   const [newEntityData, setNewEntityData] = useState({ name: '', phone: '' });
   const [formData, setFormData] = useState({
     amount: '',
-    transactionDate: new Date().toISOString().split('T')[0],
-    dueDate: '',
+    dueDate: new Date().toISOString().split('T')[0],
+    collectionDate: '',
     notes: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -84,7 +84,7 @@ const AddNewDueModal: React.FC<AddNewDueModalProps> = ({ isOpen, onClose, onSave
     if (!direction) newErrors.direction = 'Please select transaction type';
     if (!selectedEntity) newErrors.entity = 'Please select an entity';
     if (!formData.amount || parseFloat(formData.amount) <= 0) newErrors.amount = 'Please enter a valid amount';
-    if (!formData.transactionDate) newErrors.date = 'Please select a transaction date';
+    if (!formData.dueDate) newErrors.date = 'Please select a due date';
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -96,8 +96,8 @@ const AddNewDueModal: React.FC<AddNewDueModalProps> = ({ isOpen, onClose, onSave
       entityName: selectedEntity!.name,
       amount: parseFloat(formData.amount),
       direction: direction!,
-      transactionDate: formData.transactionDate,
-      dueDate: formData.dueDate || undefined,
+      transactionDate: formData.dueDate,
+      dueDate: formData.collectionDate || undefined,
       notes: formData.notes || undefined,
     };
 
@@ -111,15 +111,15 @@ const AddNewDueModal: React.FC<AddNewDueModalProps> = ({ isOpen, onClose, onSave
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-gray-900">Add New Due</h2>
+        <div className="sticky top-0 bg-white p-6 pb-4 flex items-center justify-between border-b border-gray-100">
+          <h2 className="text-xl font-bold text-gray-900">Add New Due</h2>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition"
+            className="p-1 hover:bg-gray-100 rounded-lg transition"
           >
-            <X size={20} className="text-gray-600" />
+            <X size={20} className="text-gray-500" />
           </button>
         </div>
 
@@ -161,15 +161,15 @@ const AddNewDueModal: React.FC<AddNewDueModalProps> = ({ isOpen, onClose, onSave
 
               {/* Entity Selection */}
               <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">
+                <label className="block text-sm font-medium text-gray-700">
                   {direction === 'INCOME' ? 'Customer' : 'Supplier'}
                 </label>
                 <div className="relative" ref={dropdownRef}>
                   <button
                     onClick={() => setShowEntityDropdown(!showEntityDropdown)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg text-left focus:outline-none focus:ring-2 focus:ring-theme-primary"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg text-left focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-600"
                   >
-                    {selectedEntity ? selectedEntity.name : 'Select or search...'}
+                    {selectedEntity ? <span className="text-gray-900">{selectedEntity.name}</span> : 'Select or search...'}
                   </button>
                   
                   {showEntityDropdown && (
@@ -258,66 +258,67 @@ const AddNewDueModal: React.FC<AddNewDueModalProps> = ({ isOpen, onClose, onSave
 
               {/* Amount */}
               <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">Amount (in ৳)</label>
+                <label className="block text-sm font-medium text-gray-700">Amount (in ৳)</label>
                 <input
                   type="number"
-                  min="0.01"
+                  min="0"
                   step="0.01"
                   value={formData.amount}
                   onChange={e => setFormData({ ...formData, amount: e.target.value })}
                   placeholder="0"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-theme-primary"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
                 />
                 {errors.amount && <p className="text-sm text-red-600">{errors.amount}</p>}
               </div>
 
-              {/* Transaction Date */}
+              {/* Due Date */}
               <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">Transaction Date</label>
-                <input
-                  type="date"
-                  value={formData.transactionDate}
-                  onChange={e => setFormData({ ...formData, transactionDate: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-theme-primary"
-                />
-                {errors.date && <p className="text-sm text-red-600">{errors.date}</p>}
-              </div>
-
-              {/* Due Date (Optional) */}
-              <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">Due Date (Optional)</label>
+                <label className="block text-sm font-medium text-gray-700">Due Date</label>
                 <input
                   type="date"
                   value={formData.dueDate}
                   onChange={e => setFormData({ ...formData, dueDate: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-theme-primary"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                />
+                {errors.date && <p className="text-sm text-red-600">{errors.date}</p>}
+              </div>
+
+              {/* Due Collection Date (Optional) */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">Due Collection Date (Optional)</label>
+                <input
+                  type="date"
+                  value={formData.collectionDate}
+                  onChange={e => setFormData({ ...formData, collectionDate: e.target.value })}
+                  placeholder="mm/dd/yyyy"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
                 />
               </div>
 
               {/* Notes */}
               <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">Details/Notes</label>
+                <label className="block text-sm font-medium text-gray-700">Details/Notes</label>
                 <textarea
                   value={formData.notes}
                   onChange={e => setFormData({ ...formData, notes: e.target.value })}
                   placeholder="e.g., Invoice #101 for 5kg coffee beans"
                   maxLength={500}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-theme-primary resize-none h-20"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none h-24 bg-white"
                 />
               </div>
 
               {/* Action Buttons */}
-              <div className="flex gap-3 pt-4 border-t border-gray-200">
+              <div className="flex gap-3 pt-6">
                 <button
                   onClick={onClose}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium"
+                  className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleSave}
                   disabled={!selectedEntity || !formData.amount}
-                  className="flex-1 px-4 py-2 btn-theme-primary rounded-lg transition font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 px-4 py-3 text-blue-600 font-medium rounded-lg hover:bg-blue-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Save Transaction
                 </button>
