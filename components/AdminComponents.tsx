@@ -4,7 +4,7 @@ import {
 	LayoutDashboard, ShoppingBag, Box, Settings, Sliders,
 	FileText, Star, Users, Image as ImageIcon,
 	Shield, LogOut, Bell, Menu, X, Globe, LogOut as LogOutIcon, ChevronDown, ChevronRight,
-	Layers, Boxes, MessageCircle, Loader2, Check, Target, ExternalLink, CheckCheck, Trash2, AlertCircle, Package, Clock, Headphones, Store, Figma, ClipboardList, UserCircle, Search
+	Layers, Boxes, MessageCircle, Loader2, Check, Target, ExternalLink, CheckCheck, Trash2, AlertCircle, Package, Clock, Headphones, Store, Figma, ClipboardList, UserCircle, Search, TrendingDown, TrendingUp, ShoppingCart, BookOpen
 } from 'lucide-react';
 import { StatCardProps, User, Tenant } from '../types';
 import { useNotifications } from '../hooks/useNotifications';
@@ -85,6 +85,10 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = memo(({ activePage, onN
                 { id: 'popups', icon: <FileText size={18} />, label: 'Popups', resource: 'customization' },
 		{ id: 'gallery', icon: <ImageIcon size={18} />, label: 'Gallery', resource: 'gallery' },
 		{ id: 'business_report_expense', icon: <FileText size={18} />, label: 'Business Report', resource: 'business_report' },
+		{ id: 'expenses', icon: <TrendingDown size={18} />, label: 'Expenses', resource: 'business_report' },
+		{ id: 'income', icon: <TrendingUp size={18} />, label: 'Income', resource: 'business_report' },
+		{ id: 'purchases', icon: <ShoppingCart size={18} />, label: 'Purchase Info', resource: 'business_report' },
+		{ id: 'due_book', icon: <BookOpen size={18} />, label: 'Due Book', resource: 'business_report' },
 	];
 
 	// System items

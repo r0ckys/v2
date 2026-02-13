@@ -3,9 +3,9 @@ import { Download, RefreshCw, ChevronDown, TrendingUp, Plus, Printer, MoreHorizo
 
 // Import existing sub-components
 import AdminNote from '../../pages/AdminNote';
-import { ExpenseService, ExpenseDTO } from '../../services/ExpenseService';
-import { IncomeService, IncomeDTO } from '../../services/IncomeService';
-import { CategoryService, CategoryDTO } from '../../services/CategoryService';
+import { ExpenseService, ExpenseDTO, setExpenseTenantId } from '../../services/ExpenseService';
+import { IncomeService, IncomeDTO, setIncomeTenantId } from '../../services/IncomeService';
+import { CategoryService, CategoryDTO, setCategoryTenantId } from '../../services/CategoryService';
 import { dueListService } from '../../services/DueListService';
 import { DueEntity, DueTransaction, EntityType } from '../../types';
 import CustomDateRangePicker, { DateRange, QuickSelectOption } from './CustomDateRangePicker';
@@ -196,7 +196,7 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
   initialTab
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>('profit');
-  const [dateRange, setDateRange] = useState<DateRangeType>('day');
+  const [dateRange, setDateRange] = useState<DateRangeType>('month');
   const [showCustomDatePicker, setShowCustomDatePicker] = useState(false);
   const [customDateRange, setCustomDateRange] = useState<DateRange>({ startDate: null, endDate: null });
   const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
@@ -268,16 +268,33 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
   const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
+  const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
   const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
   const [newExpense, setNewExpense] = useState<Partial<ExpenseItem>>({ status: 'Published' });
   const [selectedExpenses, setSelectedExpenses] = useState<Set<string>>(new Set());
   const [actionMenuOpen, setActionMenuOpen] = useState<string | null>(null);
+  const [expenseDetailsOpen, setExpenseDetailsOpen] = useState<ExpenseItem | null>(null);
   const expensePageSize = 10;
+
+  // Set tenant IDs for services
+  useEffect(() => {
+    if (tenantId) {
+      setExpenseTenantId(tenantId);
+      setIncomeTenantId(tenantId);
+      setCategoryTenantId(tenantId);
+    }
+  }, [tenantId]);
 
   // Load expenses
   useEffect(() => {
     const loadExpenses = async () => {
       if (activeTab !== 'expense') return;
+      if (!tenantId) return; // Wait for tenant ID
+      
+      // Ensure tenant ID is set before API calls
+      setExpenseTenantId(tenantId);
+      setCategoryTenantId(tenantId);
+      
       try {
         setExpenseLoading(true);
         const { start, end } = getDateRangeBoundaries;
@@ -300,7 +317,7 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
       }
     };
     loadExpenses();
-  }, [activeTab, selectedExpenseCategory, expensePage, getDateRangeBoundaries]);
+  }, [activeTab, selectedExpenseCategory, expensePage, getDateRangeBoundaries, tenantId]);
 
   // Expense calculations
   const expenseStats = useMemo(() => {
@@ -350,10 +367,10 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
             from: start.toISOString(),
             to: end.toISOString(),
           }),
-          CategoryService.list(),
+          IncomeService.listCategories(),
         ]);
         setIncomes(incRes.items as any);
-        setIncomeCategories(catRes.items);
+        setIncomeCategories(catRes as any);
       } catch (e) {
         console.error('Failed to load incomes:', e);
       } finally {
@@ -361,7 +378,7 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
       }
     };
     loadIncomes();
-  }, [activeTab, selectedIncomeCategory, incomePage, getDateRangeBoundaries]);
+  }, [activeTab, selectedIncomeCategory, incomePage, getDateRangeBoundaries, tenantId]);
 
   // Income calculations
   const incomeStats = useMemo(() => {
@@ -901,7 +918,22 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
 
   // Expense handlers
   const handleAddExpense = async () => {
-    if (!newExpense.name || !newExpense.category || !newExpense.amount || !newExpense.date) return;
+    // Validate required fields
+    if (!newExpense.name || !newExpense.category || !newExpense.amount || !newExpense.date) {
+      const missing = [];
+      if (!newExpense.name) missing.push('Name');
+      if (!newExpense.category) missing.push('Category');
+      if (!newExpense.amount) missing.push('Amount');
+      if (!newExpense.date) missing.push('Date');
+      alert(`Please fill in required fields: ${missing.join(', ')}`);
+      return;
+    }
+    
+    // Ensure tenant ID is set before API call
+    if (tenantId) {
+      setExpenseTenantId(tenantId);
+    }
+    
     const payload: ExpenseDTO = {
       name: newExpense.name!,
       category: newExpense.category!,
@@ -909,27 +941,29 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
       date: newExpense.date!,
       status: (newExpense.status as any) || 'Published',
       note: newExpense.note,
+      imageUrl: newExpense.imageUrl,
     };
+    
+    console.log('Saving expense:', payload);
+    
     try {
       if (editingExpenseId) {
         const updated = await ExpenseService.update(editingExpenseId, payload);
+        console.log('Updated expense:', updated);
         setExpenses(prev => prev.map(item => item.id === editingExpenseId ? { ...(updated as any), id: updated.id || editingExpenseId } : item));
       } else {
         const created = await ExpenseService.create(payload);
+        console.log('Created expense:', created);
         setExpenses(prev => [{ ...(created as any), id: created.id || Math.random().toString(36).slice(2) }, ...prev]);
       }
+      setIsAddExpenseOpen(false);
+      setNewExpense({ status: 'Published' });
+      setEditingExpenseId(null);
+      setIsCategoryDropdownOpen(false);
     } catch (e) {
-      // Fallback to local update
-      if (editingExpenseId) {
-        setExpenses(prev => prev.map(item => item.id === editingExpenseId ? (newExpense as ExpenseItem) : item));
-      } else {
-        const fallback = { id: Math.random().toString(36).slice(2), ...(payload as any) } as ExpenseItem;
-        setExpenses(prev => [fallback, ...prev]);
-      }
+      console.error('Failed to save expense:', e);
+      alert('Failed to save expense. Please try again.');
     }
-    setIsAddExpenseOpen(false);
-    setNewExpense({ status: 'Published' });
-    setEditingExpenseId(null);
   };
 
   const handleDeleteExpense = async (id: string) => {
@@ -945,6 +979,12 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
 
   const handleAddCategory = async () => {
     if (!newCategoryName.trim()) return;
+    
+    // Ensure tenant ID is set before API call
+    if (tenantId) {
+      setCategoryTenantId(tenantId);
+    }
+    
     try {
       const created = await CategoryService.create({ name: newCategoryName });
       setExpenseCategories(prev => [...prev, created]);
@@ -1056,8 +1096,8 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
   const handleAddIncomeCategory = async () => {
     if (!newIncomeCategoryName.trim()) return;
     try {
-      const created = await CategoryService.create({ name: newIncomeCategoryName });
-      setIncomeCategories(prev => [...prev, created]);
+      const created = await IncomeService.createCategory(newIncomeCategoryName);
+      setIncomeCategories(prev => [...prev, created as any]);
       setNewIncomeCategoryName('');
       setIsIncomeCategoryModalOpen(false);
     } catch (e) {
@@ -1941,90 +1981,75 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
   // ========== RENDER DUE CONTENT ==========
   const renderDueContent = () => (
     <div className="bg-white rounded-lg overflow-hidden">
-      {/* Due Header */}
-      <div className="flex items-center justify-between px-5 pt-3 pb-3">
-        <div className="flex flex-col gap-1 w-[287px]">
-          <h2 className="text-[18px] font-bold text-[#023337] tracking-[0.09px] font-['Lato']">
-            Due List
-          </h2>
-          <p className="text-[12px] text-black font-['Poppins']">
-            Manage customer, supplier & employee dues
-          </p>
-        </div>
+      {/* Due Header with Print Button */}
+      <div className="flex items-center justify-between px-5 pt-5 pb-2">
+        <h2 className="text-[18px] font-bold text-[#023337] tracking-[0.09px]">
+          Due List
+        </h2>
         <button
           onClick={handlePrintDueList}
-          className="flex items-center gap-1 bg-gradient-to-r from-[#38bdf8] to-[#1e90ff] text-white px-5 h-[34px] rounded-lg text-[13px] font-bold font-['Lato']"
+          className="flex items-center gap-2 bg-gradient-to-r from-[#38bdf8] to-[#1e90ff] text-white px-4 h-[48px] rounded-lg text-[15px] font-bold tracking-[-0.3px]"
         >
-          <Printer size={16} />
+          <Printer size={20} />
           Print Due List
         </button>
       </div>
 
-      {/* Summary Cards */}
-      <div className="flex gap-3 px-5 pb-4">
+      {/* Summary Cards - Figma Style */}
+      <div className="flex gap-4 px-5 py-4">
         {/* You will Get - Green */}
-        <div className="flex-1 bg-gradient-to-r from-[#e8f8e8] to-[#d4f4d4] rounded-[10px] p-4 border border-[#c4ecc4]">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-8 h-8 rounded-full bg-[#008c09] flex items-center justify-center">
-              <TrendingUp size={16} className="text-white" />
-            </div>
-            <span className="text-[13px] text-[#1a1a1a] font-medium font-['Poppins']">You will Get</span>
-          </div>
-          <div className="text-[24px] font-bold text-[#008c09] font-['Lato']">
-            ৳{dueSummary.totalWillGet.toLocaleString('en-IN')}
-          </div>
+        <div className="flex-1 bg-[#f9f9f9] rounded-lg h-[80px] px-[18px] py-5 flex flex-col justify-center">
+          <p className="text-[32px] font-bold text-[#008c09] tracking-[0.16px]">
+            ৳{dueSummary.totalWillGet.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </p>
+          <p className="text-[12px] text-black">You will Get</p>
         </div>
         {/* You will Give - Red */}
-        <div className="flex-1 bg-gradient-to-r from-[#ffe8e8] to-[#ffd4d4] rounded-[10px] p-4 border border-[#ffc4c4]">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-8 h-8 rounded-full bg-[#da0000] flex items-center justify-center">
-              <TrendingUp size={16} className="text-white transform rotate-180" />
-            </div>
-            <span className="text-[13px] text-[#1a1a1a] font-medium font-['Poppins']">You will Give</span>
-          </div>
-          <div className="text-[24px] font-bold text-[#da0000] font-['Lato']">
-            ৳{dueSummary.totalWillGive.toLocaleString('en-IN')}
-          </div>
+        <div className="flex-1 bg-[#f9f9f9] rounded-lg h-[80px] px-[18px] py-5 flex flex-col justify-center">
+          <p className="text-[32px] font-bold text-[#da0000] tracking-[0.16px]">
+            ৳{dueSummary.totalWillGive.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </p>
+          <p className="text-[12px] text-black">You will Give</p>
         </div>
-      </div>
-
-      {/* Entity Type Tabs */}
-      <div className="flex gap-0 px-5 border-b border-[#e0e0e0]">
-        {(['Customer', 'Supplier', 'Employee'] as EntityType[]).map((type) => (
-          <button
-            key={type}
-            onClick={() => handleDueTabChange(type)}
-            className={`px-6 py-3 text-[14px] font-medium font-['Poppins'] border-b-2 transition-colors ${
-              dueTabType === type 
-                ? 'text-[#1e90ff] border-[#1e90ff]' 
-                : 'text-[#666] border-transparent hover:text-[#333]'
-            }`}
-          >
-            {type}
-          </button>
-        ))}
       </div>
 
       {/* Main Content - Two Panel Layout */}
-      <div className="flex h-[500px]">
+      <div className="flex" style={{ height: 'calc(100vh - 380px)', minHeight: '400px' }}>
         {/* Left Panel - Entity List */}
-        <div className="w-[350px] border-r border-[#e0e0e0] flex flex-col">
+        <div className="w-[400px] flex flex-col">
+          {/* Entity Type Tabs */}
+          <div className="flex gap-0 px-5 bg-white">
+            {(['Customer', 'Supplier', 'Employee'] as EntityType[]).map((type) => (
+              <button
+                key={type}
+                onClick={() => handleDueTabChange(type)}
+                className={`px-[22px] py-3 text-[16px] font-medium border-b-2 transition-colors ${
+                  dueTabType === type 
+                    ? 'text-transparent bg-clip-text bg-gradient-to-r from-[#38bdf8] to-[#1e90ff] border-[#38bdf8]' 
+                    : 'text-black border-transparent hover:text-[#333]'
+                }`}
+              >
+                {type}
+              </button>
+            ))}
+          </div>
+
           {/* Search */}
-          <div className="p-3 border-b border-[#e0e0e0]">
+          <div className="px-5 py-3">
             <div className="bg-[#f9f9f9] h-[34px] rounded-lg flex items-center px-2">
-              <Search size={16} className="text-[#888] mr-2" />
+              <Search size={20} className="text-black mr-2" />
               <input
                 type="text"
-                placeholder={`Search ${dueTabType.toLowerCase()}...`}
+                placeholder="Search"
                 value={dueSearch}
                 onChange={(e) => setDueSearch(e.target.value)}
-                className="bg-transparent border-none outline-none flex-1 text-[12px] font-['Poppins'] text-[#1a1a1a] placeholder:text-[#888]"
+                className="bg-transparent border-none outline-none flex-1 text-[12px] text-black placeholder:text-black"
               />
             </div>
           </div>
 
           {/* Entity List */}
-          <div className="flex-1 overflow-auto">
+          <div className="flex-1 overflow-auto px-5">
             {dueLoading ? (
               <div className="flex items-center justify-center h-full">
                 <RefreshCw size={24} className="animate-spin text-[#38bdf8]" />
@@ -2032,124 +2057,123 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
             ) : dueEntities.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-[#888]">
                 <Package size={40} className="mb-2 opacity-50" />
-                <span className="text-[13px] font-['Poppins']">No {dueTabType.toLowerCase()}s found</span>
+                <span className="text-[13px]">No {dueTabType.toLowerCase()}s found</span>
               </div>
             ) : (
-              dueEntities.map((entity) => (
-                <div
-                  key={entity._id}
-                  onClick={() => handleSelectEntity(entity._id!)}
-                  className={`px-4 py-3 border-b border-[#f0f0f0] cursor-pointer transition-colors ${
-                    selectedEntityId === entity._id ? 'bg-[#e8f4ff]' : 'hover:bg-[#f9f9f9]'
-                  }`}
-                >
-                  <div className="flex justify-between items-start mb-1">
-                    <span className="text-[14px] font-medium text-[#1a1a1a] font-['Poppins']">{entity.name}</span>
-                    <div className="flex flex-col items-end gap-0.5">
-                      {entity.totalOwedToMe > 0 && (
-                        <span className="text-[12px] font-bold text-[#008c09] font-['Lato']">
-                          Get: ৳{entity.totalOwedToMe.toLocaleString('en-IN')}
-                        </span>
-                      )}
-                      {entity.totalIOweThemNumber > 0 && (
-                        <span className="text-[12px] font-bold text-[#da0000] font-['Lato']">
-                          Give: ৳{entity.totalIOweThemNumber.toLocaleString('en-IN')}
-                        </span>
-                      )}
+              <div className="flex flex-col gap-2">
+                {dueEntities.map((entity) => (
+                  <div
+                    key={entity._id}
+                    onClick={() => handleSelectEntity(entity._id!)}
+                    className={`flex items-center gap-[11px] py-2 cursor-pointer transition-colors border-b border-[#e5e5e5] ${
+                      selectedEntityId === entity._id ? 'bg-[#f0f9ff]' : 'hover:bg-[#fafafa]'
+                    }`}
+                  >
+                    {/* Left Border Indicator */}
+                    <div className={`w-[2px] h-[46px] rounded-full ${
+                      entity.totalOwedToMe > entity.totalIOweThemNumber ? 'bg-[#008c09]' : 'bg-[#da0000]'
+                    }`} />
+                    
+                    {/* Entity Info */}
+                    <div className="flex-1 flex justify-between items-center">
+                      <div className="flex flex-col">
+                        <span className="text-[16px] font-semibold text-black">{entity.name}</span>
+                        <span className="text-[12px] text-black">{entity.phone || 'No phone'}</span>
+                      </div>
+                      <div className="flex flex-col items-end gap-[2px] text-[12px]">
+                        <p>
+                          <span className="text-black">Give: </span>
+                          <span className="font-semibold text-[#008c09]">৳{(entity.totalIOweThemNumber || 0).toLocaleString('en-IN')}</span>
+                        </p>
+                        <p>
+                          <span className="text-black">Get: </span>
+                          <span className="font-semibold text-[#da0000]">৳{(entity.totalOwedToMe || 0).toLocaleString('en-IN')}</span>
+                        </p>
+                      </div>
                     </div>
                   </div>
-                  <span className="text-[12px] text-[#888] font-['Poppins']">{entity.phone || 'No phone'}</span>
-                </div>
-              ))
+                ))}
+              </div>
             )}
           </div>
         </div>
 
         {/* Right Panel - Transaction History */}
         <div className="flex-1 flex flex-col">
-          {selectedEntity ? (
-            <>
-              {/* Selected Entity Header */}
-              <div className="px-4 py-3 border-b border-[#e0e0e0] bg-[#fafafa]">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <h3 className="text-[16px] font-bold text-[#023337] font-['Lato']">{selectedEntity.name}</h3>
-                    <span className="text-[12px] text-[#888] font-['Poppins']">{selectedEntity.phone}</span>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setShowDueHistoryModal(true)}
-                      className="flex items-center gap-1 bg-[#f9f9f9] text-[#333] px-4 h-[32px] rounded-lg text-[12px] font-medium font-['Poppins'] border border-[#e0e0e0]"
-                    >
-                      Due History
-                    </button>
-                    <button
-                      onClick={() => setShowAddDueModal(true)}
-                      className="flex items-center gap-1 bg-gradient-to-r from-[#38bdf8] to-[#1e90ff] text-white px-4 h-[32px] rounded-lg text-[12px] font-bold font-['Lato']"
-                    >
-                      <Plus size={14} />
-                      Add Due
-                    </button>
-                  </div>
-                </div>
-              </div>
+          {/* Action Buttons Row */}
+          <div className="flex items-center justify-end gap-4 px-5 py-3">
+            <button
+              onClick={() => setShowDueHistoryModal(true)}
+              className="flex items-center gap-2 bg-[#f9f9f9] text-black px-4 h-[48px] rounded-lg text-[15px] font-bold tracking-[-0.3px]"
+            >
+              <RefreshCw size={20} />
+              Due History
+            </button>
+            <button
+              onClick={() => setShowAddDueModal(true)}
+              className="flex items-center gap-2 bg-gradient-to-r from-[#38bdf8] to-[#1e90ff] text-white px-4 h-[48px] rounded-lg text-[15px] font-bold tracking-[-0.3px]"
+            >
+              <Plus size={20} />
+              Add Due
+            </button>
+          </div>
 
-              {/* Transaction List */}
-              <div className="flex-1 overflow-auto">
-                {dueTransactions.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-full text-[#888]">
-                    <Package size={40} className="mb-2 opacity-50" />
-                    <span className="text-[13px] font-['Poppins']">No transactions yet</span>
-                  </div>
-                ) : (
-                  dueTransactions.map((tx) => (
-                    <div key={tx._id} className="flex items-center justify-between px-4 py-3 border-b border-[#f0f0f0] hover:bg-[#fafafa]">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-[14px] font-medium text-[#1a1a1a] font-['Poppins']">
-                            {tx.transactionType || tx.items || 'Transaction'}
-                          </span>
-                          {tx.status === 'Pending' && (
-                            <span className="px-2 py-0.5 bg-[#fff2bc] text-[#2c2400] text-[10px] font-medium rounded font-['Poppins']">
-                              Pending
-                            </span>
-                          )}
-                          {tx.status === 'Paid' && (
-                            <span className="px-2 py-0.5 bg-[#d4f4d4] text-[#008c09] text-[10px] font-medium rounded font-['Poppins']">
-                              Paid
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <span className="text-[11px] text-[#888] font-['Poppins']">
-                            {new Date(tx.transactionDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
-                          </span>
-                          {tx.notes && (
-                            <span className="text-[11px] text-[#aaa] font-['Poppins']">{tx.notes}</span>
-                          )}
-                        </div>
+          {/* Transaction List Panel */}
+          <div className="flex-1 mx-5 mb-5 bg-[#f9f9f9] rounded-lg overflow-auto">
+            {selectedEntity ? (
+              dueTransactions.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-[#888]">
+                  <Package size={40} className="mb-2 opacity-50" />
+                  <span className="text-[13px]">No transactions yet</span>
+                </div>
+              ) : (
+                <div className="p-4">
+                  {dueTransactions.map((tx, idx) => (
+                    <div key={tx._id} className={`flex items-center justify-between py-3 ${idx !== dueTransactions.length - 1 ? 'border-b border-[#e5e5e5]' : ''}`}>
+                      {/* Left: Title & Date */}
+                      <div className="flex flex-col gap-[2px] w-[145px]">
+                        <span className="text-[14px] font-medium text-black">
+                          {tx.transactionType || tx.items || 'Product purchase'}
+                        </span>
+                        <span className="text-[12px] text-black">
+                          {new Date(tx.transactionDate).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })}
+                        </span>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <span className={`text-[15px] font-bold font-['Lato'] ${
+
+                      {/* Middle: Notes */}
+                      <p className="text-[10px] text-[#b0b0b0] leading-[12px] w-[277px] line-clamp-3">
+                        {tx.notes || 'No notes'}
+                      </p>
+
+                      {/* Right: Amount, Status, Menu */}
+                      <div className="flex items-center gap-4 justify-end w-[224px]">
+                        <span className={`text-[16px] font-semibold w-[106px] ${
                           tx.direction === 'INCOME' ? 'text-[#008c09]' : 'text-[#da0000]'
                         }`}>
-                          {tx.direction === 'INCOME' ? '+' : '-'}৳{tx.amount.toLocaleString('en-IN')}
+                          {tx.direction === 'INCOME' ? '- ' : '+ '}৳{tx.amount.toLocaleString('en-IN')}
                         </span>
-                        <button className="p-1 hover:bg-[#f0f0f0] rounded">
-                          <MoreHorizontal size={18} className="text-[#888]" />
+                        <span className={`px-[9px] py-[2px] rounded-[30px] text-[12px] font-medium w-[62px] text-center ${
+                          tx.status === 'Paid' 
+                            ? 'bg-[#d4f4d4] text-[#008c09]'
+                            : 'bg-[#fff2bc] text-[#2c2400]'
+                        }`}>
+                          {tx.status === 'Paid' ? 'Paid' : 'Pending'}
+                        </span>
+                        <button className="p-1 hover:bg-[#e5e5e5] rounded">
+                          <MoreHorizontal size={20} className="text-[#888]" />
                         </button>
                       </div>
                     </div>
-                  ))
-                )}
+                  ))}
+                </div>
+              )
+            ) : (
+              <div className="flex flex-col items-center justify-center h-full text-[#888]">
+                <Package size={48} className="mb-3 opacity-50" />
+                <span className="text-[14px]">Select a {dueTabType.toLowerCase()} to view transactions</span>
               </div>
-            </>
-          ) : (
-            <div className="flex flex-col items-center justify-center h-full text-[#888]">
-              <Package size={48} className="mb-3 opacity-50" />
-              <span className="text-[14px] font-['Poppins']">Select a {dueTabType.toLowerCase()} to view transactions</span>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -2325,7 +2349,22 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
                   <DotsIcon />
                 </button>
                 {actionMenuOpen === expense.id && (
-                  <div className="absolute right-0 top-8 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-[120px]">
+                  <div className="absolute right-0 top-8 bg-white rounded-[8px] shadow-[0px_3px_19.5px_0px_rgba(0,0,0,0.13)] z-10 overflow-hidden py-2">
+                    {/* Details */}
+                    <button
+                      onClick={() => {
+                        setExpenseDetailsOpen(expense);
+                        setActionMenuOpen(null);
+                      }}
+                      className="w-full h-[48px] flex items-center gap-2 px-6 hover:bg-gray-50"
+                    >
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 20h9"/>
+                        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+                      </svg>
+                      <span className="text-[16px] font-semibold text-black font-['Lato']">Details</span>
+                    </button>
+                    {/* Edit */}
                     <button
                       onClick={() => {
                         setNewExpense(expense);
@@ -2333,15 +2372,24 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
                         setIsAddExpenseOpen(true);
                         setActionMenuOpen(null);
                       }}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-gray-700 hover:bg-gray-50"
+                      className="w-full h-[48px] flex items-center gap-2 px-6 hover:bg-gray-50"
                     >
-                      <Edit2 size={14} /> Edit
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 20h9"/>
+                        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+                      </svg>
+                      <span className="text-[16px] font-semibold text-black font-['Lato']">Edit</span>
                     </button>
+                    {/* Delete */}
                     <button
                       onClick={() => handleDeleteExpense(expense.id)}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-red-600 hover:bg-gray-50"
+                      className="w-full h-[48px] flex items-center gap-2 px-6 hover:bg-gray-50"
                     >
-                      <Trash2 size={14} /> Delete
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#da0000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="3 6 5 6 21 6"/>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                      </svg>
+                      <span className="text-[16px] font-semibold text-[#da0000] font-['Lato']">Delete</span>
                     </button>
                   </div>
                 )}
@@ -2406,74 +2454,200 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
       {/* Add/Edit Expense Modal */}
       {isAddExpenseOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-[18px] font-bold text-[#023337] font-['Lato']">
-                {editingExpenseId ? 'Edit Expense' : 'Add New Expense'}
+          <div className="bg-white rounded-[8px] p-5 w-full max-w-[548px] overflow-y-auto max-h-[90vh]">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-[16px] font-semibold text-black text-center font-['Poppins']">
+                {editingExpenseId ? 'Edit Expense' : 'Add Expense'}
               </h3>
               <button onClick={() => { setIsAddExpenseOpen(false); setEditingExpenseId(null); }} className="text-gray-500 hover:text-gray-700">
                 <X size={20} />
               </button>
             </div>
-            <div className="flex flex-col gap-4">
-              <div>
-                <label className="text-[12px] text-gray-600 font-['Poppins']">Name</label>
+            
+            <div className="flex flex-col gap-3">
+              {/* Expense Name */}
+              <div className="flex flex-col gap-3">
+                <label className="text-[15px] font-bold text-[#023337] font-['Lato']">
+                  Expense Name<span className="text-[#da0000]">*</span>
+                </label>
                 <input
                   type="text"
                   value={newExpense.name || ''}
                   onChange={(e) => setNewExpense(prev => ({ ...prev, name: e.target.value }))}
-                  className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg text-[14px] font-['Poppins']"
+                  className="w-full h-[48px] px-3 py-2.5 bg-[#f9fafb] border border-[#e5e7eb] rounded-[8px] text-[15px] font-['Lato'] text-[#023337] placeholder-[#aeaeae]"
                   placeholder="Enter expense name"
                 />
               </div>
-              <div>
-                <label className="text-[12px] text-gray-600 font-['Poppins']">Category</label>
-                <select
-                  value={newExpense.category || ''}
-                  onChange={(e) => setNewExpense(prev => ({ ...prev, category: e.target.value }))}
-                  className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg text-[14px] font-['Poppins']"
+              
+              {/* Category */}
+              <div className="flex flex-col gap-3 relative">
+                <label className="text-[15px] font-bold text-[#023337] font-['Lato']">
+                  Category<span className="text-[#da0000]">*</span>
+                </label>
+                <div 
+                  onClick={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
+                  className="w-full h-[48px] px-3 py-2.5 bg-[#f9fafb] border border-[#e5e7eb] rounded-[8px] text-[15px] font-['Lato'] text-[#023337] cursor-pointer flex items-center justify-between"
                 >
-                  <option value="">Select Category</option>
-                  {expenseCategories.map(cat => (
-                    <option key={cat.id} value={cat.name}>{cat.name}</option>
-                  ))}
-                </select>
+                  <span className={newExpense.category ? 'text-[#023337]' : 'text-[#aeaeae]'}>
+                    {newExpense.category || 'Select Category'}
+                  </span>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#023337" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`transition-transform ${isCategoryDropdownOpen ? 'rotate-180' : ''}`}>
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                  </svg>
+                </div>
+                
+                {/* Category Dropdown */}
+                {isCategoryDropdownOpen && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-[16px] shadow-[0px_3px_19.5px_0px_rgba(0,0,0,0.13)] z-10 overflow-hidden">
+                    <div className="p-4 flex flex-col gap-2 max-h-[200px] overflow-y-auto">
+                      {expenseCategories.map(cat => (
+                        <div 
+                          key={cat.id}
+                          onClick={() => { setNewExpense(prev => ({ ...prev, category: cat.name })); setIsCategoryDropdownOpen(false); }}
+                          className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1 rounded"
+                        >
+                          <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                            newExpense.category === cat.name ? 'border-[#38bdf8] bg-[#38bdf8]' : 'border-gray-300'
+                          }`}>
+                            {newExpense.category === cat.name && (
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                              </svg>
+                            )}
+                          </div>
+                          <span className="text-[15px] font-medium text-black font-['Poppins']">{cat.name}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="p-4 pt-2">
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); setIsCategoryDropdownOpen(false); setIsCategoryModalOpen(true); }}
+                        className="flex items-center gap-2.5 px-3 py-3 bg-gradient-to-r from-[#38bdf8] to-[#1e90ff] rounded-[8px] text-white"
+                      >
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                          <line x1="12" y1="8" x2="12" y2="16"></line>
+                          <line x1="8" y1="12" x2="16" y2="12"></line>
+                        </svg>
+                        <span className="text-[15px] font-medium font-['Poppins']">Add New Category</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
-              <div>
-                <label className="text-[12px] text-gray-600 font-['Poppins']">Amount (৳)</label>
+              
+              {/* Amount and Date Row */}
+              <div className="flex gap-4">
+                {/* Amount */}
+                <div className="flex-1 flex flex-col gap-3">
+                  <label className="text-[15px] font-bold text-[#023337] font-['Lato']">
+                    Amount<span className="text-[#da0000]">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    value={newExpense.amount || ''}
+                    onChange={(e) => setNewExpense(prev => ({ ...prev, amount: Number(e.target.value) }))}
+                    className="w-full h-[48px] px-3 py-2.5 bg-[#f9fafb] border border-[#e5e7eb] rounded-[8px] text-[15px] font-['Lato'] text-[#023337] placeholder-[#aeaeae]"
+                    placeholder="0.00"
+                  />
+                </div>
+                
+                {/* Date */}
+                <div className="flex-1 flex flex-col gap-3">
+                  <label className="text-[15px] font-bold text-[#023337] font-['Lato']">
+                    Date<span className="text-[#da0000]">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    value={newExpense.date || ''}
+                    onChange={(e) => setNewExpense(prev => ({ ...prev, date: e.target.value }))}
+                    className="w-full h-[48px] px-3 py-2.5 bg-[#f9fafb] border border-[#e5e7eb] rounded-[8px] text-[15px] font-['Lato'] text-[#023337]"
+                  />
+                </div>
+              </div>
+              
+              {/* Image Upload */}
+              <div className="flex flex-col gap-3">
+                <label className="text-[15px] font-bold text-[#023337] font-['Lato']">
+                  Image Upload
+                </label>
+                <div 
+                  className="w-full h-[153px] bg-[#f9fafb] border border-[#e5e7eb] rounded-[8px] flex flex-col items-center justify-center gap-4 cursor-pointer hover:bg-[#f3f4f6] transition-colors"
+                  onClick={() => document.getElementById('expense-image-upload')?.click()}
+                >
+                  {newExpense.imageUrl ? (
+                    <div className="relative w-full h-full p-2">
+                      <img 
+                        src={newExpense.imageUrl} 
+                        alt="Expense" 
+                        className="w-full h-full object-contain rounded"
+                      />
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); setNewExpense(prev => ({ ...prev, imageUrl: undefined })); }}
+                        className="absolute top-3 right-3 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-[15px] text-[#aeaeae] font-['Lato']">Upload Doc</p>
+                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#aeaeae" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="17 8 12 3 7 8" />
+                        <line x1="12" y1="3" x2="12" y2="15" />
+                      </svg>
+                    </>
+                  )}
+                </div>
                 <input
-                  type="number"
-                  value={newExpense.amount || ''}
-                  onChange={(e) => setNewExpense(prev => ({ ...prev, amount: Number(e.target.value) }))}
-                  className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg text-[14px] font-['Poppins']"
-                  placeholder="Enter amount"
+                  id="expense-image-upload"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onloadend = () => {
+                        setNewExpense(prev => ({ ...prev, imageUrl: reader.result as string }));
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                  }}
                 />
               </div>
-              <div>
-                <label className="text-[12px] text-gray-600 font-['Poppins']">Date</label>
+              
+              {/* Note */}
+              <div className="flex flex-col gap-3">
+                <label className="text-[15px] font-bold text-[#023337] font-['Lato']">
+                  Note
+                </label>
                 <input
-                  type="date"
-                  value={newExpense.date || ''}
-                  onChange={(e) => setNewExpense(prev => ({ ...prev, date: e.target.value }))}
-                  className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg text-[14px] font-['Poppins']"
-                />
-              </div>
-              <div>
-                <label className="text-[12px] text-gray-600 font-['Poppins']">Note (Optional)</label>
-                <textarea
+                  type="text"
                   value={newExpense.note || ''}
                   onChange={(e) => setNewExpense(prev => ({ ...prev, note: e.target.value }))}
-                  className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg text-[14px] font-['Poppins']"
-                  placeholder="Add a note"
-                  rows={2}
+                  className="w-full h-[48px] px-3 py-2.5 bg-[#f9fafb] border border-[#e5e7eb] rounded-[8px] text-[15px] font-['Lato'] text-[#023337] placeholder-[#aeaeae]"
+                  placeholder="Add any notes..."
                 />
               </div>
-              <button
-                onClick={handleAddExpense}
-                className="bg-gradient-to-r from-[#38bdf8] to-[#1e90ff] text-white py-3 rounded-lg text-[15px] font-bold font-['Lato']"
-              >
-                {editingExpenseId ? 'Update Expense' : 'Add Expense'}
-              </button>
+              
+              {/* Action Buttons */}
+              <div className="flex items-center justify-end gap-3 mt-4">
+                <button
+                  onClick={() => { setIsAddExpenseOpen(false); setEditingExpenseId(null); }}
+                  className="h-[40px] px-4 py-2 bg-white border border-[#e5e7eb] rounded-[8px] text-[15px] font-bold text-[#023337] font-['Lato'] tracking-[-0.3px] min-w-[111px]"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleAddExpense}
+                  className="h-[40px] px-4 py-2 bg-gradient-to-r from-[#38bdf8] to-[#1e90ff] rounded-[8px] text-[15px] font-bold text-white font-['Lato'] tracking-[-0.3px]"
+                >
+                  {editingExpenseId ? 'Update Expense' : 'Save Expense'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -2503,6 +2677,104 @@ const FigmaBusinessReport: React.FC<FigmaBusinessReportProps> = ({
               >
                 Add Category
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Expense Details Modal */}
+      {expenseDetailsOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-[8px] p-5 w-full max-w-[548px] max-h-[90vh] overflow-y-auto">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-[16px] font-semibold text-black text-center font-['Poppins']">
+                Expense Details
+              </h3>
+              <button onClick={() => setExpenseDetailsOpen(null)} className="text-gray-500 hover:text-gray-700">
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="flex flex-col gap-4">
+              {/* Expense Name */}
+              <div className="flex flex-col gap-2">
+                <label className="text-[15px] font-bold text-[#023337] font-['Lato']">Expense Name</label>
+                <div className="w-full h-[48px] px-3 py-2.5 bg-[#f9fafb] border border-[#e5e7eb] rounded-[8px] flex items-center">
+                  <span className="text-[15px] font-['Lato'] text-black">{expenseDetailsOpen.name}</span>
+                </div>
+              </div>
+              
+              {/* Category */}
+              <div className="flex flex-col gap-2">
+                <label className="text-[15px] font-bold text-[#023337] font-['Lato']">Category</label>
+                <div className="w-full h-[48px] px-3 py-2.5 bg-[#f9fafb] border border-[#e5e7eb] rounded-[8px] flex items-center">
+                  <span className="text-[15px] font-['Lato'] text-black">{expenseDetailsOpen.category}</span>
+                </div>
+              </div>
+              
+              {/* Amount and Date Row */}
+              <div className="flex gap-4">
+                <div className="flex-1 flex flex-col gap-2">
+                  <label className="text-[15px] font-bold text-[#023337] font-['Lato']">Amount</label>
+                  <div className="w-full h-[48px] px-3 py-2.5 bg-[#f9fafb] border border-[#e5e7eb] rounded-[8px] flex items-center">
+                    <span className="text-[15px] font-['Lato'] text-black">৳{expenseDetailsOpen.amount.toLocaleString('en-IN')}</span>
+                  </div>
+                </div>
+                <div className="flex-1 flex flex-col gap-2">
+                  <label className="text-[15px] font-bold text-[#023337] font-['Lato']">Date</label>
+                  <div className="w-full h-[48px] px-3 py-2.5 bg-[#f9fafb] border border-[#e5e7eb] rounded-[8px] flex items-center">
+                    <span className="text-[15px] font-['Lato'] text-black">
+                      {new Date(expenseDetailsOpen.date).toLocaleDateString('en-GB').replace(/\//g, '-')}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Image */}
+              {expenseDetailsOpen.imageUrl && (
+                <div className="flex flex-col gap-2">
+                  <label className="text-[15px] font-bold text-[#023337] font-['Lato']">Image</label>
+                  <div className="w-full h-[153px] bg-[#f9fafb] border border-[#e5e7eb] rounded-[8px] flex items-center justify-center overflow-hidden">
+                    <img 
+                      src={expenseDetailsOpen.imageUrl} 
+                      alt="Expense" 
+                      className="max-w-full max-h-full object-contain"
+                    />
+                  </div>
+                </div>
+              )}
+              
+              {/* Note */}
+              {expenseDetailsOpen.note && (
+                <div className="flex flex-col gap-2">
+                  <label className="text-[15px] font-bold text-[#023337] font-['Lato']">Note</label>
+                  <div className="w-full min-h-[48px] px-3 py-2.5 bg-[#f9fafb] border border-[#e5e7eb] rounded-[8px] flex items-center">
+                    <span className="text-[15px] font-['Lato'] text-black">{expenseDetailsOpen.note}</span>
+                  </div>
+                </div>
+              )}
+              
+              {/* Action Buttons */}
+              <div className="flex items-center justify-end gap-3 mt-4">
+                <button
+                  onClick={() => setExpenseDetailsOpen(null)}
+                  className="h-[40px] px-4 py-2 bg-white border border-[#e5e7eb] rounded-[8px] text-[15px] font-bold text-[#023337] font-['Lato'] tracking-[-0.3px] min-w-[111px]"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={() => {
+                    setNewExpense(expenseDetailsOpen);
+                    setEditingExpenseId(expenseDetailsOpen.id);
+                    setExpenseDetailsOpen(null);
+                    setIsAddExpenseOpen(true);
+                  }}
+                  className="h-[40px] px-4 py-2 bg-gradient-to-r from-[#38bdf8] to-[#1e90ff] rounded-[8px] text-[15px] font-bold text-white font-['Lato'] tracking-[-0.3px]"
+                >
+                  Edit Expense
+                </button>
+              </div>
             </div>
           </div>
         </div>

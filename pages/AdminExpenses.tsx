@@ -1,7 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Search, Plus, Calendar, Printer, Filter, Image as ImageIcon, Edit2, Trash2, ChevronLeft, ChevronRight, X } from 'lucide-react';
-import { ExpenseService, ExpenseDTO } from '../services/ExpenseService';
-import { CategoryService, CategoryDTO } from '../services/CategoryService';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import { Search, Plus, Calendar, Printer, Filter, Image as ImageIcon, Edit2, Trash2, ChevronLeft, ChevronRight, X, TrendingDown, BarChart3, Tag, Clock } from 'lucide-react';
+import { ExpenseService, ExpenseDTO, setExpenseTenantId } from '../services/ExpenseService';
+import { CategoryService, CategoryDTO, setCategoryTenantId } from '../services/CategoryService';
 import { normalizeImageUrl } from '../utils/imageUrlHelper';
 
 interface ExpenseItem {
@@ -15,17 +15,58 @@ interface ExpenseItem {
   imageUrl?: string;
 }
 
-const AdminExpenses: React.FC = () => {
+type DatePreset = 'today' | 'this_week' | 'this_month' | 'this_year' | 'custom' | 'all';
+
+function getDateRange(preset: DatePreset): { from?: string; to?: string } {
+  const now = new Date();
+  const fmt = (d: Date) => d.toISOString().slice(0, 10);
+  switch (preset) {
+    case 'today':
+      return { from: fmt(now), to: fmt(now) };
+    case 'this_week': {
+      const day = now.getDay();
+      const diff = day === 0 ? 6 : day - 1;
+      const start = new Date(now);
+      start.setDate(now.getDate() - diff);
+      return { from: fmt(start), to: fmt(now) };
+    }
+    case 'this_month':
+      return { from: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`, to: fmt(now) };
+    case 'this_year':
+      return { from: `${now.getFullYear()}-01-01`, to: fmt(now) };
+    case 'all':
+      return {};
+    default:
+      return {};
+  }
+}
+
+const presetLabels: Record<DatePreset, string> = {
+  all: 'All Time',
+  today: 'Today',
+  this_week: 'This Week',
+  this_month: 'This Month',
+  this_year: 'This Year',
+  custom: 'Custom Range',
+};
+
+interface AdminExpensesProps {
+  tenantId?: string;
+}
+
+const AdminExpenses: React.FC<AdminExpensesProps> = ({ tenantId }) => {
   const [query, setQuery] = useState('');
   const [statusTab, setStatusTab] = useState<'All'|'Published'|'Draft'|'Trash'>('All');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
-  const [dateRange, setDateRange] = useState<{from?: string; to?: string}>({});
+  const [datePreset, setDatePreset] = useState<DatePreset>('this_month');
+  const [customFrom, setCustomFrom] = useState('');
+  const [customTo, setCustomTo] = useState('');
   const [items, setItems] = useState<ExpenseItem[]>([]);
   const [categories, setCategories] = useState<CategoryDTO[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
-  const pageSize = 10;
+  const pageSize = 15;
 
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [newItem, setNewItem] = useState<Partial<ExpenseItem>>({ status: 'Draft' });
@@ -34,13 +75,28 @@ const AdminExpenses: React.FC = () => {
   const [newCategoryName, setNewCategoryName] = useState('');
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
 
+  // Set tenant IDs on services
+  useEffect(() => {
+    if (tenantId) {
+      setExpenseTenantId(tenantId);
+      setCategoryTenantId(tenantId);
+    }
+  }, [tenantId]);
+
+  const dateRange = useMemo(() => {
+    if (datePreset === 'custom') {
+      return { from: customFrom || undefined, to: customTo || undefined };
+    }
+    return getDateRange(datePreset);
+  }, [datePreset, customFrom, customTo]);
+
   const filtered = useMemo(() => {
     return items.filter(i =>
       (statusTab === 'All' || i.status === statusTab) &&
       (!selectedCategory || i.category === selectedCategory) &&
       (!query || i.name.toLowerCase().includes(query.toLowerCase())) &&
-      (!dateRange.from || new Date(i.date) >= new Date(dateRange.from)) &&
-      (!dateRange.to || new Date(i.date) <= new Date(dateRange.to))
+      (!dateRange.from || i.date >= dateRange.from) &&
+      (!dateRange.to || i.date <= dateRange.to)
     );
   }, [items, statusTab, selectedCategory, query, dateRange]);
 
@@ -51,34 +107,54 @@ const AdminExpenses: React.FC = () => {
 
   const totalAmount = useMemo(() => filtered.reduce((sum, i) => sum + i.amount, 0), [filtered]);
 
+  // Category-wise breakdown
+  const categoryBreakdown = useMemo(() => {
+    const map = new Map<string, number>();
+    filtered.forEach(i => map.set(i.category, (map.get(i.category) || 0) + i.amount));
+    return Array.from(map.entries()).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  }, [filtered]);
+
+  // Today's total
+  const todayTotal = useMemo(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    return items.filter(i => i.date === today).reduce((sum, i) => sum + i.amount, 0);
+  }, [items]);
+
+  // This month's total
+  const monthTotal = useMemo(() => {
+    const now = new Date();
+    const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+    return items.filter(i => i.date >= monthStart).reduce((sum, i) => sum + i.amount, 0);
+  }, [items]);
+
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const [expRes, catRes] = await Promise.all([
+        ExpenseService.list({
+          query: query || undefined,
+          status: statusTab === 'All' ? undefined : statusTab,
+          category: selectedCategory || undefined,
+          from: dateRange.from,
+          to: dateRange.to,
+          page: 1,
+          pageSize: 500,
+        }),
+        CategoryService.list(),
+      ]);
+      setItems(expRes.items as any);
+      setCategories(catRes.items);
+    } catch (e: any) {
+      setError(e?.message || 'Failed to load expenses');
+    } finally {
+      setLoading(false);
+    }
+  }, [query, statusTab, selectedCategory, dateRange.from, dateRange.to]);
+
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const [expRes, catRes] = await Promise.all([
-          ExpenseService.list({
-            query,
-            status: statusTab === 'All' ? undefined : statusTab,
-            category: selectedCategory || undefined,
-            from: dateRange.from,
-            to: dateRange.to,
-            page,
-            pageSize,
-          }),
-          CategoryService.list(),
-        ]);
-        setItems(expRes.items as any);
-        setCategories(catRes.items);
-      } catch (e: any) {
-        setError(e?.message || 'Failed to load expenses');
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query, statusTab, selectedCategory, dateRange.from, dateRange.to, page, pageSize]);
+  }, [fetchData]);
 
   const handleAdd = async () => {
     if (!newItem.name || !newItem.category || !newItem.amount || !newItem.date) return;
@@ -122,6 +198,16 @@ const AdminExpenses: React.FC = () => {
     setNewItem(expense);
     setEditingExpenseId(expense.id);
     setIsAddOpen(true);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this expense?')) return;
+    try {
+      await ExpenseService.remove(id);
+      setItems(prev => prev.filter(x => x.id !== id));
+    } catch {
+      setItems(prev => prev.filter(x => x.id !== id));
+    }
   };
 
   const handleAddCategory = async () => {
@@ -271,13 +357,16 @@ const AdminExpenses: React.FC = () => {
       <div className="bg-white rounded-lg sm:rounded-xl p-3 sm:p-4 md:p-5 border border-gray-200 shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3">
           <div>
-            <h2 className="text-base sm:text-lg md:text-xl font-bold text-gray-900">Expense Summary</h2>
-            <p className="text-xs text-gray-500 mt-0.5 hidden sm:block">Total expenses overview for the selected period.</p>
+            <h2 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 flex items-center gap-2">
+              <TrendingDown className="w-5 h-5 text-red-500" />
+              Expense Tracker
+            </h2>
+            <p className="text-xs text-gray-500 mt-0.5 hidden sm:block">Track & manage all expenses — filter by day, month, year or custom range.</p>
           </div>
           <div className="flex flex-col xs:flex-row items-stretch xs:items-center gap-2">
             <div className="flex items-center bg-gray-100 rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 flex-1 xs:flex-initial">
               <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-500 flex-shrink-0" />
-              <input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search..." className="bg-transparent text-gray-700 text-xs sm:text-sm outline-none ml-2 w-full xs:w-auto placeholder:text-xs" />
+              <input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search expenses..." className="bg-transparent text-gray-700 text-xs sm:text-sm outline-none ml-2 w-full xs:w-auto placeholder:text-xs" />
             </div>
             <button onClick={()=>setIsAddOpen(true)} className="inline-flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold whitespace-nowrap">
               <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -287,48 +376,95 @@ const AdminExpenses: React.FC = () => {
           </div>
         </div>
 
+        {/* Date Preset Buttons */}
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mt-3 sm:mt-4">
+          <Calendar className="w-3.5 h-3.5 text-gray-500" />
+          {(['all', 'today', 'this_week', 'this_month', 'this_year', 'custom'] as DatePreset[]).map(p => (
+            <button
+              key={p}
+              onClick={() => setDatePreset(p)}
+              className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-semibold transition-all ${
+                datePreset === p
+                  ? 'bg-emerald-600 text-white shadow-sm'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              {presetLabels[p]}
+            </button>
+          ))}
+        </div>
+
+        {/* Custom Date Range */}
+        {datePreset === 'custom' && (
+          <div className="flex flex-wrap items-center gap-2 mt-2 sm:mt-3 bg-gray-50 rounded-lg p-2 sm:p-3">
+            <div className="flex items-center gap-1.5">
+              <label className="text-[10px] sm:text-xs text-gray-500 font-medium">From:</label>
+              <input type="date" value={customFrom} onChange={e => setCustomFrom(e.target.value)} className="bg-white border border-gray-300 rounded-md px-2 py-1 text-xs text-gray-900 focus:outline-none focus:border-emerald-500" />
+            </div>
+            <div className="flex items-center gap-1.5">
+              <label className="text-[10px] sm:text-xs text-gray-500 font-medium">To:</label>
+              <input type="date" value={customTo} onChange={e => setCustomTo(e.target.value)} className="bg-white border border-gray-300 rounded-md px-2 py-1 text-xs text-gray-900 focus:outline-none focus:border-emerald-500" />
+            </div>
+          </div>
+        )}
+
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 mt-2 sm:mt-3">
-          <div className="sm:col-span-2 bg-red-50 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-red-100">
-            <div className="text-xl sm:text-2xl md:text-3xl font-black text-red-600 break-words">৳{totalAmount.toLocaleString('en-BD', {minimumFractionDigits: 2})}</div>
-            <div className="text-xs sm:text-sm text-gray-600 mt-1">Total Expense • {filtered.length} transactions</div>
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 mt-3 sm:mt-4">
+          <div className="bg-red-50 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-red-100">
+            <div className="flex items-center gap-1.5 mb-1">
+              <TrendingDown className="w-3.5 h-3.5 text-red-500" />
+              <span className="text-[10px] sm:text-xs text-gray-500 font-medium">{presetLabels[datePreset]} Total</span>
+            </div>
+            <div className="text-lg sm:text-xl md:text-2xl font-black text-red-600 break-words">৳{totalAmount.toLocaleString('en-BD', {minimumFractionDigits: 2})}</div>
+            <div className="text-[10px] sm:text-xs text-gray-500 mt-0.5">{filtered.length} transactions</div>
+          </div>
+          <div className="bg-orange-50 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-orange-100">
+            <div className="flex items-center gap-1.5 mb-1">
+              <Clock className="w-3.5 h-3.5 text-orange-500" />
+              <span className="text-[10px] sm:text-xs text-gray-500 font-medium">Today</span>
+            </div>
+            <div className="text-lg sm:text-xl md:text-2xl font-black text-orange-600 break-words">৳{todayTotal.toLocaleString('en-BD', {minimumFractionDigits: 2})}</div>
+          </div>
+          <div className="bg-purple-50 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-purple-100">
+            <div className="flex items-center gap-1.5 mb-1">
+              <BarChart3 className="w-3.5 h-3.5 text-purple-500" />
+              <span className="text-[10px] sm:text-xs text-gray-500 font-medium">This Month</span>
+            </div>
+            <div className="text-lg sm:text-xl md:text-2xl font-black text-purple-600 break-words">৳{monthTotal.toLocaleString('en-BD', {minimumFractionDigits: 2})}</div>
           </div>
           <div className="bg-gray-50 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-gray-100">
-            <div className="text-gray-600 text-[10px] sm:text-xs mb-1.5 sm:mb-2">Summary</div>
-            <div className="grid grid-cols-3 gap-1.5 sm:gap-2 text-center">
-              <div>
-                <div className="text-sm sm:text-base md:text-lg font-bold text-gray-900">{new Set(items.map(i=>i.category)).size}</div>
-                <div className="text-[10px] sm:text-[10px] md:text-[11px] text-gray-500">Categories</div>
-              </div>
-              <div>
-                <div className="text-sm sm:text-base md:text-lg font-bold text-gray-900">{items.length}</div>
-                <div className="text-[10px] sm:text-[10px] md:text-[11px] text-gray-500">Total</div>
-              </div>
-              <div>
-                <div className="text-sm sm:text-base md:text-lg font-bold text-gray-900">{filtered.length}</div>
-                <div className="text-[10px] sm:text-[10px] md:text-[11px] text-gray-500">Filtered</div>
-              </div>
+            <div className="flex items-center gap-1.5 mb-1">
+              <Tag className="w-3.5 h-3.5 text-gray-500" />
+              <span className="text-[10px] sm:text-xs text-gray-500 font-medium">Top Categories</span>
+            </div>
+            <div className="space-y-1 mt-1">
+              {categoryBreakdown.length === 0 && <div className="text-[10px] text-gray-400">No data</div>}
+              {categoryBreakdown.slice(0, 3).map(([cat, amt]) => (
+                <div key={cat} className="flex items-center justify-between text-[10px] sm:text-xs">
+                  <span className="text-gray-700 truncate mr-1">{cat}</span>
+                  <span className="text-red-600 font-semibold whitespace-nowrap">৳{amt.toFixed(0)}</span>
+                </div>
+              ))}
             </div>
           </div>
-          <div className="bg-gray-50 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-gray-100">
-            <div className="text-gray-600 text-[10px] sm:text-xs mb-1.5 sm:mb-2">Actions</div>
-            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-              <button onClick={() => { setNewCategoryName(''); setEditingCategoryId(null); setIsCategoryModalOpen(true); }} className="inline-flex items-center gap-1 sm:gap-1.5 bg-gray-200 hover:bg-gray-300 text-gray-700 px-2 sm:px-3 py-1.5 sm:py-2 rounded-md sm:rounded-lg text-[10px] sm:text-xs font-semibold">
-                <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
-                <span className="hidden sm:inline">Category</span>
-              </button>
-              <button onClick={handlePrintInvoice} className="inline-flex items-center gap-1 sm:gap-1.5 bg-gray-200 hover:bg-gray-300 text-gray-700 px-2 sm:px-3 py-1.5 sm:py-2 rounded-md sm:rounded-lg text-[10px] sm:text-xs font-semibold">
-                <Printer className="w-3 h-3 sm:w-4 sm:h-4" />
-                <span className="hidden sm:inline">Print</span>
-              </button>
-            </div>
-            <div className="flex items-center gap-1.5 sm:gap-2 mt-1.5 sm:mt-2">
-              <Filter className="w-3 h-3 sm:w-4 sm:h-4 text-gray-500 flex-shrink-0" />
-              <select value={selectedCategory} onChange={e=>setSelectedCategory(e.target.value)} className="bg-white border border-gray-300 text-gray-700 text-[10px] sm:text-xs rounded-md px-1.5 sm:px-2 py-1 flex-1 min-w-0">
-                <option value="">Category</option>
-                {categories.map(c=> <option key={c.id} value={c.name}>{c.name}</option>)}
-              </select>
-            </div>
+        </div>
+
+        {/* Actions row */}
+        <div className="flex flex-wrap items-center gap-2 mt-3">
+          <button onClick={() => { setNewCategoryName(''); setEditingCategoryId(null); setIsCategoryModalOpen(true); }} className="inline-flex items-center gap-1 sm:gap-1.5 bg-gray-200 hover:bg-gray-300 text-gray-700 px-2 sm:px-3 py-1.5 sm:py-2 rounded-md sm:rounded-lg text-[10px] sm:text-xs font-semibold">
+            <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
+            <span>Category</span>
+          </button>
+          <button onClick={handlePrintInvoice} className="inline-flex items-center gap-1 sm:gap-1.5 bg-gray-200 hover:bg-gray-300 text-gray-700 px-2 sm:px-3 py-1.5 sm:py-2 rounded-md sm:rounded-lg text-[10px] sm:text-xs font-semibold">
+            <Printer className="w-3 h-3 sm:w-4 sm:h-4" />
+            <span>Print Report</span>
+          </button>
+          <div className="flex items-center gap-1.5 sm:gap-2 ml-auto">
+            <Filter className="w-3 h-3 sm:w-4 sm:h-4 text-gray-500 flex-shrink-0" />
+            <select value={selectedCategory} onChange={e=>setSelectedCategory(e.target.value)} className="bg-white border border-gray-300 text-gray-700 text-[10px] sm:text-xs rounded-md px-1.5 sm:px-2 py-1 min-w-[100px]">
+              <option value="">All Categories</option>
+              {categories.map(c=> <option key={c.id} value={c.name}>{c.name}</option>)}
+            </select>
           </div>
         </div>
       </div>
@@ -338,42 +474,44 @@ const AdminExpenses: React.FC = () => {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3">
           <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3 text-[10px] sm:text-xs md:text-sm overflow-x-auto scrollbar-hide pb-1 sm:pb-0">
             {(['All','Published','Draft','Trash'] as const).map(t => (
-              <button key={t} onClick={()=>setStatusTab(t)} className={`font-semibold whitespace-nowrap px-1.5 sm:px-2 py-0.5 sm:py-1 rounded ${statusTab===t? 'text-emerald-600 bg-emerald-50':'text-gray-400'} hover:text-gray-900 transition`}>{t}{t==='All'? ` (${filtered.length})`: ''}</button>
+              <button key={t} onClick={()=>setStatusTab(t)} className={`font-semibold whitespace-nowrap px-1.5 sm:px-2 py-0.5 sm:py-1 rounded ${statusTab===t? 'text-emerald-600 bg-emerald-50':'text-gray-400'} hover:text-gray-900 transition`}>
+                {t}{t === 'All' ? ` (${filtered.length})` : ` (${items.filter(i => i.status === t).length})`}
+              </button>
             ))}
           </div>
           <div className="flex items-center justify-between sm:justify-end gap-1.5 sm:gap-2">
-            <button onClick={() => { setNewCategoryName(''); setEditingCategoryId(null); setIsCategoryModalOpen(true); }} className="text-[10px] sm:text-xs md:text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 sm:px-3 py-1 sm:py-1.5 rounded-md whitespace-nowrap">+ Category</button>
             <div className="flex items-center gap-1 sm:gap-1.5 md:gap-2 text-[10px] sm:text-xs text-gray-600">
               <span className="hidden sm:inline">Page</span>
-              <button disabled className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-gray-100 rounded-md min-w-[1.5rem] sm:min-w-[2rem] text-center text-[10px] sm:text-xs">1</button>
-              <span className="text-[10px] sm:text-[10px] md:text-xs">of {totalPages}</span>
-              <button onClick={()=>setPage(Math.max(1,page-1))} className="px-1 sm:px-2 py-0.5 sm:py-1 bg-gray-100 hover:bg-gray-200 rounded-md"><ChevronLeft className="w-2.5 h-2.5 sm:w-3 sm:h-3"/></button>
-              <button onClick={()=>setPage(Math.min(totalPages,page+1))} className="px-1 sm:px-2 py-0.5 sm:py-1 bg-gray-100 hover:bg-gray-200 rounded-md"><ChevronRight className="w-2.5 h-2.5 sm:w-3 sm:h-3"/></button>
+              <span className="text-[10px] sm:text-xs font-semibold">{page}</span>
+              <span className="text-[10px] sm:text-xs">of {totalPages}</span>
+              <button onClick={()=>setPage(Math.max(1,page-1))} disabled={page <= 1} className="px-1 sm:px-2 py-0.5 sm:py-1 bg-gray-100 hover:bg-gray-200 rounded-md disabled:opacity-50"><ChevronLeft className="w-2.5 h-2.5 sm:w-3 sm:h-3"/></button>
+              <button onClick={()=>setPage(Math.min(totalPages,page+1))} disabled={page >= totalPages} className="px-1 sm:px-2 py-0.5 sm:py-1 bg-gray-100 hover:bg-gray-200 rounded-md disabled:opacity-50"><ChevronRight className="w-2.5 h-2.5 sm:w-3 sm:h-3"/></button>
             </div>
           </div>
         </div>
 
         <div className="mt-2 sm:mt-3 overflow-x-auto scrollbar-hide -mx-2 sm:mx-0 px-2 sm:px-0">
-          {error ? (
+          {loading && items.length === 0 ? (
+            <div className="py-10 text-center text-gray-400 text-sm">Loading expenses...</div>
+          ) : error ? (
             <div className="py-6 sm:py-10 text-center text-red-500 text-xs sm:text-sm">{error}</div>
           ) : paged.length === 0 ? (
             <div className="py-10 sm:py-16 text-center">
               <div className="flex flex-col items-center text-gray-400">
                 <ImageIcon className="w-8 h-8 sm:w-10 sm:h-10 mb-2" />
-                <div className="font-semibold text-xs sm:text-sm">No Data Found!</div>
-                <div className="text-[10px] sm:text-xs">Please add some data to show here.</div>
+                <div className="font-semibold text-xs sm:text-sm">No Expenses Found!</div>
+                <div className="text-[10px] sm:text-xs">Add your first expense to start tracking.</div>
               </div>
             </div>
           ) : (
           <table className="min-w-full text-xs sm:text-sm">
             <thead>
               <tr className="text-left text-gray-600 border-b border-gray-200">
-                <th className="p-1.5 sm:p-2 hidden md:table-cell"><input type="checkbox" disabled/></th>
                 <th className="p-1.5 sm:p-2 hidden sm:table-cell text-[10px] sm:text-xs">Image</th>
                 <th className="p-1.5 sm:p-2 text-[10px] sm:text-xs">Name</th>
                 <th className="p-1.5 sm:p-2 hidden lg:table-cell text-[10px] sm:text-xs">Category</th>
                 <th className="p-1.5 sm:p-2 text-[10px] sm:text-xs">Amount</th>
-                <th className="p-1.5 sm:p-2 hidden md:table-cell text-[10px] sm:text-xs">Date</th>
+                <th className="p-1.5 sm:p-2 text-[10px] sm:text-xs">Date</th>
                 <th className="p-1.5 sm:p-2 hidden sm:table-cell text-[10px] sm:text-xs">Status</th>
                 <th className="p-1.5 sm:p-2 text-[10px] sm:text-xs">Actions</th>
               </tr>
@@ -381,29 +519,38 @@ const AdminExpenses: React.FC = () => {
             <tbody>
               {paged.map((i, idx) => (
                   <tr key={i.id || `expense-${idx}`} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="p-1.5 sm:p-2 hidden md:table-cell"><input type="checkbox" /></td>
                     <td className="p-1.5 sm:p-2 hidden sm:table-cell">
                       {i.imageUrl ? <img src={normalizeImageUrl(i.imageUrl)} alt="receipt" className="w-8 h-8 sm:w-10 sm:h-10 rounded object-cover"/> : <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-100 rounded flex items-center justify-center"><ImageIcon className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400"/></div>}
                     </td>
                     <td className="p-1.5 sm:p-2 text-gray-900 font-medium">
                       <div className="text-xs sm:text-sm">{i.name}</div>
                       <div className="text-[10px] sm:text-xs text-gray-500 lg:hidden mt-0.5">{i.category}</div>
+                      {i.note && <div className="text-[10px] text-gray-400 mt-0.5 truncate max-w-[200px]">{i.note}</div>}
                     </td>
                     <td className="p-1.5 sm:p-2 text-gray-600 hidden lg:table-cell text-xs sm:text-sm">{i.category}</td>
                     <td className="p-1.5 sm:p-2 text-red-600 font-semibold whitespace-nowrap text-xs sm:text-sm">৳{i.amount.toFixed(2)}</td>
-                    <td className="p-1.5 sm:p-2 text-gray-600 hidden md:table-cell text-[10px] sm:text-xs">{new Date(i.date).toLocaleDateString()}</td>
+                    <td className="p-1.5 sm:p-2 text-gray-600 text-[10px] sm:text-xs whitespace-nowrap">{new Date(i.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
                     <td className="p-1.5 sm:p-2 hidden sm:table-cell">
-                      <span className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-semibold whitespace-nowrap ${i.status==='Published'? 'bg-emerald-50 text-emerald-600':'bg-gray-100 text-gray-600'}`}>{i.status}</span>
+                      <span className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-semibold whitespace-nowrap ${i.status==='Published'? 'bg-emerald-50 text-emerald-600': i.status === 'Trash' ? 'bg-red-50 text-red-600' :'bg-gray-100 text-gray-600'}`}>{i.status}</span>
                     </td>
                     <td className="p-1.5 sm:p-2">
                       <div className="flex items-center gap-1 sm:gap-1.5 text-gray-400">
                         <button className="p-1 sm:p-1.5 hover:text-gray-700 hover:bg-gray-100 rounded" onClick={() => handleEditExpense(i)}><Edit2 className="w-3 h-3 sm:w-4 sm:h-4"/></button>
-                        <button className="p-1 sm:p-1.5 hover:text-red-500 hover:bg-red-50 rounded" onClick={()=>setItems(prev=>prev.filter(x=>x.id!==i.id))}><Trash2 className="w-3 h-3 sm:w-4 sm:h-4"/></button>
+                        <button className="p-1 sm:p-1.5 hover:text-red-500 hover:bg-red-50 rounded" onClick={()=>handleDelete(i.id)}><Trash2 className="w-3 h-3 sm:w-4 sm:h-4"/></button>
                       </div>
                     </td>
                   </tr>
                 ))}
             </tbody>
+            <tfoot>
+              <tr className="bg-red-50 font-bold text-sm">
+                <td className="p-2 hidden sm:table-cell"></td>
+                <td className="p-2" colSpan={1}>TOTAL</td>
+                <td className="p-2 hidden lg:table-cell"></td>
+                <td className="p-2 text-red-700">৳{totalAmount.toFixed(2)}</td>
+                <td className="p-2" colSpan={3}></td>
+              </tr>
+            </tfoot>
           </table>
           )}
         </div>
@@ -415,15 +562,15 @@ const AdminExpenses: React.FC = () => {
           <div className="bg-white rounded-xl p-4 sm:p-6 w-full max-w-lg border border-gray-200 shadow-xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-gray-900 font-bold text-base sm:text-lg">{editingExpenseId ? 'Edit Expense' : 'Add Expense'}</h3>
-              <button onClick={()=>{setIsAddOpen(false); setNewItem({ status: 'Draft' }); setEditingExpenseId(null);}} className="text-gray-400 hover:text-gray-600 p-1">✕</button>
+              <button onClick={()=>{setIsAddOpen(false); setNewItem({ status: 'Draft' }); setEditingExpenseId(null);}} className="text-gray-400 hover:text-gray-600 p-1"><X className="w-5 h-5"/></button>
             </div>
             <div className="space-y-3">
               <div>
-                <label className="text-xs text-gray-600 font-medium">Expense Name</label>
+                <label className="text-xs text-gray-600 font-medium">Expense Name *</label>
                 <input className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500" value={newItem.name||''} onChange={e=>setNewItem({...newItem, name: e.target.value})} placeholder="Enter expense name" />
               </div>
               <div>
-                <label className="text-xs text-gray-600 font-medium">Category</label>
+                <label className="text-xs text-gray-600 font-medium">Category *</label>
                 <select className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:border-emerald-500" value={newItem.category||''} onChange={e=>setNewItem({...newItem, category: e.target.value})}>
                   <option value="">Select Category</option>
                   {categories.map(c=> <option key={c.id} value={c.name}>{c.name}</option>)}
@@ -431,11 +578,11 @@ const AdminExpenses: React.FC = () => {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs text-gray-600 font-medium">Amount (৳)</label>
+                  <label className="text-xs text-gray-600 font-medium">Amount (৳) *</label>
                   <input type="number" className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500" value={newItem.amount as any || ''} onChange={e=>setNewItem({...newItem, amount: Number(e.target.value)})} placeholder="0.00" />
                 </div>
                 <div>
-                  <label className="text-xs text-gray-600 font-medium">Date</label>
+                  <label className="text-xs text-gray-600 font-medium">Date *</label>
                   <input type="date" className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:border-emerald-500" value={newItem.date||''} onChange={e=>setNewItem({...newItem, date: e.target.value})} />
                 </div>
               </div>

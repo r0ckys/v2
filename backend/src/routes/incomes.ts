@@ -5,17 +5,24 @@ import { createAuditLog } from './auditLogs';
 
 export const incomesRouter = Router();
 
+// Helper to extract tenantId from request
+function getTenantId(req: any): string | null {
+  return req.headers['x-tenant-id'] || (req as any).user?.tenantId || null;
+}
+
 // List with filters and pagination
 incomesRouter.get('/', async (req, res, next) => {
   try {
     const db = await getDatabase();
     const col = db.collection('incomes');
+    const tenantId = getTenantId(req);
 
     const { query, status, category, from, to } = req.query as any;
     const page = Number(req.query.page ?? 1);
     const pageSize = Number(req.query.pageSize ?? 10);
 
     const filter: any = {};
+    if (tenantId) filter.tenantId = tenantId;
     if (status) filter.status = status;
     if (category) filter.category = category;
     if (query) filter.name = { $regex: String(query), $options: 'i' };
@@ -43,9 +50,11 @@ incomesRouter.get('/summary', async (req, res, next) => {
   try {
     const db = await getDatabase();
     const col = db.collection('incomes');
+    const tenantId = getTenantId(req);
 
     const { from, to } = req.query as any;
     const filter: any = {};
+    if (tenantId) filter.tenantId = tenantId;
     if (from || to) {
       filter.date = {};
       if (from) filter.date.$gte = from;
@@ -63,14 +72,45 @@ incomesRouter.get('/summary', async (req, res, next) => {
   }
 });
 
+// Income categories - list
+incomesRouter.get('/categories', async (req, res, next) => {
+  try {
+    const db = await getDatabase();
+    const col = db.collection('income_categories');
+    const tenantId = getTenantId(req);
+    const filter: any = {};
+    if (tenantId) filter.tenantId = tenantId;
+    const cats = await col.find(filter).sort({ name: 1 }).toArray();
+    res.json(cats);
+  } catch (e) {
+    next(e);
+  }
+});
+
+// Income categories - create
+incomesRouter.post('/categories', async (req, res, next) => {
+  try {
+    const db = await getDatabase();
+    const col = db.collection('income_categories');
+    const tenantId = getTenantId(req);
+    const { name } = req.body;
+    const result = await col.insertOne({ name, tenantId, createdAt: new Date().toISOString() });
+    res.status(201).json({ id: result.insertedId.toString(), name, tenantId });
+  } catch (e) {
+    next(e);
+  }
+});
+
 // Create
 incomesRouter.post('/', async (req, res, next) => {
   try {
     const db = await getDatabase();
     const col = db.collection('incomes');
+    const tenantId = getTenantId(req);
     const payload = req.body;
     const result = await col.insertOne({
       ...payload,
+      tenantId: tenantId || payload.tenantId,
       createdAt: new Date().toISOString(),
     });
     
@@ -103,6 +143,7 @@ incomesRouter.put('/:id', async (req, res, next) => {
   try {
     const db = await getDatabase();
     const col = db.collection('incomes');
+    const tenantId = getTenantId(req);
     const { id } = req.params;
     const payload = req.body;
     
@@ -112,6 +153,7 @@ incomesRouter.put('/:id', async (req, res, next) => {
     } catch {
       filter = { id };
     }
+    if (tenantId) filter.tenantId = tenantId;
 
     await col.updateOne(filter, {
       $set: {
@@ -130,6 +172,7 @@ incomesRouter.delete('/:id', async (req, res, next) => {
   try {
     const db = await getDatabase();
     const col = db.collection('incomes');
+    const tenantId = getTenantId(req);
     const { id } = req.params;
     
     let filter: any;
@@ -138,6 +181,7 @@ incomesRouter.delete('/:id', async (req, res, next) => {
     } catch {
       filter = { id };
     }
+    if (tenantId) filter.tenantId = tenantId;
 
     await col.deleteOne(filter);
     res.json({ success: true });

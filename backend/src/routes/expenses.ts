@@ -5,17 +5,24 @@ import { createAuditLog } from './auditLogs';
 
 export const expensesRouter = Router();
 
+// Helper to extract tenantId from request
+function getTenantId(req: any): string | null {
+  return req.headers['x-tenant-id'] || (req as any).user?.tenantId || null;
+}
+
 // List with filters and pagination
 expensesRouter.get('/', async (req, res, next) => {
   try {
     const db = await getDatabase();
     const col = db.collection('expenses');
+    const tenantId = getTenantId(req);
 
     const { query, status, category, from, to } = req.query as any;
     const page = Number(req.query.page ?? 1);
     const pageSize = Number(req.query.pageSize ?? 10);
 
     const filter: any = {};
+    if (tenantId) filter.tenantId = tenantId;
     if (status) filter.status = status;
     if (category) filter.category = category;
     if (query) filter.name = { $regex: String(query), $options: 'i' };
@@ -43,9 +50,11 @@ expensesRouter.get('/summary', async (req, res, next) => {
   try {
     const db = await getDatabase();
     const col = db.collection('expenses');
+    const tenantId = getTenantId(req);
 
     const { from, to } = req.query as any;
     const filter: any = {};
+    if (tenantId) filter.tenantId = tenantId;
     if (from || to) {
       filter.date = {};
       if (from) filter.date.$gte = from;
@@ -69,6 +78,7 @@ expensesRouter.post('/', async (req, res, next) => {
     const db = await getDatabase();
     const col = db.collection('expenses');
     const payload = req.body;
+    const tenantId = getTenantId(req);
 
     const required = ['name','category','amount','date','status'];
     for (const k of required) {
@@ -85,6 +95,7 @@ expensesRouter.post('/', async (req, res, next) => {
       status: String(payload.status),
       note: payload.note ? String(payload.note) : undefined,
       imageUrl: payload.imageUrl ? String(payload.imageUrl) : undefined,
+      tenantId: tenantId || 'unknown',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -154,7 +165,10 @@ expensesRouter.get('/categories/list', async (req, res, next) => {
   try {
     const db = await getDatabase();
     const col = db.collection('expense_categories');
-    const items = await col.find({}).sort({ name: 1 }).toArray();
+    const tenantId = getTenantId(req);
+    const filter: any = {};
+    if (tenantId) filter.tenantId = tenantId;
+    const items = await col.find(filter).sort({ name: 1 }).toArray();
     res.json({ items: items.map(i => ({ id: String(i._id), ...i, _id: undefined })) });
   } catch (e) {
     next(e);
@@ -167,12 +181,13 @@ expensesRouter.post('/categories/create', async (req, res, next) => {
     const db = await getDatabase();
     const col = db.collection('expense_categories');
     const { name } = req.body;
+    const tenantId = getTenantId(req);
 
     if (!name || !String(name).trim()) {
       return res.status(400).json({ error: 'Name is required' });
     }
 
-    const doc = { name: String(name).trim(), createdAt: new Date().toISOString() };
+    const doc = { name: String(name).trim(), tenantId: tenantId || 'unknown', createdAt: new Date().toISOString() };
     const result = await col.insertOne(doc as any);
     res.status(201).json({ id: String(result.insertedId), ...doc });
     

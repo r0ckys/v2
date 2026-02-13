@@ -65,6 +65,10 @@ const AdminActivityLog = lazy(() => import(/* webpackChunkName: "admin-activity-
 const AdminProfile = lazy(() => import(/* webpackChunkName: "admin-profile" */ './AdminProfile'));
 const AdminShopDomain = lazy(() => import(/* webpackChunkName: "admin-shop-domain" */ './AdminShopDomain'));
 const AdminRewardPointSettings = lazy(() => import(/* webpackChunkName: "admin-reward-settings" */ './AdminRewardPointSettings'));
+const AdminExpenses = lazy(() => import(/* webpackChunkName: "admin-expenses" */ './AdminExpenses'));
+const AdminIncome = lazy(() => import(/* webpackChunkName: "admin-income" */ './AdminIncome'));
+const AdminPurchase = lazy(() => import(/* webpackChunkName: "admin-purchase" */ './AdminPurchase'));
+const AdminDueListPage = lazy(() => import(/* webpackChunkName: "admin-duelist" */ './AdminDueList'));
 import AIChatAssistant from '../components/AIChatAssistant';
 // Admin Components - directly imported for instant layout render
 import { AdminSidebar, AdminHeader } from '../components/AdminComponents';
@@ -291,6 +295,10 @@ const adminUrlMap: Record<string, string> = {
   'business_report_profit_loss': '/reports',
   'business_report_contact_list': '/reports',
   'business_report_note': '/reports',
+  'expenses': '/expenses',
+  'income': '/income',
+  'purchases': '/purchases',
+  'due_book': '/due-book',
   'activity_log': '/activity',
   'support': '/support',
   'tutorial': '/tutorial',
@@ -358,6 +366,9 @@ const canAccessPage = (page: string, user?: User | null, permissions?: Permissio
         'business_report_note': 'business_report',
         'due_list': 'due_book',
         'expenses': 'expenses',
+        'income': 'income',
+        'purchases': 'purchases',
+        'due_book': 'due_book',
         'settings': 'settings',
         'manage_shop': 'settings',
         'settings_delivery': 'settings',
@@ -713,7 +724,7 @@ const AdminApp: React.FC<AdminAppProps> = ({
               adminSection === 'products' ? <FigmaProductList products={products} categories={categories} brands={brands} onAddProduct={() => { setEditingProduct(null); setAdminSection('product-upload'); }} onEditProduct={(p) => { setEditingProduct(p); setAdminSection('product-upload'); }} onDeleteProduct={onDeleteProduct} onCloneProduct={(p) => onAddProduct({ ...p, id: Date.now(), name: p.name + ' (Copy)' })} onBulkDelete={onBulkDeleteProducts} onBulkStatusUpdate={(ids, status) => onBulkUpdateProducts(ids, { status })} /> :
                 adminSection === 'product-upload' ? <FigmaProductUpload categories={categories} subCategories={subCategories} childCategories={childCategories} brands={brands} tags={tags} onAddProduct={editingProduct ? onUpdateProduct : onAddProduct} onBack={() => { setEditingProduct(null); setAdminSection('products'); }} onNavigate={setAdminSection} editProduct={editingProduct} /> :
                   adminSection === 'store_studio' ? <StoreStudioManager tenantId={activeTenantId} onBack={() => setAdminSection('manage_shop')} products={products} /> :
-                  adminSection === 'landing_pages' ? <AdminLandingPage tenantSubdomain={activeTenantSubdomain || selectedTenantRecord?.subdomain || ''} products={products} landingPages={landingPages} onCreateLandingPage={onCreateLandingPage} onUpdateLandingPage={onUpsertLandingPage} onTogglePublish={onToggleLandingPublish} onPreviewLandingPage={handlePreviewLandingPage} /> :
+                  adminSection === 'landing_pages' ? <AdminLandingPage tenantSubdomain={selectedTenantRecord?.subdomain || ''} products={products} landingPages={landingPages} onCreateLandingPage={onCreateLandingPage} onUpdateLandingPage={onUpsertLandingPage} onTogglePublish={onToggleLandingPublish} onPreviewLandingPage={handlePreviewLandingPage} /> :
                     adminSection === 'due_list' ? <AdminDueList user={user} onLogout={onLogout} /> :
                       adminSection === 'inventory' ? <FigmaInventory products={products} tenantId={activeTenantId} /> :
                         adminSection === 'popups' ? <AdminPopups onBack={() => setAdminSection('dashboard')} tenantId={activeTenantId} /> :
@@ -739,8 +750,12 @@ const AdminApp: React.FC<AdminAppProps> = ({
                                                               adminSection === 'settings_rewards' ? <AdminRewardPointSettings tenantId={activeTenantId} onBack={() => setAdminSection('settings')} /> :
                                                               adminSection === 'admin_control' ? <AdminControlNew users={users as any} roles={roles as any} onAddUser={handleAddUser} onUpdateUser={handleUpdateUser} onDeleteUser={handleDeleteUser} onAddRole={handleAddRole} onUpdateRole={handleUpdateRole} onDeleteRole={handleDeleteRole} onUpdateUserRole={handleUpdateUserRole} currentUser={user as any} tenantId={activeTenantId} userPermissions={userPermissions} /> :
                                                               adminSection.startsWith('catalog_') ? <FigmaCatalogManager view={adminSection} onNavigate={setAdminSection} categories={categories} subCategories={subCategories} childCategories={childCategories} brands={brands} tags={tags} onAddCategory={catHandlers.add} onUpdateCategory={catHandlers.update} onDeleteCategory={catHandlers.delete} onAddSubCategory={subCatHandlers.add} onUpdateSubCategory={subCatHandlers.update} onDeleteSubCategory={subCatHandlers.delete} onAddChildCategory={childCatHandlers.add} onUpdateChildCategory={childCatHandlers.update} onDeleteChildCategory={childCatHandlers.delete} onAddBrand={brandHandlers.add} onUpdateBrand={brandHandlers.update} onDeleteBrand={brandHandlers.delete} onAddTag={tagHandlers.add} onUpdateTag={tagHandlers.update} onDeleteTag={tagHandlers.delete} /> :
+                                                                adminSection === 'expenses' ? <AdminExpenses tenantId={activeTenantId} /> :
+                                                                adminSection === 'income' ? <AdminIncome tenantId={activeTenantId} /> :
+                                                                adminSection === 'purchases' ? <AdminPurchase products={products} tenantId={activeTenantId} categories={categories} /> :
+                                                                adminSection === 'due_book' ? <AdminDueListPage user={user} onLogout={onLogout} /> :
                                                                 (adminSection === 'business_report' || adminSection.startsWith('business_report_')) ? <FigmaBusinessReport initialTab={adminSection} orders={orders} products={products} user={user} onLogout={onLogout} tenantId={activeTenantId} /> :
-                                                                  adminSection === 'website_content_landing_page' ? <AdminLandingPage tenantSubdomain={activeTenantSubdomain || selectedTenantRecord?.subdomain || ''} products={products} landingPages={landingPages} onCreateLandingPage={onCreateLandingPage} onUpdateLandingPage={onUpsertLandingPage} onTogglePublish={onToggleLandingPublish} onPreviewLandingPage={handlePreviewLandingPage} /> :
+                                                                  adminSection === 'website_content_landing_page' ? <AdminLandingPage tenantSubdomain={selectedTenantRecord?.subdomain || ''} products={products} landingPages={landingPages} onCreateLandingPage={onCreateLandingPage} onUpdateLandingPage={onUpsertLandingPage} onTogglePublish={onToggleLandingPublish} onPreviewLandingPage={handlePreviewLandingPage} /> :
                                                                   (adminSection === 'website_content' || adminSection === 'carousel' || adminSection === 'campaigns' || adminSection === 'popup' || adminSection === 'website_info' || adminSection === 'chat_settings' || adminSection === 'website_content_carousel' || adminSection === 'website_content_banners' || adminSection === 'website_content_popups') ? <AdminWebsiteContent tenantId={activeTenantId} logo={logo} onUpdateLogo={onUpdateLogo} themeConfig={themeConfig ?? undefined} onUpdateTheme={onUpdateTheme} websiteConfig={websiteConfig} onUpdateWebsiteConfig={onUpdateWebsiteConfig} products={products} initialTab={adminSection === 'website_content' || adminSection === 'website_content_carousel' ? 'carousel' : adminSection === 'website_content_banners' ? 'campaigns' : adminSection === 'website_content_popups' ? 'popup' : adminSection} /> :
                                                                     <AdminCustomization tenantId={activeTenantId} logo={logo} onUpdateLogo={onUpdateLogo} themeConfig={themeConfig ?? undefined} onUpdateTheme={onUpdateTheme} websiteConfig={websiteConfig} onUpdateWebsiteConfig={onUpdateWebsiteConfig} products={products} initialTab={adminSection === 'customization' ? 'theme_view' : adminSection} />
           }
