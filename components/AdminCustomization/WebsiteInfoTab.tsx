@@ -666,13 +666,13 @@ export const WebsiteInfoTab: React.FC<WebsiteInfoTabProps> = ({
           />
           <LogoUploadCard
             title="Header Logo Override"
-            imageUrl={websiteConfiguration.headerLogo}
+            imageUrl={websiteConfiguration.headerLogo ?? null}
             onSelect={() => headerLogoInputRef.current?.click()}
             onRemove={() => handleRemoveImage('headerLogo')}
           />
           <LogoUploadCard
             title="Footer Logo Override"
-            imageUrl={websiteConfiguration.footerLogo}
+            imageUrl={websiteConfiguration.footerLogo ?? null}
             onSelect={() => footerLogoInputRef.current?.click()}
             onRemove={() => handleRemoveImage('footerLogo')}
           />
