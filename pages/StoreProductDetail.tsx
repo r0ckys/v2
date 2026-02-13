@@ -469,7 +469,6 @@ const StoreProductDetail = ({
         <StoreHeader
           onTrackOrder={() => setIsTrackOrderOpen(true)}
           onHomeClick={onBack}
-          onImageSearchClick={onImageSearchClick}
           wishlistCount={wishlistCount}
           cart={cart}
           onToggleCart={onToggleCart}
@@ -484,6 +483,7 @@ const StoreProductDetail = ({
           searchValue={searchValue}
           onSearchChange={onSearchChange}
           onProductClick={onProductClick}
+          tenantId={tenantId}
         />
       </Suspense>
 

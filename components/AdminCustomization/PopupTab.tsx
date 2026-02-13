@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import {
   Plus,
   Search,
@@ -8,7 +8,9 @@ import {
   Upload,
   Layers,
   FolderOpen,
-  MoreVertical
+  MoreVertical,
+  Eye,
+  Image as ImageIcon
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Popup, WebsiteConfig, PopupFilterStatus, ImageUploadType } from './types';
@@ -76,7 +78,8 @@ const styles = {
     width: '100%',
     background: 'white',
     borderRadius: '8px',
-    overflow: 'hidden',
+    overflow: 'visible',
+    minHeight: '400px',
   },
   tableHeader: {
     display: 'grid',
@@ -184,16 +187,17 @@ const styles = {
     top: '100%',
     background: 'white',
     borderRadius: '8px',
-    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-    minWidth: '120px',
-    zIndex: 10,
-    overflow: 'hidden',
+    boxShadow: '0 4px 20px rgba(0,0,0,0.2)',
+    minWidth: '140px',
+    zIndex: 50,
+    overflow: 'visible',
+    border: '1px solid #e5e7eb',
   },
   dropdownItem: {
     display: 'flex',
     alignItems: 'center',
-    gap: '8px',
-    padding: '10px 14px',
+    gap: '10px',
+    padding: '12px 16px',
     fontFamily: "'Poppins', sans-serif",
     fontSize: '14px',
     color: '#333',
@@ -443,11 +447,12 @@ export const PopupTab: React.FC<PopupTabProps> = ({
     const startTime = Date.now();
 
     try {
+      const newStatus: 'Publish' | 'Draft' = popup.status === 'Draft' ? 'Publish' : 'Draft';
       const updatedPopups = (websiteConfiguration.popups || []).map((item) =>
         item.id === popup.id
           ? {
               ...item,
-              status: item.status === 'Draft' ? 'Publish' : 'Draft',
+              status: newStatus,
               updatedAt: new Date().toISOString()
             }
           : item
@@ -499,33 +504,49 @@ export const PopupTab: React.FC<PopupTabProps> = ({
     return text.substring(0, maxLength) + '...';
   };
 
+  // Get currently selected/hovered popup for preview
+  const [previewPopup, setPreviewPopup] = useState<Popup | null>(filteredPopups[0] || null);
+
+  // Auto-select first popup for preview when list changes
+  useEffect(() => {
+    if (filteredPopups.length > 0 && !previewPopup) {
+      setPreviewPopup(filteredPopups[0]);
+    } else if (filteredPopups.length === 0) {
+      setPreviewPopup(null);
+    } else if (previewPopup && !filteredPopups.find(p => p.id === previewPopup.id)) {
+      setPreviewPopup(filteredPopups[0]);
+    }
+  }, [filteredPopups]);
+
   return (
     <>
-      <div style={styles.container}>
-        {/* Header Section */}
-        <div style={styles.header}>
-          <div style={styles.headerLeft}>
-            <p style={styles.headerTitle}>Popup</p>
-            <p style={styles.headerSubtitle}>Create unlimited Popup</p>
+      <div className="flex gap-6" style={{ width: '100%' }}>
+        {/* Main Content */}
+        <div style={{ ...styles.container, flex: 1, minWidth: 0 }}>
+          {/* Header Section */}
+          <div style={styles.header}>
+            <div style={styles.headerLeft}>
+              <p style={styles.headerTitle}>Popup</p>
+              <p style={styles.headerSubtitle}>Create unlimited Popup</p>
+            </div>
+            <button
+              style={styles.createButton}
+              onClick={() => openPopupModal()}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.opacity = '0.9';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.opacity = '1';
+              }}
+            >
+              <Plus size={24} color="white" />
+              <span style={styles.createButtonText}>Create Popup</span>
+            </button>
           </div>
-          <button
-            style={styles.createButton}
-            onClick={() => openPopupModal()}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.opacity = '0.9';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.opacity = '1';
-            }}
-          >
-            <Plus size={24} color="white" />
-            <span style={styles.createButtonText}>Create Popup</span>
-          </button>
-        </div>
 
-        {/* Table Section */}
-        <div style={styles.tableContainer}>
-          {/* Desktop Table */}
+          {/* Table Section */}
+          <div style={styles.tableContainer}>
+            {/* Desktop Table */}
           <div className="hidden md:block">
             {/* Table Header */}
             <div style={styles.tableHeader}>
@@ -542,13 +563,34 @@ export const PopupTab: React.FC<PopupTabProps> = ({
               <div style={styles.emptyState}>No popups found</div>
             ) : (
               filteredPopups.map((popup, index) => (
-                <div key={popup.id} style={styles.tableRow}>
+                <div 
+                  key={popup.id} 
+                  style={{
+                    ...styles.tableRow,
+                    cursor: 'pointer',
+                    background: previewPopup?.id === popup.id ? '#f0f9ff' : 'transparent',
+                    transition: 'background 0.15s ease',
+                  }}
+                  onClick={() => setPreviewPopup(popup)}
+                  onMouseEnter={(e) => {
+                    if (previewPopup?.id !== popup.id) {
+                      e.currentTarget.style.background = '#fafafa';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = previewPopup?.id === popup.id ? '#f0f9ff' : 'transparent';
+                  }}
+                >
                   {/* Checkbox + SL */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <input
                       type="checkbox"
                       checked={selectedPopups.has(popup.id)}
-                      onChange={() => toggleSelectPopup(popup.id)}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        toggleSelectPopup(popup.id);
+                      }}
+                      onClick={(e) => e.stopPropagation()}
                       style={styles.checkbox}
                     />
                   </div>
@@ -576,7 +618,10 @@ export const PopupTab: React.FC<PopupTabProps> = ({
                   {/* Status Badge */}
                   <div>
                     <button
-                      onClick={() => handleTogglePopupStatus(popup)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleTogglePopupStatus(popup);
+                      }}
                       style={{
                         ...styles.statusBadge,
                         ...(popup.status === 'Publish' ? styles.statusPublish : styles.statusDraft),
@@ -587,10 +632,13 @@ export const PopupTab: React.FC<PopupTabProps> = ({
                   </div>
 
                   {/* Action Menu */}
-                  <div style={{ position: 'relative' }}>
+                  <div style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()}>
                     <button
                       style={styles.actionButton}
-                      onClick={() => setOpenMenuId(openMenuId === popup.id ? null : popup.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setOpenMenuId(openMenuId === popup.id ? null : popup.id);
+                      }}
                     >
                       <MoreVertical size={20} color="#666" />
                     </button>
@@ -598,7 +646,8 @@ export const PopupTab: React.FC<PopupTabProps> = ({
                       <div style={styles.dropdownMenu}>
                         <button
                           style={{ ...styles.dropdownItem }}
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation();
                             openPopupModal(popup);
                             setOpenMenuId(null);
                           }}
@@ -614,7 +663,8 @@ export const PopupTab: React.FC<PopupTabProps> = ({
                         </button>
                         <button
                           style={{ ...styles.dropdownItem, color: '#dc2626' }}
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation();
                             handleDeletePopup(popup.id);
                             setOpenMenuId(null);
                           }}
@@ -688,6 +738,154 @@ export const PopupTab: React.FC<PopupTabProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Preview Panel */}
+      <div className="hidden lg:block" style={{
+        width: '320px',
+        flexShrink: 0,
+        background: 'white',
+        borderRadius: '12px',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+        padding: '20px',
+        height: 'fit-content',
+        position: 'sticky',
+        top: '20px',
+      }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          marginBottom: '16px',
+          paddingBottom: '12px',
+          borderBottom: '1px solid #eee',
+        }}>
+          <Eye size={18} color="#1e90ff" />
+          <span style={{
+            fontFamily: "'Poppins', sans-serif",
+            fontWeight: 600,
+            fontSize: '14px',
+            color: '#333',
+          }}>Popup Preview</span>
+        </div>
+        
+        {previewPopup ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {/* Preview Image */}
+            <div style={{
+              position: 'relative',
+              borderRadius: '8px',
+              overflow: 'hidden',
+              background: '#f5f5f5',
+              aspectRatio: '1/1',
+            }}>
+              <img
+                src={normalizeImageUrl(previewPopup.image)}
+                alt={previewPopup.name}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                }}
+              />
+              {/* Close button simulation */}
+              <div style={{
+                position: 'absolute',
+                top: '8px',
+                right: '8px',
+                width: '24px',
+                height: '24px',
+                background: 'rgba(0,0,0,0.5)',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}>
+                <X size={14} color="white" />
+              </div>
+            </div>
+            
+            {/* Popup Info */}
+            <div style={{ padding: '8px 0' }}>
+              <p style={{
+                fontFamily: "'Poppins', sans-serif",
+                fontWeight: 600,
+                fontSize: '14px',
+                color: '#333',
+                marginBottom: '4px',
+              }}>{previewPopup.name}</p>
+              
+              <p style={{
+                fontFamily: "'Poppins', sans-serif",
+                fontSize: '12px',
+                color: '#666',
+                marginBottom: '8px',
+              }}>
+                {previewPopup.url || 'No URL specified'}
+              </p>
+              
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <span style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  padding: '2px 8px',
+                  borderRadius: '20px',
+                  fontSize: '11px',
+                  fontWeight: 500,
+                  ...(previewPopup.status === 'Publish' 
+                    ? { background: '#c1ffbc', color: '#085e00' }
+                    : { background: '#ffeeba', color: '#856404' }
+                  ),
+                }}>
+                  {previewPopup.status}
+                </span>
+                <span style={{
+                  fontSize: '11px',
+                  color: '#999',
+                  fontFamily: "'Poppins', sans-serif",
+                }}>
+                  Priority: {previewPopup.priority || 0}
+                </span>
+              </div>
+            </div>
+            
+            {/* Edit Button */}
+            <button
+              onClick={() => openPopupModal(previewPopup)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                padding: '10px 16px',
+                background: 'linear-gradient(to right, #38bdf8, #1e90ff)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontFamily: "'Poppins', sans-serif",
+                fontWeight: 500,
+                fontSize: '13px',
+              }}
+            >
+              <Edit size={16} />
+              Edit Popup
+            </button>
+          </div>
+        ) : (
+          <div style={{
+            textAlign: 'center',
+            padding: '40px 16px',
+            color: '#999',
+          }}>
+            <ImageIcon size={40} style={{ opacity: 0.3, marginBottom: '12px' }} />
+            <p style={{
+              fontFamily: "'Poppins', sans-serif",
+              fontSize: '13px',
+            }}>Select a popup to preview</p>
+          </div>
+        )}
+      </div>
+    </div>
 
       {/* Popup Modal */}
       {isPopupModalOpen && (

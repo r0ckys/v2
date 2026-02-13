@@ -337,6 +337,10 @@ export interface WebsiteConfig {
   chatSurfaceColor?: string;
   chatBorderColor?: string;
   chatShadowColor?: string;
+  // Chat Support Credentials
+  chatSupportPhone?: string;
+  chatSupportWhatsapp?: string;
+  chatSupportMessenger?: string;
   // App Download Links
   androidAppUrl?: string;
   iosAppUrl?: string;
@@ -348,6 +352,23 @@ export interface WebsiteConfig {
   popups?: Popup[];
   // Custom Domain for storefront
   customDomain?: string | null;
+  // Country & Currency Settings
+  shopCountry?: string;
+  shopCurrency?: string;
+  // Social Login Settings
+  socialLogins?: { type: string; clientId: string }[];
+  // Offer Settings
+  offers?: { type: string; discount: string }[];
+  // About/Policy text
+  aboutUs?: string;
+  privacyPolicy?: string;
+  termsAndConditions?: string;
+  returnPolicy?: string;
+  // Product Settings
+  showProductSoldCount?: boolean;
+  allowProductImageDownloads?: boolean;
+  showEmailFieldForOrder?: boolean;
+  enablePromoCode?: boolean;
 }
 
 export interface DeliveryConfig {

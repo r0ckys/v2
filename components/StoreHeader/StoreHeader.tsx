@@ -6,6 +6,7 @@ import { AdminNoticeTicker } from '../store/header/AdminNoticeTicker';
 import { MobileHeaderBar } from '../store/header/MobileHeaderBar';
 import { DesktopHeaderBar } from '../store/header/DesktopHeaderBar';
 import { StoreHeaderModals } from '../store/header/StoreHeaderModals';
+import { ImageSearchModal } from '../store/header/ImageSearchModal';
 import type { CatalogGroup, HeaderSearchProps } from '../store/header/headerTypes';
 
 // Lazy load toast - avoid sync import of heavy dependency
@@ -44,6 +45,7 @@ export interface StoreHeaderProps {
   productCatalog?: Product[];
   onProductClick?: (product: Product) => void;
   onMobileMenuOpenRef?: (openFn: () => void) => void;
+  tenantId?: string;
 }
 
 export const StoreHeader: React.FC<StoreHeaderProps> = (props) => {
@@ -76,8 +78,20 @@ export const StoreHeader: React.FC<StoreHeaderProps> = (props) => {
     tags = [],
     productCatalog,
     onProductClick,
-    onMobileMenuOpenRef
+    onMobileMenuOpenRef,
+    tenantId = ''
   } = props;
+
+  const [isImageSearchOpen, setIsImageSearchOpen] = useState(false);
+
+  const handleVisualSearch = useCallback(() => {
+    setIsImageSearchOpen(true);
+  }, []);
+
+  const handleImageSearchProductClick = useCallback((product: Product) => {
+    setIsImageSearchOpen(false);
+    onProductClick?.(product);
+  }, [onProductClick]);
 
   const normalizedCart = useMemo(() => (Array.isArray(cart) ? cart : []), [cart]);
   const normalizedWishlist = useMemo(() => (Array.isArray(wishlist) ? wishlist : []), [wishlist]);
@@ -385,7 +399,8 @@ export const StoreHeader: React.FC<StoreHeaderProps> = (props) => {
       isListening,
       liveTranscript,
       supportsVoiceSearch,
-      onVoiceSearch: handleVoiceSearch
+      onVoiceSearch: handleVoiceSearch,
+      onVisualSearch: handleVisualSearch
     }),
     [
       activeSearchValue,
@@ -398,7 +413,8 @@ export const StoreHeader: React.FC<StoreHeaderProps> = (props) => {
       isListening,
       liveTranscript,
       supportsVoiceSearch,
-      handleVoiceSearch
+      handleVoiceSearch,
+      handleVisualSearch
     ]
   );
 
@@ -475,6 +491,14 @@ export const StoreHeader: React.FC<StoreHeaderProps> = (props) => {
         onCatalogSectionToggle={toggleCatalogSection}
         onCatalogItemClick={handleCatalogItemClick}
         onTrackOrder={onTrackOrder}
+      />
+
+      {/* AI Image Search Modal */}
+      <ImageSearchModal
+        isOpen={isImageSearchOpen}
+        onClose={() => setIsImageSearchOpen(false)}
+        tenantId={tenantId || websiteConfig?.tenantId || ''}
+        onProductClick={handleImageSearchProductClick}
       />
     </>
   );

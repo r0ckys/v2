@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import {
   Image as ImageIcon,
   Plus,
@@ -9,7 +9,10 @@ import {
   ChevronRight,
   X,
   CalendarDays,
-  MoreVertical
+  MoreVertical,
+  Eye,
+  Smartphone,
+  Monitor
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Campaign, WebsiteConfig, Product, CampaignFilterStatus } from './types';
@@ -57,8 +60,18 @@ export const CampaignTab: React.FC<CampaignTabProps> = ({
   const [campaignCurrentPage, setCampaignCurrentPage] = useState(1);
   const [campaignItemsPerPage, setCampaignItemsPerPage] = useState(10);
   const [campaignActionMenu, setCampaignActionMenu] = useState<string | null>(null);
+  const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
+  const [previewDevice, setPreviewDevice] = useState<'mobile' | 'desktop'>('desktop');
 
   const campaignLogoInputRef = useRef<HTMLInputElement>(null);
+
+  // Auto-select first campaign when campaigns change
+  useEffect(() => {
+    const campaigns = websiteConfiguration.campaigns || [];
+    if (!selectedCampaign && campaigns.length > 0) {
+      setSelectedCampaign(campaigns[0]);
+    }
+  }, [websiteConfiguration.campaigns]);
 
   const openCampaignModal = (campaign?: Campaign): void => {
     if (campaign) {
@@ -204,7 +217,9 @@ export const CampaignTab: React.FC<CampaignTabProps> = ({
 
   return (
     <>
-      <div className="space-y-2 sm:space-y-3">
+      <div className="flex gap-4">
+        {/* Main Content */}
+        <div className="flex-1 space-y-2 sm:space-y-3">
         {/* Filters and Search */}
         <div className="flex flex-col gap-2 sm:gap-3">
           {/* Status Filters */}
@@ -259,7 +274,7 @@ export const CampaignTab: React.FC<CampaignTabProps> = ({
         </div>
 
         {/* Campaign Table - Desktop / Cards - Mobile */}
-        <div className="overflow-hidden border rounded-lg shadow-sm">
+        <div className="overflow-visible border rounded-lg shadow-sm min-h-[400px]">
           {/* Desktop Table View */}
           <div className="hidden lg:block overflow-x-auto">
             <table className="w-full text-sm text-left">
@@ -279,20 +294,24 @@ export const CampaignTab: React.FC<CampaignTabProps> = ({
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {paginatedCampaigns.map((campaign, index) => {
-                  const product = products.find(p => p.id === campaign.productId);
+                  const product = products.find(p => String(p.id) === campaign.productId);
                   const rowNumber = (campaignCurrentPage - 1) * campaignItemsPerPage + index + 1;
                   return (
-                    <tr key={campaign.id} className="hover:bg-gray-50 group">
+                    <tr 
+                      key={campaign.id} 
+                      onClick={() => setSelectedCampaign(campaign)}
+                      className={`hover:bg-gray-50 group cursor-pointer ${selectedCampaign?.id === campaign.id ? 'bg-green-50 border-l-4 border-l-green-500' : ''}`}
+                    >
                       <td className="px-3 py-2">
-                        <input type="checkbox" className="rounded" />
+                        <input type="checkbox" className="rounded" onClick={(e) => e.stopPropagation()} />
                       </td>
                       <td className="px-3 py-2 font-medium text-gray-800">{campaign.serial || rowNumber}</td>
                       <td className="px-3 py-2">
                         <div className="flex items-center gap-3">
                           <div className="w-12 h-12 bg-gray-100 rounded border overflow-hidden flex-shrink-0">
-                            {product?.images?.[0] ? (
+                            {product?.image?.[0] ? (
                               <img
-                                src={normalizeImageUrl(product.images[0])}
+                                src={normalizeImageUrl(product.image[0])}
                                 alt={product.name}
                                 className="w-full h-full object-cover"
                               />
@@ -330,16 +349,16 @@ export const CampaignTab: React.FC<CampaignTabProps> = ({
                           <MoreVertical size={18} />
                         </button>
                         {campaignActionMenu === campaign.id && (
-                          <div className="absolute right-0 top-full mt-1 bg-white border rounded-lg shadow-lg z-20 min-w-[120px]">
+                          <div className="absolute right-0 top-full mt-1 bg-white border rounded-lg shadow-xl z-50 min-w-[140px]">
                             <button
-                              onClick={() => { openCampaignModal(campaign); setCampaignActionMenu(null); }}
-                              className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2 text-blue-600"
+                              onClick={(e) => { e.stopPropagation(); openCampaignModal(campaign); setCampaignActionMenu(null); }}
+                              className="w-full px-4 py-2.5 text-left text-sm hover:bg-gray-50 flex items-center gap-2 text-blue-600"
                             >
                               <Edit size={14} /> Edit
                             </button>
                             <button
-                              onClick={() => { handleDeleteCampaign(campaign.id); setCampaignActionMenu(null); }}
-                              className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2 text-red-600"
+                              onClick={(e) => { e.stopPropagation(); handleDeleteCampaign(campaign.id); setCampaignActionMenu(null); }}
+                              className="w-full px-4 py-2.5 text-left text-sm hover:bg-red-50 flex items-center gap-2 text-red-600"
                             >
                               <Trash2 size={14} /> Delete
                             </button>
@@ -370,14 +389,18 @@ export const CampaignTab: React.FC<CampaignTabProps> = ({
               </div>
             ) : (
               paginatedCampaigns.map((campaign, index) => {
-                const product = products.find(p => p.id === campaign.productId);
+                const product = products.find(p => String(p.id) === campaign.productId);
                 return (
-                  <div key={campaign.id} className="p-3 hover:bg-gray-50">
+                  <div 
+                    key={campaign.id} 
+                    onClick={() => setSelectedCampaign(campaign)}
+                    className={`p-3 hover:bg-gray-50 cursor-pointer ${selectedCampaign?.id === campaign.id ? 'bg-green-50 border-l-4 border-l-green-500' : ''}`}
+                  >
                     <div className="flex gap-2">
                       <div className="w-14 h-14 bg-gray-100 rounded border overflow-hidden flex-shrink-0">
-                        {product?.images?.[0] ? (
+                        {product?.image?.[0] ? (
                           <img
-                            src={normalizeImageUrl(product.images[0])}
+                            src={normalizeImageUrl(product.image[0])}
                             alt={product.name}
                             className="w-full h-full object-cover"
                           />
@@ -479,6 +502,185 @@ export const CampaignTab: React.FC<CampaignTabProps> = ({
             </div>
           </div>
         )}
+      </div>
+
+        {/* Preview Panel */}
+        <div className="hidden xl:block w-80 flex-shrink-0">
+          <div className="sticky top-4 border rounded-lg shadow-sm bg-white overflow-hidden">
+            <div className="p-3 border-b bg-gray-50 flex items-center justify-between">
+              <h3 className="font-semibold text-gray-700 flex items-center gap-2">
+                <Eye size={16} />
+                Preview
+              </h3>
+              <div className="flex gap-1">
+                <button
+                  onClick={() => setPreviewDevice('mobile')}
+                  className={`p-1.5 rounded ${previewDevice === 'mobile' ? 'bg-green-100 text-green-600' : 'text-gray-400 hover:text-gray-600'}`}
+                  title="Mobile View"
+                >
+                  <Smartphone size={16} />
+                </button>
+                <button
+                  onClick={() => setPreviewDevice('desktop')}
+                  className={`p-1.5 rounded ${previewDevice === 'desktop' ? 'bg-green-100 text-green-600' : 'text-gray-400 hover:text-gray-600'}`}
+                  title="Desktop View"
+                >
+                  <Monitor size={16} />
+                </button>
+              </div>
+            </div>
+            
+            {selectedCampaign ? (
+              <div className="p-3">
+                {/* Device Frame Preview */}
+                <div className={`mx-auto bg-gray-900 rounded-2xl p-1.5 ${previewDevice === 'mobile' ? 'w-44' : 'w-full'}`}>
+                  <div className="bg-white rounded-lg overflow-hidden">
+                    {/* Browser/Phone Header */}
+                    <div className={`bg-gray-100 ${previewDevice === 'mobile' ? 'px-2 py-1' : 'px-2 py-1.5'} flex items-center gap-1`}>
+                      {previewDevice === 'mobile' ? (
+                        <div className="w-6 h-0.5 bg-gray-300 rounded-full mx-auto"></div>
+                      ) : (
+                        <>
+                          <div className="flex gap-0.5">
+                            <div className="w-1.5 h-1.5 rounded-full bg-red-400"></div>
+                            <div className="w-1.5 h-1.5 rounded-full bg-yellow-400"></div>
+                            <div className="w-1.5 h-1.5 rounded-full bg-green-400"></div>
+                          </div>
+                          <div className="flex-1 mx-1">
+                            <div className="bg-white rounded px-1.5 py-0.5 text-[6px] text-gray-400 text-center truncate">yourstore.com</div>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                    
+                    {/* Mini Store Header */}
+                    <div className={`bg-white border-b ${previewDevice === 'mobile' ? 'px-1.5 py-1' : 'px-2 py-1.5'} flex items-center justify-between`}>
+                      <div className={`font-bold text-gray-800 ${previewDevice === 'mobile' ? 'text-[6px]' : 'text-[8px]'}`}>🏪 Store</div>
+                      <div className="flex gap-1">
+                        <div className={`bg-gray-100 rounded ${previewDevice === 'mobile' ? 'w-8 h-2' : 'w-12 h-2.5'}`}></div>
+                        <div className={`bg-pink-500 rounded ${previewDevice === 'mobile' ? 'w-3 h-2' : 'w-4 h-2.5'}`}></div>
+                      </div>
+                    </div>
+
+                    {/* Mini Nav */}
+                    <div className={`bg-gray-50 border-b flex gap-1 ${previewDevice === 'mobile' ? 'px-1 py-0.5' : 'px-2 py-1'}`}>
+                      {['Home', 'Categories', 'Products'].map(item => (
+                        <div key={item} className={`text-gray-500 ${previewDevice === 'mobile' ? 'text-[4px]' : 'text-[6px]'}`}>{item}</div>
+                      ))}
+                    </div>
+
+                    {/* Campaign Banner Area - Main Content */}
+                    <div className={`${previewDevice === 'mobile' ? 'p-1' : 'p-1.5'}`}>
+                      <div className={`flex gap-1 ${previewDevice === 'mobile' ? 'flex-col' : ''}`}>
+                        {/* Campaign Banner */}
+                        <div className={`${previewDevice === 'mobile' ? 'w-full' : 'flex-1'} relative`}>
+                          {(() => {
+                            const product = products.find(p => String(p.id) === selectedCampaign.productId);
+                            const imageUrl = product?.image || product?.galleryImages?.[0] || selectedCampaign.logo;
+                            return imageUrl ? (
+                              <img
+                                src={normalizeImageUrl(imageUrl)}
+                                alt={selectedCampaign.name}
+                                className={`w-full object-cover rounded ${previewDevice === 'mobile' ? 'h-16' : 'h-20'}`}
+                              />
+                            ) : (
+                              <div className={`w-full bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 rounded flex items-center justify-center ${previewDevice === 'mobile' ? 'h-16' : 'h-20'}`}>
+                                <span className={`text-white font-bold ${previewDevice === 'mobile' ? 'text-[8px]' : 'text-xs'}`}>{selectedCampaign.name}</span>
+                              </div>
+                            );
+                          })()}
+                          {/* Campaign overlay text */}
+                          <div className={`absolute bottom-1 left-1 bg-black/60 text-white rounded px-1 ${previewDevice === 'mobile' ? 'text-[5px]' : 'text-[7px]'}`}>
+                            {selectedCampaign.name}
+                          </div>
+                        </div>
+
+                        {/* Upcoming Campaigns Widget */}
+                        <div className={`${previewDevice === 'mobile' ? 'w-full mt-1' : 'w-16'} bg-gray-50 rounded border`}>
+                          <div className={`font-semibold text-gray-700 border-b bg-white ${previewDevice === 'mobile' ? 'text-[5px] px-1 py-0.5' : 'text-[6px] px-1 py-0.5'}`}>
+                            Upcoming Campaigns
+                          </div>
+                          <div className={`${previewDevice === 'mobile' ? 'p-1 flex gap-1' : 'p-0.5 space-y-0.5'}`}>
+                            {/* Current Campaign */}
+                            <div className={`bg-white rounded border p-0.5 ${previewDevice === 'mobile' ? 'flex-1' : ''}`}>
+                              <div className={`flex items-center gap-0.5 ${previewDevice === 'mobile' ? '' : 'flex-col'}`}>
+                                <div className="w-3 h-1 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-full"></div>
+                                <div className={`text-[5px] text-gray-600 ${previewDevice === 'mobile' ? 'flex gap-1' : 'flex gap-0.5 mt-0.5'}`}>
+                                  <span className="bg-gray-100 px-0.5 rounded">0d</span>
+                                  <span className="bg-gray-100 px-0.5 rounded">0h</span>
+                                </div>
+                              </div>
+                              <div className="text-[4px] text-green-600 mt-0.5">Campaign live!</div>
+                            </div>
+                            {/* Another Campaign indicator */}
+                            <div className={`bg-white rounded border p-0.5 ${previewDevice === 'mobile' ? 'flex-1' : ''}`}>
+                              <div className={`flex items-center gap-0.5 ${previewDevice === 'mobile' ? '' : 'flex-col'}`}>
+                                <div className="w-3 h-3 bg-gray-200 rounded-full overflow-hidden">
+                                  <div className="w-full h-1/2 bg-gradient-to-r from-green-400 to-teal-500"></div>
+                                </div>
+                                <div className={`text-[5px] text-gray-600 ${previewDevice === 'mobile' ? 'flex gap-1' : 'flex gap-0.5 mt-0.5'}`}>
+                                  <span className="bg-gray-100 px-0.5 rounded">2d</span>
+                                  <span className="bg-gray-100 px-0.5 rounded">5h</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Categories Row */}
+                      <div className={`mt-1 ${previewDevice === 'mobile' ? '' : ''}`}>
+                        <div className={`flex items-center justify-between mb-0.5 ${previewDevice === 'mobile' ? '' : ''}`}>
+                          <span className={`font-semibold text-gray-700 ${previewDevice === 'mobile' ? 'text-[5px]' : 'text-[7px]'}`}>Categories</span>
+                          <span className={`text-pink-500 ${previewDevice === 'mobile' ? 'text-[4px]' : 'text-[5px]'}`}>View All →</span>
+                        </div>
+                        <div className="flex gap-0.5 overflow-hidden">
+                          {['🎮', '📱', '💻', '🎧', '⌚'].map((icon, i) => (
+                            <div key={i} className={`bg-gray-100 rounded flex items-center justify-center flex-shrink-0 ${previewDevice === 'mobile' ? 'w-5 h-5 text-[8px]' : 'w-6 h-6 text-[10px]'}`}>
+                              {icon}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Campaign Info */}
+                <div className="mt-3 space-y-1.5 text-sm">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-500">Status:</span>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${selectedCampaign.status === 'Publish' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                      {selectedCampaign.status}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Start:</span>
+                    <span className="text-gray-700">{new Date(selectedCampaign.startDate).toLocaleDateString('en-GB')}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">End:</span>
+                    <span className="text-gray-700">{new Date(selectedCampaign.endDate).toLocaleDateString('en-GB')}</span>
+                  </div>
+                </div>
+
+                {/* Edit Button */}
+                <button
+                  onClick={() => openCampaignModal(selectedCampaign)}
+                  className="w-full mt-4 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition flex items-center justify-center gap-2"
+                >
+                  <Edit size={16} />
+                  Edit Campaign
+                </button>
+              </div>
+            ) : (
+              <div className="p-8 text-center text-gray-400">
+                <CalendarDays size={32} className="mx-auto mb-2 opacity-50" />
+                <p className="text-sm">Select a campaign to preview</p>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Campaign Modal */}

@@ -8,17 +8,17 @@ import {
 } from './SearchBar';
 import type { HeaderSearchProps } from './headerTypes';
 
-// Camera button - simply redirects to AI Product Scanner page
-const CameraButton: React.FC = () => {
-  const handleClick = () => {
-    window.location.href = '/search';
-  };
+// Camera button - triggers image search modal
+interface CameraButtonProps {
+  onClick?: () => void;
+}
 
+const CameraButton: React.FC<CameraButtonProps> = ({ onClick }) => {
   return (
     <button 
-      onClick={handleClick}
+      onClick={onClick}
       className="p-2 text-gray-500 hover:text-theme-primary transition-colors"
-      title="AI Product Scanner"
+      title="AI Product Search - Upload or capture an image"
     >
       <Camera size={20} />
     </button>
@@ -56,7 +56,7 @@ export const DesktopSearchBar: React.FC<HeaderSearchProps> = ({
       className="w-full border-2 border-theme-primary hover:border-theme-primary focus:border-theme-primary rounded-full py-2.5 pl-5 pr-36 focus:outline-none focus:ring-4 focus:ring-theme-primary/10 placeholder-gray-400 transition-all bg-gray-50 focus:bg-white"
     />
     <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-      <CameraButton />
+      <CameraButton onClick={onVisualSearch} />
       <VoiceButton
         isListening={isListening}
         supportsVoiceSearch={supportsVoiceSearch}
@@ -103,7 +103,7 @@ export const MobileSearchBar: React.FC<HeaderSearchProps> = ({
       className="w-full border-2 border-gray-200 focus:border-theme-primary rounded-full py-3 pl-4 pr-28 text-sm focus:outline-none focus:ring-4 focus:ring-theme-primary/10 bg-gray-50 focus:bg-white transition-all"
     />
     <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
-      <CameraButton />
+      <CameraButton onClick={onVisualSearch} />
       <VoiceButton
         isListening={isListening}
         supportsVoiceSearch={supportsVoiceSearch}

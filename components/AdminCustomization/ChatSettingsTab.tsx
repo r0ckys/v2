@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
-import { Phone, MessageCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Phone, MessageCircle, Save } from 'lucide-react';
 import { WebsiteConfig } from './types';
 
 interface ChatSettingsTabProps {
   websiteConfiguration: WebsiteConfig;
   setWebsiteConfiguration: React.Dispatch<React.SetStateAction<WebsiteConfig>>;
+  onSave?: () => Promise<void>;
 }
 
 // Figma-styled Toggle Switch
@@ -172,10 +173,33 @@ const ChatSupportTab: React.FC<{
 
 export const ChatSettingsTab: React.FC<ChatSettingsTabProps> = ({
   websiteConfiguration,
-  setWebsiteConfiguration
+  setWebsiteConfiguration,
+  onSave
 }) => {
   const [activeChatSupport, setActiveChatSupport] = useState<'phone' | 'whatsapp' | 'messenger'>('messenger');
   const [chatSupportUrl, setChatSupportUrl] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  // Sync chatSupportUrl when tab changes or websiteConfiguration changes
+  useEffect(() => {
+    if (activeChatSupport === 'phone') {
+      setChatSupportUrl(websiteConfiguration.chatSupportPhone || '');
+    } else if (activeChatSupport === 'whatsapp') {
+      setChatSupportUrl(websiteConfiguration.chatSupportWhatsapp || '');
+    } else {
+      setChatSupportUrl(websiteConfiguration.chatSupportMessenger || '');
+    }
+  }, [activeChatSupport, websiteConfiguration.chatSupportPhone, websiteConfiguration.chatSupportWhatsapp, websiteConfiguration.chatSupportMessenger]);
+
+  const handleSave = async () => {
+    if (!onSave) return;
+    setSaving(true);
+    try {
+      await onSave();
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -382,10 +406,11 @@ export const ChatSettingsTab: React.FC<ChatSettingsTabProps> = ({
           </div>
           <button
             onClick={() => {
-              // Save chat support URL to config
+              // Save chat support URL to config state
+              const key = `chatSupport${activeChatSupport.charAt(0).toUpperCase() + activeChatSupport.slice(1)}` as keyof WebsiteConfig;
               setWebsiteConfiguration((p) => ({
                 ...p,
-                [`chatSupport${activeChatSupport.charAt(0).toUpperCase() + activeChatSupport.slice(1)}`]: chatSupportUrl,
+                [key]: chatSupportUrl,
               }));
             }}
             style={{
@@ -408,11 +433,47 @@ export const ChatSettingsTab: React.FC<ChatSettingsTabProps> = ({
                 color: 'white',
               }}
             >
-              Save
+              Apply
             </span>
           </button>
         </div>
       </div>
+
+      {/* Floating Save Button */}
+      {onSave && (
+        <div
+          style={{
+            position: 'fixed',
+            bottom: '24px',
+            right: '24px',
+            zIndex: 1000,
+          }}
+        >
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '12px 24px',
+              backgroundColor: saving ? '#9ca3af' : '#10b981',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: saving ? 'not-allowed' : 'pointer',
+              fontFamily: '"Lato", sans-serif',
+              fontWeight: 600,
+              fontSize: '14px',
+              boxShadow: '0 4px 12px rgba(16, 185, 129, 0.4)',
+              transition: 'all 0.2s ease',
+            }}
+          >
+            <Save size={18} />
+            {saving ? 'Saving...' : 'Save Chat Settings'}
+          </button>
+        </div>
+      )}
     </div>
   );
 };

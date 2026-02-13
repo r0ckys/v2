@@ -3,3 +3,4 @@ export { VoiceButton, CameraButton, SearchSuggestions, VoiceStreamOverlay, Searc
 export { CartModal } from './CartModal';
 export { WishlistModal } from './WishlistModal';
 export { MobileDrawer } from './MobileDrawer';
+export { ImageSearchModal } from './ImageSearchModal';

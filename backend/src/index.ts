@@ -39,6 +39,7 @@ import faviconRouter from './routes/favicon';
 
 import aiAssistantRouter from './routes/aiAssistant';
 import smsRouter from './routes/sms';
+import imageSearchRouter from './routes/imageSearch';
 
 const app = express();
 const httpServer = createServer(app);
@@ -211,6 +212,7 @@ app.use('/api/apk-builder', apkBuilderRouter);
 app.use('/api/favicon', faviconRouter);
 app.use('/api/ai-assistant', aiAssistantRouter);
 app.use('/api/sms', smsRouter);
+app.use('/api/image-search', imageSearchRouter);
 app.use('/api', dueListRoutes);
 
 // Visitors tracking (import at top of file)

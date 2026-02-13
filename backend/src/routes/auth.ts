@@ -385,6 +385,172 @@ authRouter.get('/me', authenticateToken, async (req: Request, res: Response, nex
 });
 
 /**
+ * PUT /api/auth/profile
+ * Update current user's profile
+ */
+authRouter.put('/profile', authenticateToken, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const user = req.user!;
+    const { name, username, phone, email, address, image } = req.body;
+
+    // Validate email uniqueness if changed
+    if (email && email !== user.email) {
+      const existingUser = await User.findOne({ email, _id: { $ne: user._id } });
+      if (existingUser) {
+        return res.status(400).json({
+          error: 'Email already in use',
+          code: 'EMAIL_EXISTS'
+        });
+      }
+    }
+
+    // Validate username uniqueness if changed and tenantId exists
+    if (username && username !== user.username && user.tenantId) {
+      const existingUsername = await User.findOne({ 
+        username, 
+        tenantId: user.tenantId,
+        _id: { $ne: user._id } 
+      });
+      if (existingUsername) {
+        return res.status(400).json({
+          error: 'Username already in use',
+          code: 'USERNAME_EXISTS'
+        });
+      }
+    }
+
+    // Update user profile
+    const updatedUser = await User.findByIdAndUpdate(
+      user._id,
+      {
+        $set: {
+          ...(name && { name }),
+          ...(username && { username }),
+          ...(phone && { phone }),
+          ...(email && { email }),
+          ...(address && { address }),
+          ...(image !== undefined && { image }),
+          updatedAt: new Date()
+        }
+      },
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    if (!updatedUser) {
+      return res.status(404).json({
+        error: 'User not found',
+        code: 'USER_NOT_FOUND'
+      });
+    }
+
+    // Log profile update
+    await createAuditLog({
+      tenantId: user.tenantId,
+      userId: user._id.toString(),
+      userName: user.name,
+      userRole: user.role,
+      action: 'Profile Updated',
+      actionType: 'update',
+      resourceType: 'user',
+      resourceId: user._id.toString(),
+      resourceName: user.name,
+      details: `${user.name} updated their profile`,
+      metadata: { updatedFields: Object.keys(req.body).filter(k => req.body[k] !== undefined) },
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      status: 'success'
+    });
+
+    res.json({
+      message: 'Profile updated successfully',
+      user: updatedUser
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /api/auth/change-password
+ * Change current user's password (requires old password)
+ */
+authRouter.post('/change-password', authenticateToken, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const user = req.user!;
+    const { oldPassword, newPassword } = req.body;
+
+    // Validate inputs
+    if (!oldPassword || !newPassword) {
+      return res.status(400).json({
+        error: 'Old password and new password are required',
+        code: 'INVALID_INPUT'
+      });
+    }
+
+    // Validate new password length (minimum 9 characters)
+    if (newPassword.length < 9) {
+      return res.status(400).json({
+        error: 'New password must be at least 9 characters',
+        code: 'PASSWORD_TOO_SHORT'
+      });
+    }
+
+    // Get user with password field
+    const userWithPassword = await User.findById(user._id).select('+password');
+    if (!userWithPassword) {
+      return res.status(404).json({
+        error: 'User not found',
+        code: 'USER_NOT_FOUND'
+      });
+    }
+
+    // Verify old password
+    const isValidPassword = await bcrypt.compare(oldPassword, userWithPassword.password);
+    if (!isValidPassword) {
+      return res.status(400).json({
+        error: 'Current password is incorrect',
+        code: 'INVALID_PASSWORD'
+      });
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+
+    // Update password
+    await User.findByIdAndUpdate(user._id, {
+      $set: {
+        password: hashedPassword,
+        updatedAt: new Date()
+      }
+    });
+
+    // Log password change
+    await createAuditLog({
+      tenantId: user.tenantId,
+      userId: user._id.toString(),
+      userName: user.name,
+      userRole: user.role,
+      action: 'Password Changed',
+      actionType: 'update',
+      resourceType: 'user',
+      resourceId: user._id.toString(),
+      resourceName: user.name,
+      details: `${user.name} changed their password`,
+      metadata: {},
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      status: 'success'
+    });
+
+    res.json({
+      message: 'Password changed successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
  * GET /api/auth/permissions
  * Get current user's permissions
  */

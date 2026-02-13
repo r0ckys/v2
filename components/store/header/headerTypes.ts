@@ -20,4 +20,5 @@ export interface HeaderSearchProps {
   liveTranscript: string;
   supportsVoiceSearch: boolean;
   onVoiceSearch: () => void;
+  onVisualSearch?: () => void;
 }

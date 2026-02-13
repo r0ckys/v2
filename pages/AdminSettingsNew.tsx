@@ -1,6 +1,10 @@
-import React, { useState } from 'react';
-import { Truck, CreditCard, MessageCircle, Link2, MessageSquare, Coins, Store, User, Camera, RefreshCw, Download, ChevronRight, Lock } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Truck, CreditCard, MessageCircle, Link2, MessageSquare, Coins, Store, User, Camera, RefreshCw, Download, ChevronRight, Lock, Image as ImageIcon, X, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { useComingSoon } from '../components/ComingSoonModal';
+import { GalleryPicker } from '../components/GalleryPicker';
+import toast from 'react-hot-toast';
+import { convertFileToWebP, dataUrlToFile } from '../services/imageUtils';
+import { uploadPreparedImageToServer } from '../services/imageUploadService';
 
 interface SettingsCardProps {
   title: string;
@@ -415,23 +419,23 @@ const figmaStyles = {
     WebkitTextFillColor: 'transparent',
   },
   formContainer: {
-    display: 'flex',
-    gap: '16px',
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, 1fr)',
+    gap: '24px',
   },
   formLeft: {
-    display: 'flex',
-    flexDirection: 'column' as const,
-    gap: '16px',
+    gridColumn: 'span 2',
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: '20px',
   },
   formRow: {
-    display: 'flex',
-    gap: '16px',
-    alignItems: 'center',
+    display: 'contents',
   },
   formGroup: {
     display: 'flex',
     flexDirection: 'column' as const,
-    gap: '12px',
+    gap: '8px',
   },
   formLabel: {
     fontFamily: "'Lato', sans-serif",
@@ -441,35 +445,37 @@ const figmaStyles = {
     margin: 0,
   },
   formInput: {
-    width: '271px',
+    width: '100%',
     height: '48px',
-    padding: '10px 12px',
-    background: '#f9f9f9',
+    padding: '12px 16px',
+    background: '#f9fafb',
     borderRadius: '8px',
-    border: 'none',
+    border: '1px solid #e5e7eb',
     fontFamily: "'Poppins', sans-serif",
-    fontSize: '16px',
-    color: 'black',
+    fontSize: '15px',
+    color: '#111827',
     outline: 'none',
+    transition: 'border-color 0.2s, box-shadow 0.2s',
   },
   formRight: {
-    flex: 1,
+    gridColumn: 'span 1',
     display: 'flex',
     flexDirection: 'column' as const,
-    gap: '16px',
+    gap: '20px',
   },
   addressInput: {
     width: '100%',
-    height: '79px',
-    padding: '12px',
-    background: '#f9f9f9',
+    height: '100px',
+    padding: '12px 16px',
+    background: '#f9fafb',
     borderRadius: '8px',
-    border: 'none',
+    border: '1px solid #e5e7eb',
     fontFamily: "'Poppins', sans-serif",
-    fontSize: '16px',
-    color: 'black',
+    fontSize: '15px',
+    color: '#111827',
     outline: 'none',
     resize: 'none' as const,
+    transition: 'border-color 0.2s, box-shadow 0.2s',
   },
   changePasswordButton: {
     display: 'flex',
@@ -477,11 +483,12 @@ const figmaStyles = {
     justifyContent: 'space-between',
     width: '100%',
     height: '48px',
-    padding: '10px 12px',
-    background: '#f9f9f9',
+    padding: '10px 16px',
+    background: '#f9fafb',
     borderRadius: '8px',
-    border: 'none',
+    border: '1px solid #e5e7eb',
     cursor: 'pointer',
+    transition: 'all 0.2s ease',
   },
   changePasswordLeft: {
     display: 'flex',
@@ -496,47 +503,186 @@ const figmaStyles = {
   },
 };
 
-const AdminSettingsNew: React.FC<AdminSettingsNewProps> = ({ onNavigate, currentUser, onUpdateProfile }) => {
+const AdminSettingsNew: React.FC<AdminSettingsNewProps> = ({ onNavigate, currentUser, onUpdateProfile, activeTenant }) => {
   const [activeTab, setActiveTab] = useState<'manage_shop' | 'profile_details'>('manage_shop');
   const { showComingSoon, ComingSoonPopup } = useComingSoon();
   const [profileForm, setProfileForm] = useState({
-    name: currentUser?.name || 'Imam Hoshen Ornob',
-    username: currentUser?.username || 'ornob423',
-    phone: currentUser?.phone || '+88 017XX XXXXXX',
-    email: currentUser?.email || 'ornob423@gmail.com',
-    address: currentUser?.address || 'Plot No. 23, Sector 7, Uttara Dhaka – 1230 BANGLADESH',
+    name: currentUser?.name || '',
+    username: currentUser?.username || '',
+    phone: currentUser?.phone || '',
+    email: currentUser?.email || '',
+    address: currentUser?.address || '',
   });
   const [avatarPreview, setAvatarPreview] = useState<string | null>(currentUser?.avatar || null);
+  const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const hasInitialized = useRef(false);
 
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setAvatarPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+  // Sync form with currentUser when it loads/changes
+  useEffect(() => {
+    if (currentUser && !hasInitialized.current) {
+      setProfileForm({
+        name: currentUser.name || '',
+        username: currentUser.username || '',
+        phone: currentUser.phone || '',
+        email: currentUser.email || '',
+        address: currentUser.address || '',
+      });
+      setAvatarPreview(currentUser.avatar || null);
+      hasInitialized.current = true;
     }
+  }, [currentUser]);
+  
+  // Password change state
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({
+    oldPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
+  const [showOldPassword, setShowOldPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+
+  const tenantId = activeTenant?.tenantId || activeTenant?.id || '';
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setIsUploadingAvatar(true);
+    try {
+      // Convert to WebP for optimization
+      const webpDataUrl = await convertFileToWebP(file, { quality: 0.85, maxDimension: 400 });
+      
+      // Upload to server
+      if (tenantId) {
+        const webpFile = dataUrlToFile(webpDataUrl, `profile-${Date.now()}.webp`);
+        const uploadedUrl = await uploadPreparedImageToServer(webpFile, tenantId, 'gallery');
+        setAvatarPreview(uploadedUrl);
+        toast.success('Photo uploaded - save to apply');
+      } else {
+        // Fallback to base64 if no tenant
+        setAvatarPreview(webpDataUrl);
+        toast.success('Photo ready - save to apply');
+      }
+    } catch (error) {
+      toast.error('Failed to upload photo');
+      console.error('Avatar upload error:', error);
+    }
+    setIsUploadingAvatar(false);
+    if (e.target) e.target.value = '';
+  };
+
+  const handleGallerySelect = (imageUrl: string) => {
+    setAvatarPreview(imageUrl);
+    setIsGalleryOpen(false);
+    toast.success('Photo selected - save to apply');
   };
 
   const handleSaveProfile = async () => {
-    if (onUpdateProfile) {
-      await onUpdateProfile({
-        ...profileForm,
-        avatar: avatarPreview,
-      });
+    if (!profileForm.name.trim()) {
+      toast.error('Name is required');
+      return;
     }
+    if (!profileForm.email.trim()) {
+      toast.error('Email is required');
+      return;
+    }
+    
+    setIsSaving(true);
+    try {
+      const response = await fetch('/api/auth/profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+        body: JSON.stringify({
+          name: profileForm.name,
+          username: profileForm.username,
+          phone: profileForm.phone,
+          email: profileForm.email,
+          address: profileForm.address,
+          image: avatarPreview,
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to update profile');
+      }
+
+      // Also call the legacy handler if exists
+      if (onUpdateProfile) {
+        await onUpdateProfile({
+          ...profileForm,
+          avatar: avatarPreview,
+        });
+      }
+      
+      toast.success('Profile saved successfully!');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to save profile');
+    }
+    setIsSaving(false);
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (passwordForm.newPassword.length < 9) {
+      toast.error('Password must be at least 9 characters');
+      return;
+    }
+    
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      toast.error('New passwords do not match');
+      return;
+    }
+    
+    setIsChangingPassword(true);
+    try {
+      const response = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+        body: JSON.stringify({
+          oldPassword: passwordForm.oldPassword,
+          newPassword: passwordForm.newPassword,
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to change password');
+      }
+      
+      toast.success('Password changed successfully!');
+      setPasswordForm({ oldPassword: '', newPassword: '', confirmPassword: '' });
+      setIsPasswordModalOpen(false);
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to change password');
+    }
+    setIsChangingPassword(false);
   };
 
   const handleResetProfile = () => {
     setProfileForm({
-      name: currentUser?.name || 'Imam Hoshen Ornob',
-      username: currentUser?.username || 'ornob423',
-      phone: currentUser?.phone || '+88 017XX XXXXXX',
-      email: currentUser?.email || 'ornob423@gmail.com',
-      address: currentUser?.address || 'Plot No. 23, Sector 7, Uttara Dhaka – 1230 BANGLADESH',
+      name: currentUser?.name || '',
+      username: currentUser?.username || '',
+      phone: currentUser?.phone || '',
+      email: currentUser?.email || '',
+      address: currentUser?.address || '',
     });
     setAvatarPreview(currentUser?.avatar || null);
+    toast.success('Form reset to original values');
   };
 
   const formatSinceDate = () => {
@@ -589,7 +735,30 @@ const AdminSettingsNew: React.FC<AdminSettingsNewProps> = ({ onNavigate, current
   ];
 
   return (
-    <div style={figmaStyles.container}>
+    <>
+      <style>{`
+        .profile-input:focus {
+          border-color: #0ea5e9 !important;
+          box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.15) !important;
+        }
+        .profile-input::placeholder {
+          color: #9ca3af;
+        }
+        .change-password-btn:hover {
+          background: #f3f4f6 !important;
+          border-color: #0ea5e9 !important;
+        }
+        @media (max-width: 900px) {
+          .profile-form-container {
+            grid-template-columns: 1fr !important;
+          }
+          .profile-form-left {
+            grid-column: span 1 !important;
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
+      <div style={figmaStyles.container}>
       {/* Header Card with Tabs */}
       <div style={figmaStyles.headerCard}>
         <h1 style={figmaStyles.title}>Settings</h1>
@@ -662,34 +831,51 @@ const AdminSettingsNew: React.FC<AdminSettingsNewProps> = ({ onNavigate, current
             <div style={figmaStyles.profileHeader}>
               <h2 style={figmaStyles.profileTitle}>Profile Details</h2>
               <div style={figmaStyles.buttonGroup}>
-                <button onClick={handleResetProfile} style={figmaStyles.resetButton}>
+                <button onClick={handleResetProfile} style={figmaStyles.resetButton} disabled={isSaving}>
                   <RefreshCw size={24} color="#020202" />
                   <span style={figmaStyles.resetButtonText}>Reset</span>
                 </button>
-                <button onClick={handleSaveProfile} style={figmaStyles.saveButton}>
+                <button onClick={handleSaveProfile} style={{...figmaStyles.saveButton, opacity: isSaving ? 0.7 : 1}} disabled={isSaving}>
                   <Download size={24} color="white" />
-                  <span style={figmaStyles.saveButtonText}>Save Changes</span>
+                  <span style={figmaStyles.saveButtonText}>{isSaving ? 'Saving...' : 'Save Changes'}</span>
                 </button>
               </div>
             </div>
 
             {/* Avatar Section */}
             <div style={figmaStyles.avatarSection}>
-              <div style={figmaStyles.avatarContainer}>
+              <div style={{...figmaStyles.avatarContainer, position: 'relative'}}>
                 {avatarPreview ? (
                   <img src={avatarPreview} alt="Avatar" style={figmaStyles.avatar} />
                 ) : (
-                  <div style={figmaStyles.avatar} />
+                  <div style={{...figmaStyles.avatar, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f3f4f6'}}>
+                    <User size={48} color="#9ca3af" />
+                  </div>
                 )}
-                <label style={figmaStyles.cameraButton}>
-                  <Camera size={24} color="#666" />
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleAvatarChange}
-                    style={{ display: 'none' }}
-                  />
-                </label>
+                {isUploadingAvatar && (
+                  <div style={{position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.8)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+                    <Loader2 size={24} className="animate-spin text-sky-500" />
+                  </div>
+                )}
+                <div style={{position: 'absolute', bottom: 0, right: 0, display: 'flex', gap: 4}}>
+                  <label style={{...figmaStyles.cameraButton, cursor: 'pointer'}}>
+                    <Camera size={20} color="#666" />
+                    <input
+                      ref={avatarInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleAvatarChange}
+                      style={{ display: 'none' }}
+                    />
+                  </label>
+                  <button
+                    onClick={() => setIsGalleryOpen(true)}
+                    style={{...figmaStyles.cameraButton, border: 'none', cursor: 'pointer'}}
+                    title="Select from Gallery"
+                  >
+                    <ImageIcon size={20} color="#666" />
+                  </button>
+                </div>
               </div>
               <div style={figmaStyles.userInfo}>
                 <p style={figmaStyles.userName}>{profileForm.name}</p>
@@ -703,48 +889,52 @@ const AdminSettingsNew: React.FC<AdminSettingsNewProps> = ({ onNavigate, current
             </div>
 
             {/* Form Fields */}
-            <div style={figmaStyles.formContainer}>
-              {/* Left Column */}
-              <div style={figmaStyles.formLeft}>
-                <div style={figmaStyles.formRow}>
-                  <div style={figmaStyles.formGroup}>
-                    <label style={figmaStyles.formLabel}>Name</label>
-                    <input
-                      type="text"
-                      value={profileForm.name}
-                      onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
-                      style={figmaStyles.formInput}
-                    />
-                  </div>
-                  <div style={figmaStyles.formGroup}>
-                    <label style={figmaStyles.formLabel}>Username</label>
-                    <input
-                      type="text"
-                      value={profileForm.username}
-                      onChange={(e) => setProfileForm({ ...profileForm, username: e.target.value })}
-                      style={figmaStyles.formInput}
-                    />
-                  </div>
+            <div style={figmaStyles.formContainer} className="profile-form-container">
+              {/* Left Column - 2 columns grid */}
+              <div style={figmaStyles.formLeft} className="profile-form-left">
+                <div style={figmaStyles.formGroup}>
+                  <label style={figmaStyles.formLabel}>Name</label>
+                  <input
+                    type="text"
+                    value={profileForm.name}
+                    onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
+                    placeholder="Enter your name"
+                    className="profile-input"
+                    style={figmaStyles.formInput}
+                  />
                 </div>
-                <div style={figmaStyles.formRow}>
-                  <div style={figmaStyles.formGroup}>
-                    <label style={figmaStyles.formLabel}>Phone</label>
-                    <input
-                      type="text"
-                      value={profileForm.phone}
-                      onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
-                      style={figmaStyles.formInput}
-                    />
-                  </div>
-                  <div style={figmaStyles.formGroup}>
-                    <label style={figmaStyles.formLabel}>Email</label>
-                    <input
-                      type="email"
-                      value={profileForm.email}
-                      onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
-                      style={figmaStyles.formInput}
-                    />
-                  </div>
+                <div style={figmaStyles.formGroup}>
+                  <label style={figmaStyles.formLabel}>Username</label>
+                  <input
+                    type="text"
+                    value={profileForm.username}
+                    onChange={(e) => setProfileForm({ ...profileForm, username: e.target.value })}
+                    placeholder="Enter username"
+                    className="profile-input"
+                    style={figmaStyles.formInput}
+                  />
+                </div>
+                <div style={figmaStyles.formGroup}>
+                  <label style={figmaStyles.formLabel}>Phone</label>
+                  <input
+                    type="text"
+                    value={profileForm.phone}
+                    onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
+                    placeholder="Enter phone number"
+                    className="profile-input"
+                    style={figmaStyles.formInput}
+                  />
+                </div>
+                <div style={figmaStyles.formGroup}>
+                  <label style={figmaStyles.formLabel}>Email</label>
+                  <input
+                    type="email"
+                    value={profileForm.email}
+                    onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
+                    placeholder="Enter email address"
+                    className="profile-input"
+                    style={figmaStyles.formInput}
+                  />
                 </div>
               </div>
 
@@ -755,15 +945,18 @@ const AdminSettingsNew: React.FC<AdminSettingsNewProps> = ({ onNavigate, current
                   <textarea
                     value={profileForm.address}
                     onChange={(e) => setProfileForm({ ...profileForm, address: e.target.value })}
+                    placeholder="Enter your address"
+                    className="profile-input"
                     style={figmaStyles.addressInput}
                   />
                 </div>
                 <button
-                  onClick={() => onNavigate('change_password')}
+                  onClick={() => setIsPasswordModalOpen(true)}
                   style={figmaStyles.changePasswordButton}
+                  className="change-password-btn"
                 >
                   <div style={figmaStyles.changePasswordLeft}>
-                    <Lock size={24} color="#666" />
+                    <Lock size={24} color="#0ea5e9" />
                     <span style={figmaStyles.changePasswordText}>Change Password</span>
                   </div>
                   <ChevronRight size={24} color="#666" />
@@ -773,7 +966,240 @@ const AdminSettingsNew: React.FC<AdminSettingsNewProps> = ({ onNavigate, current
           </div>
         </div>
       )}
+
+      {/* Gallery Picker Modal */}
+      <GalleryPicker
+        isOpen={isGalleryOpen}
+        onSelect={handleGallerySelect}
+        onClose={() => setIsGalleryOpen(false)}
+        multiple={false}
+        title="Select Profile Photo"
+      />
+
+      {/* Password Change Modal */}
+      {isPasswordModalOpen && (
+        <div 
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: 16,
+          }}
+          onClick={() => setIsPasswordModalOpen(false)}
+        >
+          <div 
+            style={{
+              background: 'white',
+              borderRadius: 16,
+              width: '100%',
+              maxWidth: 420,
+              overflow: 'hidden',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '16px 20px',
+              borderBottom: '1px solid #e5e7eb',
+            }}>
+              <h3 style={{
+                fontFamily: "'Poppins', sans-serif",
+                fontWeight: 600,
+                fontSize: 18,
+                margin: 0,
+              }}>Change Password</h3>
+              <button 
+                onClick={() => setIsPasswordModalOpen(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: 4,
+                }}
+              >
+                <X size={24} color="#666" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <form onSubmit={handleChangePassword} style={{ padding: 20 }}>
+              <p style={{
+                fontFamily: "'Poppins', sans-serif",
+                fontSize: 13,
+                color: '#6b7280',
+                marginBottom: 16,
+              }}>
+                Password must be at least 9 characters long.
+              </p>
+
+              {/* Old Password */}
+              <div style={{ marginBottom: 16 }}>
+                <label style={{
+                  display: 'block',
+                  fontFamily: "'Poppins', sans-serif",
+                  fontWeight: 500,
+                  fontSize: 14,
+                  color: '#374151',
+                  marginBottom: 6,
+                }}>Current Password *</label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type={showOldPassword ? 'text' : 'password'}
+                    value={passwordForm.oldPassword}
+                    onChange={(e) => setPasswordForm({ ...passwordForm, oldPassword: e.target.value })}
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '10px 40px 10px 12px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: 8,
+                      fontFamily: "'Poppins', sans-serif",
+                      fontSize: 14,
+                      outline: 'none',
+                    }}
+                    placeholder="Enter current password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowOldPassword(!showOldPassword)}
+                    style={{
+                      position: 'absolute',
+                      right: 10,
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      padding: 4,
+                    }}
+                  >
+                    {showOldPassword ? <EyeOff size={18} color="#9ca3af" /> : <Eye size={18} color="#9ca3af" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* New Password */}
+              <div style={{ marginBottom: 16 }}>
+                <label style={{
+                  display: 'block',
+                  fontFamily: "'Poppins', sans-serif",
+                  fontWeight: 500,
+                  fontSize: 14,
+                  color: '#374151',
+                  marginBottom: 6,
+                }}>New Password *</label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type={showNewPassword ? 'text' : 'password'}
+                    value={passwordForm.newPassword}
+                    onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                    required
+                    minLength={9}
+                    style={{
+                      width: '100%',
+                      padding: '10px 40px 10px 12px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: 8,
+                      fontFamily: "'Poppins', sans-serif",
+                      fontSize: 14,
+                      outline: 'none',
+                    }}
+                    placeholder="Min 9 characters"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    style={{
+                      position: 'absolute',
+                      right: 10,
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      padding: 4,
+                    }}
+                  >
+                    {showNewPassword ? <EyeOff size={18} color="#9ca3af" /> : <Eye size={18} color="#9ca3af" />}
+                  </button>
+                </div>
+                {passwordForm.newPassword && passwordForm.newPassword.length < 9 && (
+                  <p style={{ color: '#ef4444', fontSize: 12, marginTop: 4 }}>
+                    Password must be at least 9 characters ({9 - passwordForm.newPassword.length} more needed)
+                  </p>
+                )}
+              </div>
+
+              {/* Confirm Password */}
+              <div style={{ marginBottom: 24 }}>
+                <label style={{
+                  display: 'block',
+                  fontFamily: "'Poppins', sans-serif",
+                  fontWeight: 500,
+                  fontSize: 14,
+                  color: '#374151',
+                  marginBottom: 6,
+                }}>Confirm New Password *</label>
+                <input
+                  type="password"
+                  value={passwordForm.confirmPassword}
+                  onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: 8,
+                    fontFamily: "'Poppins', sans-serif",
+                    fontSize: 14,
+                    outline: 'none',
+                  }}
+                  placeholder="Re-enter new password"
+                />
+                {passwordForm.confirmPassword && passwordForm.newPassword !== passwordForm.confirmPassword && (
+                  <p style={{ color: '#ef4444', fontSize: 12, marginTop: 4 }}>
+                    Passwords do not match
+                  </p>
+                )}
+              </div>
+
+              {/* Submit Button */}
+              <button
+                type="submit"
+                disabled={isChangingPassword || passwordForm.newPassword.length < 9 || passwordForm.newPassword !== passwordForm.confirmPassword}
+                style={{
+                  width: '100%',
+                  padding: '12px 20px',
+                  background: isChangingPassword ? '#9ca3af' : '#0ea5e9',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: 8,
+                  fontFamily: "'Poppins', sans-serif",
+                  fontWeight: 600,
+                  fontSize: 14,
+                  cursor: isChangingPassword ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                }}
+              >
+                <Lock size={18} />
+                {isChangingPassword ? 'Changing...' : 'Change Password'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
+    </>
   );
 };
 

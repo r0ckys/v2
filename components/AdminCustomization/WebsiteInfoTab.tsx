@@ -1,16 +1,18 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import {
   Plus,
   Trash2,
   RefreshCw,
   Save,
-  ChevronDown
+  ChevronDown,
+  Loader2
 } from 'lucide-react';
 import { WebsiteConfig, SocialLink, FooterLink, FooterLinkField } from './types';
 import { SOCIAL_PLATFORM_OPTIONS, FOOTER_LINK_SECTIONS } from './constants';
 import { normalizeImageUrl } from '../../utils/imageUrlHelper';
 import { convertFileToWebP, dataUrlToFile } from '../../services/imageUtils';
 import { uploadPreparedImageToServer } from '../../services/imageUploadService';
+import toast from 'react-hot-toast';
 
 interface WebsiteInfoTabProps {
   websiteConfiguration: WebsiteConfig;
@@ -18,6 +20,7 @@ interface WebsiteInfoTabProps {
   logo: string | null;
   onUpdateLogo: (logo: string | null) => void;
   tenantId: string;
+  onSave?: (config: WebsiteConfig) => Promise<void>;
 }
 
 // Figma-styled Logo Upload Card
@@ -420,7 +423,8 @@ export const WebsiteInfoTab: React.FC<WebsiteInfoTabProps> = ({
   setWebsiteConfiguration,
   logo,
   onUpdateLogo,
-  tenantId
+  tenantId,
+  onSave
 }) => {
   // File Input Refs
   const logoInputRef = useRef<HTMLInputElement>(null);
@@ -428,13 +432,101 @@ export const WebsiteInfoTab: React.FC<WebsiteInfoTabProps> = ({
   const headerLogoInputRef = useRef<HTMLInputElement>(null);
   const footerLogoInputRef = useRef<HTMLInputElement>(null);
 
-  // Social login state
-  const [socialLogins, setSocialLogins] = useState<{ type: string; clientId: string }[]>([
-    { type: 'Google', clientId: '' }
-  ]);
+  // Save state
+  const [isSaving, setIsSaving] = useState(false);
+  const [hasChanges, setHasChanges] = useState(false);
+  const initialConfigRef = useRef<string>('');
 
-  // Offer state
-  const [offers, setOffers] = useState<{ type: string; discount: string }[]>([]);
+  // Initialize socialLogins and offers in websiteConfiguration if not present
+  useEffect(() => {
+    if (!websiteConfiguration.socialLogins) {
+      setWebsiteConfiguration(prev => ({
+        ...prev,
+        socialLogins: [{ type: 'Google', clientId: '' }]
+      }));
+    }
+    if (!websiteConfiguration.offers) {
+      setWebsiteConfiguration(prev => ({
+        ...prev,
+        offers: []
+      }));
+    }
+  }, []);
+
+  // Track changes
+  useEffect(() => {
+    if (!initialConfigRef.current) {
+      initialConfigRef.current = JSON.stringify(websiteConfiguration);
+    } else {
+      const hasChanged = JSON.stringify(websiteConfiguration) !== initialConfigRef.current;
+      setHasChanges(hasChanged);
+    }
+  }, [websiteConfiguration]);
+
+  // Social login helpers
+  const socialLogins = websiteConfiguration.socialLogins || [{ type: 'Google', clientId: '' }];
+  const offers = websiteConfiguration.offers || [];
+
+  const updateSocialLogin = (index: number, key: 'type' | 'clientId', value: string) => {
+    setWebsiteConfiguration(prev => {
+      const updated = [...(prev.socialLogins || [])];
+      updated[index] = { ...updated[index], [key]: value };
+      return { ...prev, socialLogins: updated };
+    });
+  };
+
+  const addSocialLogin = () => {
+    setWebsiteConfiguration(prev => ({
+      ...prev,
+      socialLogins: [...(prev.socialLogins || []), { type: 'Google', clientId: '' }]
+    }));
+  };
+
+  const removeSocialLogin = (index: number) => {
+    setWebsiteConfiguration(prev => ({
+      ...prev,
+      socialLogins: (prev.socialLogins || []).filter((_, i) => i !== index)
+    }));
+  };
+
+  const updateOffer = (index: number, key: 'type' | 'discount', value: string) => {
+    setWebsiteConfiguration(prev => {
+      const updated = [...(prev.offers || [])];
+      updated[index] = { ...updated[index], [key]: value };
+      return { ...prev, offers: updated };
+    });
+  };
+
+  const addOffer = () => {
+    setWebsiteConfiguration(prev => ({
+      ...prev,
+      offers: [...(prev.offers || []), { type: 'Registration', discount: '' }]
+    }));
+  };
+
+  const removeOffer = (index: number) => {
+    setWebsiteConfiguration(prev => ({
+      ...prev,
+      offers: (prev.offers || []).filter((_, i) => i !== index)
+    }));
+  };
+
+  // Handle save
+  const handleSave = useCallback(async () => {
+    if (!onSave) return;
+    setIsSaving(true);
+    try {
+      await onSave(websiteConfiguration);
+      toast.success('Website settings saved successfully!');
+      initialConfigRef.current = JSON.stringify(websiteConfiguration);
+      setHasChanges(false);
+    } catch (error) {
+      console.error('Failed to save website settings:', error);
+      toast.error('Failed to save settings');
+    } finally {
+      setIsSaving(false);
+    }
+  }, [onSave, websiteConfiguration]);
 
   const handleImageUpload = async (
     event: React.ChangeEvent<HTMLInputElement>,
@@ -767,27 +859,47 @@ export const WebsiteInfoTab: React.FC<WebsiteInfoTabProps> = ({
       {/* Social Login */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
         <SectionHeader title="Social Login" />
-        <div style={{ display: 'flex', gap: '16px' }}>
-          <FigmaSelect
-            label="Login Type"
-            value={socialLogins[0]?.type || 'Google'}
-            onChange={(v) => setSocialLogins([{ ...socialLogins[0], type: v }])}
-            options={[
-              { value: 'Google', label: 'Google' },
-              { value: 'Facebook', label: 'Facebook' },
-            ]}
-            width="426px"
-          />
-          <FigmaInput
-            label="Auth/Client ID"
-            value={socialLogins[0]?.clientId || ''}
-            onChange={(v) => setSocialLogins([{ ...socialLogins[0], clientId: v }])}
-            placeholder="531559968835-9dne3cs01s1knffdctpgvu955qfft588.apps.googleusercontent.com"
-            flex
-          />
-        </div>
+        {socialLogins.map((login, index) => (
+          <div key={index} style={{ display: 'flex', gap: '16px', alignItems: 'flex-end' }}>
+            <FigmaSelect
+              label={index === 0 ? 'Login Type' : ''}
+              value={login.type || 'Google'}
+              onChange={(v) => updateSocialLogin(index, 'type', v)}
+              options={[
+                { value: 'Google', label: 'Google' },
+                { value: 'Facebook', label: 'Facebook' },
+              ]}
+              width="426px"
+            />
+            <FigmaInput
+              label={index === 0 ? 'Auth/Client ID' : ''}
+              value={login.clientId || ''}
+              onChange={(v) => updateSocialLogin(index, 'clientId', v)}
+              placeholder="531559968835-9dne3cs01s1knffdctpgvu955qfft588.apps.googleusercontent.com"
+              flex
+            />
+            {socialLogins.length > 1 && (
+              <button
+                onClick={() => removeSocialLogin(index)}
+                style={{
+                  width: '48px',
+                  height: '48px',
+                  backgroundColor: 'rgba(218,0,0,0.1)',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Trash2 size={20} color="#da0000" />
+              </button>
+            )}
+          </div>
+        ))}
         <button
-          onClick={() => setSocialLogins([...socialLogins, { type: 'Google', clientId: '' }])}
+          onClick={addSocialLogin}
           style={{
             width: '132px',
             height: '48px',
@@ -811,28 +923,69 @@ export const WebsiteInfoTab: React.FC<WebsiteInfoTabProps> = ({
       {/* Offer */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
         <SectionHeader title="Offer" />
-        <div style={{ display: 'flex', gap: '16px' }}>
-          <FigmaSelect
-            label="Offer Type"
-            value={offers[0]?.type || 'Registration'}
-            onChange={(v) => setOffers([{ ...offers[0], type: v }])}
-            options={[
-              { value: 'Registration', label: 'Registration' },
-              { value: 'First Purchase', label: 'First Purchase' },
-              { value: 'Referral', label: 'Referral' },
-            ]}
-            width="426px"
-          />
-          <FigmaInput
-            label="Discount"
-            value={offers[0]?.discount || ''}
-            onChange={(v) => setOffers([{ ...offers[0], discount: v }])}
-            placeholder="Ex: 1000 or 20%"
-            flex
-          />
-        </div>
+        {offers.length === 0 ? (
+          <div style={{ display: 'flex', gap: '16px' }}>
+            <FigmaSelect
+              label="Offer Type"
+              value="Registration"
+              onChange={() => {}}
+              options={[
+                { value: 'Registration', label: 'Registration' },
+                { value: 'First Purchase', label: 'First Purchase' },
+                { value: 'Referral', label: 'Referral' },
+              ]}
+              width="426px"
+            />
+            <FigmaInput
+              label="Discount"
+              value=""
+              onChange={() => {}}
+              placeholder="Ex: 1000 or 20%"
+              flex
+            />
+          </div>
+        ) : (
+          offers.map((offer, index) => (
+            <div key={index} style={{ display: 'flex', gap: '16px', alignItems: 'flex-end' }}>
+              <FigmaSelect
+                label={index === 0 ? 'Offer Type' : ''}
+                value={offer.type || 'Registration'}
+                onChange={(v) => updateOffer(index, 'type', v)}
+                options={[
+                  { value: 'Registration', label: 'Registration' },
+                  { value: 'First Purchase', label: 'First Purchase' },
+                  { value: 'Referral', label: 'Referral' },
+                ]}
+                width="426px"
+              />
+              <FigmaInput
+                label={index === 0 ? 'Discount' : ''}
+                value={offer.discount || ''}
+                onChange={(v) => updateOffer(index, 'discount', v)}
+                placeholder="Ex: 1000 or 20%"
+                flex
+              />
+              <button
+                onClick={() => removeOffer(index)}
+                style={{
+                  width: '48px',
+                  height: '48px',
+                  backgroundColor: 'rgba(218,0,0,0.1)',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Trash2 size={20} color="#da0000" />
+              </button>
+            </div>
+          ))
+        )}
         <button
-          onClick={() => setOffers([...offers, { type: 'Registration', discount: '' }])}
+          onClick={addOffer}
           style={{
             width: '132px',
             height: '48px',
@@ -961,6 +1114,54 @@ export const WebsiteInfoTab: React.FC<WebsiteInfoTabProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Floating Save Button */}
+      {onSave && hasChanges && (
+        <div
+          style={{
+            position: 'fixed',
+            bottom: '24px',
+            right: '24px',
+            zIndex: 1000,
+          }}
+        >
+          <button
+            onClick={handleSave}
+            disabled={isSaving}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              padding: '14px 28px',
+              background: isSaving 
+                ? 'linear-gradient(180deg, #94a3b8 0%, #64748b 100%)'
+                : 'linear-gradient(180deg, #22c55e 0%, #16a34a 100%)',
+              color: 'white',
+              fontFamily: '"Poppins", sans-serif',
+              fontWeight: 600,
+              fontSize: '16px',
+              border: 'none',
+              borderRadius: '12px',
+              cursor: isSaving ? 'not-allowed' : 'pointer',
+              boxShadow: '0 4px 14px rgba(34, 197, 94, 0.4)',
+              transition: 'all 0.2s ease',
+            }}
+          >
+            {isSaving ? (
+              <>
+                <Loader2 size={20} className="animate-spin" style={{ animation: 'spin 1s linear infinite' }} />
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save size={20} />
+                Save Changes
+              </>
+            )}
+          </button>
+        </div>
+      )}
     </div>
   );
 };

@@ -76,11 +76,22 @@ const AdminPopups: React.FC<AdminPopupsProps> = ({ onBack, tenantId }) => {
 
     let updatedPopups: Popup[];
     if (editingPopup) {
-      updatedPopups = popups.map((p) =>
-        p.id === editingPopup.id
-          ? { ...p, ...formData, updatedAt: new Date().toISOString(), status: (formData.status || 'Draft') as 'Draft' | 'Publish' } as Popup
-          : p
-      );
+      updatedPopups = popups.map((p) => {
+        if (p.id === editingPopup.id) {
+          const status = (formData.status || 'Draft') as 'Draft' | 'Publish';
+          return {
+            ...p,
+            name: formData.name || p.name,
+            image: formData.image || p.image,
+            url: formData.url || p.url,
+            urlType: (formData.urlType || p.urlType) as 'Internal' | 'External',
+            priority: formData.priority ?? p.priority,
+            status,
+            updatedAt: new Date().toISOString(),
+          };
+        }
+        return p;
+      });
     } else {
       const newPopup: Popup = {
         name: formData.name || '',
@@ -134,7 +145,7 @@ const AdminPopups: React.FC<AdminPopupsProps> = ({ onBack, tenantId }) => {
   );
 
   const toggleStatus = async (popup: Popup) => {
-    const newStatus = popup.status === 'Draft' ? 'Publish' : 'Draft';
+    const newStatus: 'Draft' | 'Publish' = popup.status === 'Draft' ? 'Publish' : 'Draft';
     const updatedPopups = popups.map((p) =>
       p.id === popup.id ? { ...p, status: newStatus, updatedAt: new Date().toISOString() } : p
     );

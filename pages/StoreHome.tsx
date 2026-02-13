@@ -314,7 +314,6 @@ const StoreHome: React.FC<StoreHomeProps> = ({
     <div className="min-h-screen font-sans text-slate-900" style={{ background: 'linear-gradient(to bottom, #f0f4f8, #e8ecf1)' }}>
       <StoreHeader 
         onTrackOrder={() => setIsTrackOrderOpen(true)} 
-        // onImageSearchClick={onImageSearchClick}
         productCatalog={activeProducts}
         wishlistCount={wishlistCount}
         wishlist={wishlist}
@@ -341,6 +340,7 @@ const StoreHome: React.FC<StoreHomeProps> = ({
         brands={brands}
         tags={tags}
         onMobileMenuOpenRef={onMobileMenuOpenRef}
+        tenantId={tenantId}
       />
       
       {/* Track Order Modal */}

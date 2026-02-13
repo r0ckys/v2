@@ -319,6 +319,7 @@ const AdminWebsiteContent: React.FC<AdminWebsiteContentProps> = ({
             logo={logo}
             onUpdateLogo={onUpdateLogo}
             tenantId={tenantId}
+            onSave={onUpdateWebsiteConfig}
           />
         )}
 
@@ -326,6 +327,7 @@ const AdminWebsiteContent: React.FC<AdminWebsiteContentProps> = ({
           <ChatSettingsTab
             websiteConfiguration={websiteConfiguration}
             setWebsiteConfiguration={setWebsiteConfiguration}
+            onSave={onUpdateWebsiteConfig}
           />
         )}
       </div>
