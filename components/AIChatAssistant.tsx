@@ -13,6 +13,29 @@ import {
 import { getAuthHeader } from '../services/authService';
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
+// SN Intelligence Icon
+const SNIntelligenceIcon = ({ className = "" }: { className?: string }) => (
+  <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+    <path d="M10 12H22M10 17.3333H17.3333" stroke="url(#paint0_linear_sn)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M26 2L26.2947 2.79661C26.6813 3.84117 26.8745 4.36345 27.2555 4.74445C27.6366 5.12545 28.1589 5.31871 29.2034 5.70523L30 6L29.2034 6.29477C28.1589 6.68129 27.6366 6.87456 27.2555 7.25555C26.8745 7.63655 26.6813 8.15883 26.2947 9.20339L26 10L25.7053 9.20339C25.3187 8.15883 25.1255 7.63655 24.7445 7.25555C24.3634 6.87456 23.8411 6.68129 22.7966 6.29477L22 6L22.7966 5.70523C23.8411 5.31871 24.3634 5.12545 24.7445 4.74445C25.1255 4.36345 25.3187 3.84117 25.7053 2.79661L26 2Z" stroke="url(#paint1_linear_sn)" strokeWidth="1.5" strokeLinejoin="round"/>
+    <path d="M18.6257 4.02468C17.7677 4.00841 16.8912 4 16 4C14.0279 4 12.1269 4.0412 10.3416 4.11759C7.0876 4.2568 5.4606 4.32641 4.17343 5.62327C2.88625 6.92012 2.83043 8.50244 2.71879 11.6671C2.68461 12.6357 2.66667 13.6389 2.66667 14.6667C2.66667 15.6944 2.68461 16.6976 2.71879 17.6663C2.83043 20.8309 2.88625 22.4132 4.17343 23.71C5.4606 25.0069 7.08759 25.0765 10.3416 25.2157C10.4495 25.2204 10.5579 25.2248 10.6667 25.2292V28.3601C10.6667 28.8976 11.1024 29.3333 11.6399 29.3333C11.8723 29.3333 12.097 29.2501 12.2734 29.0989L15.1793 26.6071C15.91 25.9807 16.2752 25.6675 16.7093 25.5021C17.1435 25.3368 17.6376 25.3273 18.6257 25.3087C19.6664 25.2889 20.6797 25.2576 21.6583 25.2157C24.9124 25.0765 26.5395 25.0069 27.8265 23.7101C29.1137 22.4132 29.1696 20.8309 29.2812 17.6663C29.3153 16.6976 29.3333 15.6944 29.3333 14.6667C29.3333 13.9884 29.3255 13.3207 29.3104 12.6667" stroke="url(#paint2_linear_sn)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+    <defs>
+      <linearGradient id="paint0_linear_sn" x1="10" y1="14.6667" x2="22" y2="14.6667" gradientUnits="userSpaceOnUse">
+        <stop stopColor="#38BDF8"/>
+        <stop offset="1" stopColor="#1E90FF"/>
+      </linearGradient>
+      <linearGradient id="paint1_linear_sn" x1="26" y1="2" x2="26" y2="10" gradientUnits="userSpaceOnUse">
+        <stop stopColor="#FF6A00"/>
+        <stop offset="1" stopColor="#FF9F1C"/>
+      </linearGradient>
+      <linearGradient id="paint2_linear_sn" x1="2.66667" y1="16.6667" x2="29.3333" y2="16.6667" gradientUnits="userSpaceOnUse">
+        <stop stopColor="#38BDF8"/>
+        <stop offset="1" stopColor="#1E90FF"/>
+      </linearGradient>
+    </defs>
+  </svg>
+);
+
 interface Message {
   id: string;
   role: 'user' | 'assistant';
@@ -587,14 +610,10 @@ export const AIChatAssistant: React.FC<AIChatAssistantProps> = ({ tenantId, shop
     return (
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-violet-600 to-purple-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all flex items-center justify-center z-50 hover:scale-105 overflow-hidden"
+        className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 w-14 h-14 sm:w-16 sm:h-16 bg-white/20 backdrop-blur-xl border border-white/30 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] hover:shadow-[0_8px_40px_rgba(56,189,248,0.25)] transition-all flex items-center justify-center z-50 hover:scale-105 hover:bg-white/30"
       >
-        <img 
-          src="https://hdnfltv.com/image/nitimages/Gemini_Generated_Image_kzl6ldkzl6ldkzl6_1769128034.webp" 
-          alt="SN Assistant" 
-          className="w-full h-full object-cover rounded-full"
-        />
-        <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full animate-pulse" />
+        <SNIntelligenceIcon className="w-8 h-8 sm:w-9 sm:h-9" />
+        <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full animate-pulse ring-2 ring-white/50" />
       </button>
     );
   }
@@ -632,12 +651,8 @@ export const AIChatAssistant: React.FC<AIChatAssistantProps> = ({ tenantId, shop
         <div className="flex-1 overflow-y-auto bg-white">
           {messages.length === 0 && !imageAnalysis ? (
             <div className="h-full flex flex-col items-center justify-center p-6">
-              <div className="w-16 h-16 bg-violet-100 rounded-2xl flex items-center justify-center mb-4 overflow-hidden">
-                <img 
-                  src="https://hdnfltv.com/image/nitimages/Gemini_Generated_Image_kzl6ldkzl6ldkzl6_1769128034.webp" 
-                  alt="SN Assistant" 
-                  className="w-full h-full object-cover rounded-2xl"
-                />
+              <div className="w-16 h-16 bg-violet-100 rounded-2xl flex items-center justify-center mb-4">
+                <SNIntelligenceIcon className="w-10 h-10" />
               </div>
               <h3 className="font-semibold text-gray-900 text-lg mb-1">Hi there! 👋</h3>
               <p className="text-gray-500 text-sm text-center mb-6 max-w-[280px]">

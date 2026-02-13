@@ -172,6 +172,7 @@ interface AdminLayoutProps {
   onOpenChatCenter?: () => void;
   hasUnreadChat?: boolean;
   userPermissions?: PermissionMap;
+  onOrderNotificationClick?: (orderId: string) => void;
 }
 
 const AdminLayout: React.FC<AdminLayoutProps> = ({
@@ -189,7 +190,8 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
   isTenantSwitching,
   onOpenChatCenter,
   hasUnreadChat,
-  userPermissions = {}
+  userPermissions = {},
+  onOrderNotificationClick
 }) => {
   const highlightPage = activePage.startsWith('settings') ? 'settings' : activePage;
   const [resolvedSubdomain, setResolvedSubdomain] = useState<string>('');
@@ -260,6 +262,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
         notificationCount: unreadCount,
         notifications: notifications,
         onMarkNotificationRead: markAsRead,
+        onOrderNotificationClick: onOrderNotificationClick,
         // Chat props
         unreadChatCount: hasUnreadChat ? 1 : 0,
         onChatClick: onOpenChatCenter
@@ -448,6 +451,14 @@ const AdminApp: React.FC<AdminAppProps> = ({
   onAddOrder,
 }) => {
   const [adminSection, setAdminSectionInternal] = useState(() => getPageFromUrl());
+  const [selectedOrderIdFromNotification, setSelectedOrderIdFromNotification] = useState<string | null>(null);
+
+  // Handler for when an order notification is clicked
+  const handleOrderNotificationClick = useCallback((orderId: string) => {
+    setSelectedOrderIdFromNotification(orderId);
+    setAdminSectionInternal('orders');
+    window.history.pushState({ page: 'orders' }, '', '/admin/orders');
+  }, []);
 
   // Wrapper that checks permission before navigating and updates URL
   const setAdminSection = (page: string) => {
@@ -719,11 +730,12 @@ const AdminApp: React.FC<AdminAppProps> = ({
         onOpenChatCenter={onOpenAdminChat}
         hasUnreadChat={hasUnreadChat}
         userPermissions={userPermissions}
+        onOrderNotificationClick={handleOrderNotificationClick}
       >
         <Suspense fallback={<PageLoadingFallback section={adminSection} />}>
           {
-            adminSection === 'orders' ? <FigmaOrderList orders={orders} courierConfig={courierConfig} onUpdateOrder={onUpdateOrder} products={products} tenantId={activeTenantId} onNewOrder={onAddOrder} /> :
-              adminSection === 'products' ? <FigmaProductList products={products} categories={categories} brands={brands} onAddProduct={() => { setEditingProduct(null); setAdminSection('product-upload'); }} onEditProduct={(p) => { setEditingProduct(p); setAdminSection('product-upload'); }} onDeleteProduct={onDeleteProduct} onCloneProduct={(p) => onAddProduct({ ...p, id: Date.now(), name: p.name + ' (Copy)' })} onBulkDelete={onBulkDeleteProducts} onBulkStatusUpdate={(ids, status) => onBulkUpdateProducts(ids, { status })} onBulkFlashSale={onBulkFlashSale} /> :
+            adminSection === 'orders' ? <FigmaOrderList orders={orders} courierConfig={courierConfig} onUpdateOrder={onUpdateOrder} products={products} tenantId={activeTenantId} onNewOrder={onAddOrder} initialSelectedOrderId={selectedOrderIdFromNotification} onClearSelectedOrderId={() => setSelectedOrderIdFromNotification(null)} /> :
+              adminSection === 'products' ? <FigmaProductList products={products} categories={categories} brands={brands} onAddProduct={() => { setEditingProduct(null); setAdminSection('product-upload'); }} onEditProduct={(p) => { setEditingProduct(p); setAdminSection('product-upload'); }} onDeleteProduct={onDeleteProduct} onCloneProduct={(p) => onAddProduct({ ...p, id: Date.now(), name: p.name + ' (Copy)' })} onBulkDelete={onBulkDeleteProducts} onBulkStatusUpdate={(ids, status) => onBulkUpdateProducts(ids, { status })} onBulkFlashSale={onBulkFlashSale} onBulkImport={(importedProducts) => { importedProducts.forEach(product => onAddProduct(product)); }} /> :
                 adminSection === 'product-upload' ? <FigmaProductUpload categories={categories} subCategories={subCategories} childCategories={childCategories} brands={brands} tags={tags} onAddProduct={editingProduct ? onUpdateProduct : onAddProduct} onBack={() => { setEditingProduct(null); setAdminSection('products'); }} onNavigate={setAdminSection} editProduct={editingProduct} /> :
                   adminSection === 'store_studio' ? <StoreStudioManager tenantId={activeTenantId} onBack={() => setAdminSection('manage_shop')} products={products} /> :
                   adminSection === 'landing_pages' ? <AdminLandingPage tenantSubdomain={selectedTenantRecord?.subdomain || ''} products={products} landingPages={landingPages} onCreateLandingPage={onCreateLandingPage} onUpdateLandingPage={onUpsertLandingPage} onTogglePublish={onToggleLandingPublish} onPreviewLandingPage={handlePreviewLandingPage} /> :

@@ -49,6 +49,7 @@ const AdminCatalog: React.FC<AdminCatalogProps> = ({
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
   const [openActionMenu, setOpenActionMenu] = useState<string | null>(null);
+  const [actionMenuPosition, setActionMenuPosition] = useState<{ top: number; left: number } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Tab navigation
@@ -136,6 +137,7 @@ const AdminCatalog: React.FC<AdminCatalogProps> = ({
       case 'catalog_tags': onDeleteTag(id); break;
     }
     setOpenActionMenu(null);
+    setActionMenuPosition(null);
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -154,7 +156,10 @@ const AdminCatalog: React.FC<AdminCatalogProps> = ({
 
   // Close action menu when clicking outside
   useEffect(() => {
-    const handleClickOutside = () => setOpenActionMenu(null);
+    const handleClickOutside = () => {
+      setOpenActionMenu(null);
+      setActionMenuPosition(null);
+    };
     if (openActionMenu) document.addEventListener('click', handleClickOutside);
     return () => document.removeEventListener('click', handleClickOutside);
   }, [openActionMenu]);
@@ -340,29 +345,26 @@ const AdminCatalog: React.FC<AdminCatalogProps> = ({
                         </span>
                       </td>
                       <td className="px-3 sm:px-4 py-3 sm:py-4">
-                        <div className="flex justify-center relative">
+                        <div className="flex justify-center">
                           <button
-                            onClick={(e) => { e.stopPropagation(); setOpenActionMenu(openActionMenu === item.id ? null : item.id); }}
+                            onClick={(e) => { 
+                              e.stopPropagation(); 
+                              if (openActionMenu === item.id) {
+                                setOpenActionMenu(null);
+                                setActionMenuPosition(null);
+                              } else {
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                setActionMenuPosition({
+                                  top: rect.bottom + 4,
+                                  left: rect.right - 144 // dropdown width is 144px (w-36)
+                                });
+                                setOpenActionMenu(item.id);
+                              }
+                            }}
                             className="p-1.5 hover:bg-gray-100 rounded transition"
                           >
                             <MoreVertical size={16} className="text-gray-400" />
                           </button>
-                          {openActionMenu === item.id && (
-                            <div className="absolute right-0 top-full mt-1 w-36 bg-white border border-gray-200 rounded-lg z-[100] py-2" style={{ boxShadow: '0 10px 40px rgba(0,0,0,0.2)' }}>
-                              <button
-                                onClick={() => { handleOpenModal(item); setOpenActionMenu(null); }}
-                                className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-blue-50 flex items-center gap-3 font-medium transition-colors"
-                              >
-                                <Edit size={15} className="text-blue-500" /> Edit
-                              </button>
-                              <button
-                                onClick={() => handleDelete(item.id)}
-                                className="w-full px-4 py-2.5 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-3 font-medium transition-colors"
-                              >
-                                <Trash2 size={15} /> Delete
-                              </button>
-                            </div>
-                          )}
                         </div>
                       </td>
                     </tr>
@@ -421,29 +423,26 @@ const AdminCatalog: React.FC<AdminCatalogProps> = ({
                             }`}>
                               {item.status === 'Active' ? 'Publish' : 'Inactive'}
                             </span>
-                            <div className="relative">
+                            <div>
                               <button
-                                onClick={(e) => { e.stopPropagation(); setOpenActionMenu(openActionMenu === item.id ? null : item.id); }}
+                                onClick={(e) => { 
+                                  e.stopPropagation(); 
+                                  if (openActionMenu === item.id) {
+                                    setOpenActionMenu(null);
+                                    setActionMenuPosition(null);
+                                  } else {
+                                    const rect = e.currentTarget.getBoundingClientRect();
+                                    setActionMenuPosition({
+                                      top: rect.bottom + 4,
+                                      left: rect.right - 144
+                                    });
+                                    setOpenActionMenu(item.id);
+                                  }
+                                }}
                                 className="p-1 hover:bg-gray-100 rounded transition"
                               >
                                 <MoreVertical size={16} className="text-gray-400" />
                               </button>
-                              {openActionMenu === item.id && (
-                                <div className="absolute right-0 top-full mt-1 w-36 bg-white border border-gray-200 rounded-lg z-[100] py-2" style={{ boxShadow: '0 10px 40px rgba(0,0,0,0.2)' }}>
-                                  <button
-                                    onClick={() => { handleOpenModal(item); setOpenActionMenu(null); }}
-                                    className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-blue-50 flex items-center gap-3 font-medium transition-colors"
-                                  >
-                                    <Edit size={15} className="text-blue-500" /> Edit
-                                  </button>
-                                  <button
-                                    onClick={() => handleDelete(item.id)}
-                                    className="w-full px-4 py-2.5 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-3 font-medium transition-colors"
-                                  >
-                                    <Trash2 size={15} /> Delete
-                                  </button>
-                                </div>
-                              )}
                             </div>
                           </div>
                         </div>
@@ -514,6 +513,36 @@ const AdminCatalog: React.FC<AdminCatalogProps> = ({
           )}
         </div>
       </div>
+
+      {/* Fixed Action Dropdown (Portal) */}
+      {openActionMenu && actionMenuPosition && (() => {
+        const activeItem = displayData.find(item => item.id === openActionMenu);
+        if (!activeItem) return null;
+        return (
+          <div 
+            className="fixed z-[9999] w-36 bg-white border border-gray-200 rounded-lg py-2"
+            style={{ 
+              top: actionMenuPosition.top, 
+              left: actionMenuPosition.left,
+              boxShadow: '0 10px 40px rgba(0,0,0,0.2)' 
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => { handleOpenModal(activeItem); setOpenActionMenu(null); setActionMenuPosition(null); }}
+              className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-blue-50 flex items-center gap-3 font-medium transition-colors"
+            >
+              <Edit size={15} className="text-blue-500" /> Edit
+            </button>
+            <button
+              onClick={() => { handleDelete(activeItem.id); setActionMenuPosition(null); }}
+              className="w-full px-4 py-2.5 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-3 font-medium transition-colors"
+            >
+              <Trash2 size={15} /> Delete
+            </button>
+          </div>
+        );
+      })()}
 
       {/* Modal */}
       {isModalOpen && (

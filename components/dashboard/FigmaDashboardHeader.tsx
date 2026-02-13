@@ -157,6 +157,7 @@ const FigmaDashboardHeader: React.FC<DashboardHeaderProps> = ({
   onNotificationClick,
   notifications = [],
   onMarkNotificationRead,
+  onOrderNotificationClick,
   // Chat props
   unreadChatCount = 0,
   onChatClick
@@ -456,7 +457,15 @@ const FigmaDashboardHeader: React.FC<DashboardHeaderProps> = ({
                           className={`p-3 border-b border-gray-50 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors ${
                             !notification.isRead ? 'bg-blue-50/50 dark:bg-blue-900/20' : ''
                           }`}
-                          onClick={() => onMarkNotificationRead?.([notification._id])}
+                          onClick={() => {
+                            // Mark as read
+                            onMarkNotificationRead?.([notification._id]);
+                            // If it's an order notification, open order details
+                            if (notification.type === 'order' && notification.data?.orderId && onOrderNotificationClick) {
+                              onOrderNotificationClick(notification.data.orderId);
+                              setShowNotificationDropdown(false);
+                            }
+                          }}
                         >
                           <div className="flex items-start gap-3">
                             <div className="flex-shrink-0 mt-0.5">

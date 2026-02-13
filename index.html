@@ -1,7 +1,28 @@
 <!DOCTYPE html>
-<html lang="en" style="background:#f9fafb">
+<html lang="en">
 
 <head>
+  <!-- Dark mode initialization - must be first to prevent flash -->
+  <script>
+    (function() {
+      try {
+        var darkMode = localStorage.getItem('admin-dark-mode');
+        console.log('[DarkMode HTML] localStorage value:', darkMode);
+        if (darkMode === 'true') {
+          document.documentElement.classList.add('dark');
+          document.documentElement.style.background = '#111827';
+          document.documentElement.style.colorScheme = 'dark';
+          console.log('[DarkMode HTML] Applied dark mode');
+        } else {
+          document.documentElement.style.background = '#f9fafb';
+          document.documentElement.style.colorScheme = 'light';
+          console.log('[DarkMode HTML] Applied light mode');
+        }
+      } catch (e) {
+        console.log('[DarkMode HTML] Error:', e);
+      }
+    })();
+  </script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SystemNext IT | Innovative IT Solutions & Digital Transformation</title>

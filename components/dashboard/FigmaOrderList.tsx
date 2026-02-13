@@ -69,6 +69,8 @@ interface FigmaOrderListProps {
   products?: Product[];
   tenantId?: string;
   onNewOrder?: (order: Order) => void;
+  initialSelectedOrderId?: string | null;
+  onClearSelectedOrderId?: () => void;
 }
 
 const FigmaOrderList: React.FC<FigmaOrderListProps> = ({
@@ -78,7 +80,9 @@ const FigmaOrderList: React.FC<FigmaOrderListProps> = ({
   onAddOrder,
   products = [],
   tenantId: propTenantId,
-  onNewOrder
+  onNewOrder,
+  initialSelectedOrderId,
+  onClearSelectedOrderId
 }) => {
   const [activeTab, setActiveTab] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
@@ -173,6 +177,18 @@ const FigmaOrderList: React.FC<FigmaOrderListProps> = ({
     };
     loadPathaoConfig();
   }, []);
+
+  // Handle initial selected order from notification click
+  useEffect(() => {
+    if (initialSelectedOrderId && propOrders.length > 0) {
+      const orderToOpen = propOrders.find(o => o.id === initialSelectedOrderId);
+      if (orderToOpen) {
+        setDetailsOrder(orderToOpen);
+        // Clear the selection so it doesn't reopen on re-render
+        onClearSelectedOrderId?.();
+      }
+    }
+  }, [initialSelectedOrderId, propOrders, onClearSelectedOrderId]);
 
   const orders = propOrders;
 

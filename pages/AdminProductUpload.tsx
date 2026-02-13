@@ -181,17 +181,49 @@ const AdminProductUpload: React.FC<AdminProductUploadProps> = ({
   };
 
   const handleSaveDraft = () => {
-    // Save to localStorage
-    const drafts = JSON.parse(localStorage.getItem(`drafts_${tenantId}`) || '[]');
-    const draftId = `draft_${Date.now()}`;
-    drafts.push({
-      id: draftId,
-      data: formData,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    });
-    localStorage.setItem(`drafts_${tenantId}`, JSON.stringify(drafts));
-    toast.success('Draft saved successfully');
+    // Create draft product with whatever info has been entered (no validation for drafts)
+    const draftProduct: Product = {
+      id: initialProduct?.id || Date.now(),
+      name: formData.name || 'Untitled Draft',
+      slug: formData.slug || `draft-${Date.now()}`,
+      description: formData.description,
+      image: formData.mainImage,
+      galleryImages: formData.galleryImages,
+      price: formData.salesPrice || 0,
+      originalPrice: formData.regularPrice || 0,
+      costPrice: formData.costPrice || 0,
+      category: formData.category,
+      subCategory: formData.subCategory,
+      childCategory: formData.childCategory,
+      brand: formData.brand,
+      sku: formData.sku,
+      stock: formData.quantity || 0,
+      colors: initialProduct?.colors || [],
+      sizes: initialProduct?.sizes || [],
+      status: 'Draft',
+      tags: formData.tags
+    };
+
+    // Save to backend via onSubmit or onAddProduct
+    if (onSubmit) {
+      onSubmit(draftProduct);
+      toast.success('Draft saved successfully');
+    } else if (onAddProduct) {
+      onAddProduct(draftProduct);
+      toast.success('Draft saved successfully');
+    } else {
+      // Fallback: Save to localStorage if no backend handler
+      const drafts = JSON.parse(localStorage.getItem(`drafts_${tenantId}`) || '[]');
+      const draftId = `draft_${Date.now()}`;
+      drafts.push({
+        id: draftId,
+        data: formData,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      });
+      localStorage.setItem(`drafts_${tenantId}`, JSON.stringify(drafts));
+      toast.success('Draft saved to local storage');
+    }
   };
 
   const handleAddProduct = async () => {

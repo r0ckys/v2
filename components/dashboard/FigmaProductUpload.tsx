@@ -723,14 +723,48 @@ const FigmaProductUpload: React.FC<FigmaProductUploadProps> = ({
   };
 
   const handleSaveDraft = () => {
-    const drafts = JSON.parse(localStorage.getItem(`drafts_${tenantId}`) || '[]');
-    drafts.push({
-      id: `draft_${Date.now()}`,
-      data: formData,
-      createdAt: new Date().toISOString()
-    });
-    localStorage.setItem(`drafts_${tenantId}`, JSON.stringify(drafts));
+    // Create draft product with whatever info has been entered (no validation required)
+    const validVariants = formData.variants
+      .filter(v => v.title.trim() && v.options.some(o => o.attribute.trim()))
+      .map(v => ({
+        title: v.title.trim(),
+        isMandatory: formData.variantsMandatory,
+        options: v.options
+          .filter(o => o.attribute.trim())
+          .map(o => ({
+            attribute: o.attribute.trim(),
+            extraPrice: o.extraPrice || 0,
+            image: o.image
+          }))
+      }));
+
+    const draftProduct: Product = {
+      id: editProduct?.id || Date.now(),
+      name: formData.name || 'Untitled Draft',
+      slug: formData.slug || `draft-${Date.now()}`,
+      description: formData.description,
+      image: formData.mainImage,
+      galleryImages: formData.galleryImages,
+      price: formData.salesPrice || 0,
+      originalPrice: formData.regularPrice || 0,
+      costPrice: formData.costPrice || 0,
+      category: formData.category,
+      subCategory: formData.subCategory,
+      childCategory: formData.childCategory,
+      brand: formData.brandName,
+      sku: formData.sku,
+      stock: formData.quantity || 0,
+      status: 'Draft',
+      tags: formData.tag ? [formData.tag] : [],
+      tenantId: tenantId,
+      shopName: formData.shopName,
+      variantGroups: validVariants.length > 0 ? validVariants : undefined
+    };
+
+    // Save to backend via onAddProduct
+    onAddProduct(draftProduct);
     toast.success('Draft saved!');
+    onBack?.();
   };
 
   const handlePublish = () => {

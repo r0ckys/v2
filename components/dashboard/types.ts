@@ -35,6 +35,7 @@ export interface DashboardHeaderProps {
     data?: Record<string, any>;
   }>;
   onMarkNotificationRead?: (ids?: string[]) => void;
+  onOrderNotificationClick?: (orderId: string) => void;
   // Chat props
   unreadChatCount?: number;
   onChatClick?: () => void;

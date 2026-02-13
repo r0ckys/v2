@@ -10,34 +10,63 @@ const DarkModeContext = createContext<DarkModeContextValue | null>(null);
 
 const DARK_MODE_KEY = 'admin-dark-mode';
 
+// Helper to check localStorage synchronously
+const getInitialDarkMode = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  try {
+    const saved = localStorage.getItem(DARK_MODE_KEY);
+    console.log('[DarkMode] Init - localStorage value:', saved);
+    if (saved !== null) {
+      const result = saved === 'true';
+      console.log('[DarkMode] Using saved value:', result);
+      return result;
+    }
+    const systemPref = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    console.log('[DarkMode] Using system preference:', systemPref);
+    return systemPref;
+  } catch (e) {
+    console.log('[DarkMode] Error reading localStorage:', e);
+    return false;
+  }
+};
+
+// Apply dark mode class synchronously to prevent flash
+const applyDarkModeClass = (isDark: boolean) => {
+  if (typeof document === 'undefined') return;
+  const root = document.documentElement;
+  if (isDark) {
+    root.classList.add('dark');
+    root.style.background = '#111827';
+    root.style.colorScheme = 'dark';
+  } else {
+    root.classList.remove('dark');
+    root.style.background = '#f9fafb';
+    root.style.colorScheme = 'light';
+  }
+};
+
 interface DarkModeProviderProps {
   children: React.ReactNode;
 }
 
 export const DarkModeProvider: React.FC<DarkModeProviderProps> = ({ children }) => {
+  // Initialize with localStorage value synchronously to prevent flash
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
-    // Check localStorage on initial load
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem(DARK_MODE_KEY);
-      if (saved !== null) {
-        return saved === 'true';
-      }
-      // Check system preference
-      return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const initial = getInitialDarkMode();
+    // Apply immediately during state initialization
+    if (typeof document !== 'undefined') {
+      applyDarkModeClass(initial);
     }
-    return false;
+    return initial;
   });
 
-  // Apply dark mode class to document
+  // Apply dark mode class to document whenever isDarkMode changes
   useEffect(() => {
-    const root = document.documentElement;
-    if (isDarkMode) {
-      root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
-    }
+    applyDarkModeClass(isDarkMode);
     // Persist to localStorage
-    localStorage.setItem(DARK_MODE_KEY, String(isDarkMode));
+    try {
+      localStorage.setItem(DARK_MODE_KEY, String(isDarkMode));
+    } catch {}
   }, [isDarkMode]);
 
   const toggleDarkMode = useCallback(() => {

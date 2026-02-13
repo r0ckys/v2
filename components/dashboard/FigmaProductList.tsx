@@ -65,6 +65,7 @@ interface FigmaProductListProps {
   onBulkDiscount?: (ids: number[], discount: number) => void;
   onImport?: () => void;
   onExport?: () => void;
+  onBulkImport?: (products: Product[]) => void;
 }
 
 const FigmaProductList: React.FC<FigmaProductListProps> = ({
@@ -80,7 +81,8 @@ const FigmaProductList: React.FC<FigmaProductListProps> = ({
   onBulkFlashSale,
   onBulkDiscount,
   onImport,
-  onExport
+  onExport,
+  onBulkImport
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -137,6 +139,11 @@ const FigmaProductList: React.FC<FigmaProductListProps> = ({
     toast.success(`Exported ${propProducts.length} products`);
   }, [propProducts]);
 
+  // Generate unique ID using timestamp + random number
+  const generateUniqueId = useCallback((): number => {
+    return Date.now() + Math.floor(Math.random() * 10000);
+  }, []);
+
   // Import products from CSV
   const handleImportCSV = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -149,8 +156,55 @@ const FigmaProductList: React.FC<FigmaProductListProps> = ({
         header: true,
         skipEmptyLines: true,
         complete: (results) => {
-          toast.success(`Parsed ${results.data.length} products from CSV. Connect import handler to save.`);
-          console.log('Imported data:', results.data);
+          try {
+            // Get existing product IDs to avoid duplicates
+            const existingIds = new Set(propProducts.map(p => p.id));
+            
+            const importedProducts: Product[] = results.data.map((row: any) => {
+              // Generate unique ID, ensuring no collision with existing products
+              let newId = generateUniqueId();
+              while (existingIds.has(newId)) {
+                newId = generateUniqueId();
+              }
+              existingIds.add(newId);
+              
+              return {
+                id: newId,
+                name: row.name || row.Name || row.product_name || 'Unnamed Product',
+                price: parseFloat(row.price || row.Price || row.salesPrice || row.sales_price || '0') || 0,
+                originalPrice: parseFloat(row.originalPrice || row.original_price || row.regularPrice || row.regular_price || '0') || 0,
+                costPrice: parseFloat(row.costPrice || row.cost_price || '0') || 0,
+                image: row.image || row.Image || row.mainImage || row.main_image || '',
+                galleryImages: (row.galleryImages || row.gallery_images || '').split(',').filter(Boolean).map((s: string) => s.trim()),
+                description: row.description || row.Description || '',
+                category: row.category || row.Category || '',
+                subCategory: row.subCategory || row.sub_category || '',
+                childCategory: row.childCategory || row.child_category || '',
+                brand: row.brand || row.Brand || '',
+                sku: row.sku || row.SKU || `SKU-${newId}`,
+                stock: parseInt(row.stock || row.Stock || row.quantity || row.Quantity || '0') || 0,
+                status: (row.status || row.Status || 'Active') as 'Active' | 'Draft',
+                tags: (row.tags || row.Tags || '').split(',').filter(Boolean).map((s: string) => s.trim()),
+                slug: row.slug || row.Slug || (row.name || row.Name || '').toLowerCase().replace(/\s+/g, '-'),
+              };
+            }).filter((p: Product) => p.name !== 'Unnamed Product' || p.price > 0 || p.image);
+
+            if (importedProducts.length === 0) {
+              toast.error('No valid products found in CSV');
+              return;
+            }
+
+            if (onBulkImport) {
+              onBulkImport(importedProducts);
+              toast.success(`Imported ${importedProducts.length} products successfully!`);
+            } else {
+              toast.success(`Parsed ${importedProducts.length} products. Connect onBulkImport handler to save.`);
+              console.log('Import ready:', importedProducts);
+            }
+          } catch (error) {
+            console.error('Error processing CSV:', error);
+            toast.error('Failed to process CSV data');
+          }
         },
         error: (error) => {
           toast.error('Failed to parse CSV file');
@@ -159,7 +213,7 @@ const FigmaProductList: React.FC<FigmaProductListProps> = ({
       });
     }
     if (importInputRef.current) importInputRef.current.value = '';
-  }, [onImport]);
+  }, [onImport, onBulkImport, propProducts, generateUniqueId]);
 
   // Close dropdowns on outside click
   useEffect(() => {
@@ -737,7 +791,7 @@ const FigmaProductList: React.FC<FigmaProductListProps> = ({
                   <DotsIcon />
                 </button>
                 {openDropdownId === productKey && (
-                  <div className="absolute right-0 top-full mt-1 z-50">
+                  <div className="absolute right-0 top-[calc(100%+4px)] z-[9999]">
                     <div className="w-[140px] bg-white dark:bg-gray-800 rounded-lg shadow-xl border dark:border-gray-600 overflow-hidden py-1">
                       <button
                         onClick={() => { onEditProduct?.(product); setOpenDropdownId(null); }}
@@ -810,7 +864,7 @@ const FigmaProductList: React.FC<FigmaProductListProps> = ({
         </div>
       )}
 
-      {/* Grid View - Small Icons */}}
+      {/* Grid View - Small Icons */}
       {viewMode === 'small' && (
         <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-3">
           {paginatedProducts.length > 0 ? paginatedProducts.map((product, idx) => {
@@ -869,8 +923,8 @@ const FigmaProductList: React.FC<FigmaProductListProps> = ({
 
       {/* List View - Table */}
       {viewMode === 'list' && (
-      <div className="overflow-x-auto overflow-y-visible">
-        <table className="w-full text-sm">
+      <div className="overflow-visible min-h-[200px]">
+        <table className="w-full text-sm overflow-visible">
           <thead className="bg-[#E0F2FE] dark:bg-gray-700">
             <tr>
               <th className="px-4 py-3 text-left">
@@ -893,7 +947,7 @@ const FigmaProductList: React.FC<FigmaProductListProps> = ({
               <th className="px-4 py-3 text-center font-medium text-black dark:text-white text-[16px]">Action</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#b9b9b9]/50 dark:divide-gray-700">
+          <tbody className="divide-y divide-[#b9b9b9]/50 dark:divide-gray-700 overflow-visible">
             {paginatedProducts.length > 0 ? paginatedProducts.map((product, index) => {
               const productKey = getProductKey(product, index);
               return (
@@ -962,7 +1016,7 @@ const FigmaProductList: React.FC<FigmaProductListProps> = ({
                       <DotsIcon />
                     </button>
                     {openDropdownId === productKey && (
-                      <div className="absolute right-0 top-full mt-1 z-50">
+                      <div className="absolute right-4 top-[calc(100%+4px)] z-[9999]">
                         <div className="w-[160px] bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-600 overflow-hidden py-2">
                           <button
                             onClick={() => { onEditProduct?.(product); setOpenDropdownId(null); }}

@@ -115,6 +115,7 @@ const FigmaCatalogManager: React.FC<FigmaCatalogManagerProps> = ({
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [openActionMenu, setOpenActionMenu] = useState<string | null>(null);
+  const [actionMenuPosition, setActionMenuPosition] = useState<{ top: number; left: number } | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editItem, setEditItem] = useState<any>(null);
   const [formData, setFormData] = useState<any>({});
@@ -188,6 +189,7 @@ const FigmaCatalogManager: React.FC<FigmaCatalogManagerProps> = ({
       const target = event.target as HTMLElement;
       if (!target.closest('[data-dropdown]')) {
         setOpenActionMenu(null);
+        setActionMenuPosition(null);
         setShowStatusDropdown(false);
         setShowPerPageDropdown(false);
       }
@@ -252,6 +254,7 @@ const FigmaCatalogManager: React.FC<FigmaCatalogManagerProps> = ({
       case 'catalog_tags': onDeleteTag(id); break;
     }
     setOpenActionMenu(null);
+    setActionMenuPosition(null);
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -498,32 +501,27 @@ const FigmaCatalogManager: React.FC<FigmaCatalogManagerProps> = ({
                         {item.status === 'Active' ? 'Publish' : 'Inactive'}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-center relative">
+                    <td className="px-4 py-3 text-center">
                       <div data-dropdown>
                         <button
-                          onClick={(e) => { e.stopPropagation(); setOpenActionMenu(openActionMenu === item.id ? null : item.id); }}
+                          onClick={(e) => { 
+                            e.stopPropagation(); 
+                            if (openActionMenu === item.id) {
+                              setOpenActionMenu(null);
+                              setActionMenuPosition(null);
+                            } else {
+                              const rect = e.currentTarget.getBoundingClientRect();
+                              setActionMenuPosition({
+                                top: rect.bottom + 4,
+                                left: rect.right - 160 // dropdown width is 160px
+                              });
+                              setOpenActionMenu(item.id);
+                            }
+                          }}
                           className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors inline-flex"
                         >
                           <DotsIcon />
                         </button>
-                        {openActionMenu === item.id && (
-                          <div className="absolute right-4 top-full mt-1 z-[100]">
-                            <div className="w-[160px] bg-white dark:bg-gray-800 rounded-lg shadow-2xl border border-gray-200 dark:border-gray-600 py-2" style={{ boxShadow: '0 10px 40px rgba(0,0,0,0.2)' }}>
-                              <button
-                                onClick={() => { handleOpenModal(item); setOpenActionMenu(null); }}
-                                className="flex items-center gap-3 w-full px-4 py-2.5 hover:bg-blue-50 dark:hover:bg-gray-700 text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors"
-                              >
-                                <Edit size={16} className="text-blue-500" /> Edit
-                              </button>
-                              <button
-                                onClick={() => handleDelete(item.id)}
-                                className="flex items-center gap-3 w-full px-4 py-2.5 hover:bg-red-50 dark:hover:bg-red-900/30 text-sm font-medium text-red-600 transition-colors"
-                              >
-                                <Trash2 size={16} /> Delete
-                              </button>
-                            </div>
-                          </div>
-                        )}
                       </div>
                     </td>
                   </tr>
@@ -592,6 +590,36 @@ const FigmaCatalogManager: React.FC<FigmaCatalogManagerProps> = ({
           </div>
         )}
       </div>
+
+      {/* Fixed Action Dropdown (Portal) */}
+      {openActionMenu && actionMenuPosition && (() => {
+        const activeItem = getCurrentData().find(item => item.id === openActionMenu);
+        if (!activeItem) return null;
+        return (
+          <div 
+            data-dropdown
+            className="fixed z-[9999] w-[160px] bg-white dark:bg-gray-800 rounded-lg shadow-2xl border border-gray-200 dark:border-gray-600 py-2"
+            style={{ 
+              top: actionMenuPosition.top, 
+              left: actionMenuPosition.left,
+              boxShadow: '0 10px 40px rgba(0,0,0,0.2)' 
+            }}
+          >
+            <button
+              onClick={() => { handleOpenModal(activeItem); setOpenActionMenu(null); setActionMenuPosition(null); }}
+              className="flex items-center gap-3 w-full px-4 py-2.5 hover:bg-blue-50 dark:hover:bg-gray-700 text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors"
+            >
+              <Edit size={16} className="text-blue-500" /> Edit
+            </button>
+            <button
+              onClick={() => { handleDelete(activeItem.id); setActionMenuPosition(null); }}
+              className="flex items-center gap-3 w-full px-4 py-2.5 hover:bg-red-50 dark:hover:bg-red-900/30 text-sm font-medium text-red-600 transition-colors"
+            >
+              <Trash2 size={16} /> Delete
+            </button>
+          </div>
+        );
+      })()}
 
       {/* Modal */}
       {isModalOpen && (
