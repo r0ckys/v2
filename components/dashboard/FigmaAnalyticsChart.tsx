@@ -122,12 +122,13 @@ const FigmaAnalyticsChart: React.FC<FigmaAnalyticsChartProps> = ({
     return date.toLocaleDateString('en-GB', { month: 'short', day: 'numeric' });
   };
 
-  // Calculate bar height (max 160px, min 60px for visibility)
+  // Calculate bar height (max 160px, min 8px for zero values, min 50px for values with data)
   const getBarHeight = (value: number) => {
     const maxHeight = 160;
-    const minHeight = 60;
-    if (maxValue === 0) return minHeight;
-    return Math.max(minHeight, Math.round((value / maxValue) * maxHeight));
+    const minVisibleHeight = 8; // Very small for zero values
+    if (value === 0) return minVisibleHeight;
+    if (maxValue === 0) return minVisibleHeight;
+    return Math.max(50, Math.round((value / maxValue) * maxHeight));
   };
 
   const handleDateRangeClick = (rangeType: DateRangeType) => {
