@@ -264,6 +264,19 @@ const FigmaOrderList: React.FC<FigmaOrderListProps> = ({
     setFraudResult(null);
   }, []);
 
+  // Ctrl+S keyboard shortcut for save when modal is open
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's' && selectedOrder) {
+        e.preventDefault();
+        handleSaveOrder();
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  });
+
   const handleDraftChange = <K extends keyof Order>(field: K, value: Order[K]) => {
     setDraftOrder((prev) => (prev ? { ...prev, [field]: value } : prev));
   };

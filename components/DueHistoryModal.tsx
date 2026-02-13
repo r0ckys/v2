@@ -3,12 +3,12 @@ import { X, Trash2 } from 'lucide-react';
 import { DueTransaction } from '../types';
 import { dueListService } from '../services/DueListService';
 
-interface Props { isOpen: boolean; onClose: () => void; }
+interface Props { isOpen: boolean; onClose: () => void; onRefresh?: () => void; }
 
-const DueHistoryModal = ({ isOpen, onClose }: Props) => {
+const DueHistoryModal = ({ isOpen, onClose, onRefresh }: Props) => {
   const [transactions, setTransactions] = useState<DueTransaction[]>([]), [loading, setLoading] = useState(false), [filter, setFilter] = useState<'all' | 'Pending' | 'Paid' | 'Cancelled'>('all'), [error, setError] = useState<string | null>(null);
 
-  useEffect(() => { if (isOpen) fetchTransactions(); }, [isOpen]);
+  useEffect(() => { if (isOpen) fetchTransactions(); }, [isOpen, filter]);
 
   const fetchTransactions = async () => {
     setLoading(true); setError(null);
@@ -17,8 +17,19 @@ const DueHistoryModal = ({ isOpen, onClose }: Props) => {
     finally { setLoading(false); }
   };
 
-  const handleStatusChange = async (id: string, status: string) => { try { await dueListService.updateTransactionStatus(id, status); fetchTransactions(); } catch (e) { setError('Failed to update transaction'); } };
-  const handleDelete = async (id: string) => { if (!confirm('Are you sure you want to delete this transaction?')) return; try { await dueListService.deleteTransaction(id); fetchTransactions(); } catch (e) { setError('Failed to delete transaction'); } };
+  const handleStatusChange = async (id: string, status: string) => { try { await dueListService.updateTransactionStatus(id, status); fetchTransactions(); onRefresh?.(); } catch (e) { setError('Failed to update transaction'); } };
+  const handleDelete = async (id: string) => { 
+    if (!id) { setError('Transaction ID is missing'); return; }
+    if (!confirm('Are you sure you want to delete this transaction?')) return; 
+    try { 
+      await dueListService.deleteTransaction(id); 
+      fetchTransactions(); 
+      onRefresh?.();
+    } catch (e) { 
+      console.error('Delete error:', e);
+      setError('Failed to delete transaction'); 
+    } 
+  };
 
   if (!isOpen) return null;
 
@@ -31,7 +42,7 @@ const DueHistoryModal = ({ isOpen, onClose }: Props) => {
         </div>
         <div className="p-6 space-y-4">
           <div className="flex gap-2 border-b border-gray-200 pb-4">
-            {(['all', 'Pending', 'Paid', 'Cancelled'] as const).map(s => <button key={s} onClick={() => { setFilter(s); setTransactions([]); }} className={`px-4 py-2 font-medium transition ${filter === s ? 'text-theme-primary border-b-2 border-theme-primary' : 'text-gray-600 hover:text-gray-900'}`}>{s === 'all' ? 'All Transactions' : s}</button>)}
+            {(['all', 'Pending', 'Paid', 'Cancelled'] as const).map(s => <button key={s} onClick={() => setFilter(s)} className={`px-4 py-2 font-medium transition ${filter === s ? 'text-theme-primary border-b-2 border-theme-primary' : 'text-gray-600 hover:text-gray-900'}`}>{s === 'all' ? 'All Transactions' : s}</button>)}
           </div>
           {error && <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">{error}</div>}
           {loading ? <div className="flex items-center justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-theme-primary"/></div> : transactions.length === 0 ? <div className="flex items-center justify-center py-12 text-gray-500">No transactions found</div> : (

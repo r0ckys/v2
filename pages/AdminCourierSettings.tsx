@@ -130,6 +130,23 @@ const AdminCourierSettings: React.FC<AdminCourierSettingsProps> = ({ config, onS
     loadConfig();
   }, []);
 
+  // Keyboard shortcut for save (Ctrl+S / Cmd+S)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        // Create a synthetic form event to trigger save
+        const form = document.querySelector('form');
+        if (form) {
+          form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+        }
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSaving) return;

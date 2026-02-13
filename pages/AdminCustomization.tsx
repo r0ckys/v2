@@ -304,6 +304,21 @@ const AdminCustomization: React.FC<AdminCustomizationProps> = ({
   };
 
   // ---------------------------------------------------------------------------
+  // Ctrl+S Keyboard Shortcut for Save
+  // ---------------------------------------------------------------------------
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        handleSaveChanges();
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  });
+
+  // ---------------------------------------------------------------------------
   // Render
   // ---------------------------------------------------------------------------
 

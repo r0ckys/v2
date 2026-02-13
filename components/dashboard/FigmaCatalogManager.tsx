@@ -412,8 +412,8 @@ const FigmaCatalogManager: React.FC<FigmaCatalogManagerProps> = ({
         </div>
 
         {/* Data Table */}
-        <div className="bg-white overflow-hidden">
-          <div className="overflow-x-auto">
+        <div className="bg-white">
+          <div className="overflow-x-auto overflow-y-visible">
             <table className="w-full text-sm">
               {/* Table Header - Gradient Background */}
               <thead className="bg-[#E0F2FE]">

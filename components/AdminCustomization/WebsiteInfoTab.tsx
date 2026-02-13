@@ -528,6 +528,19 @@ export const WebsiteInfoTab: React.FC<WebsiteInfoTabProps> = ({
     }
   }, [onSave, websiteConfiguration]);
 
+  // Keyboard shortcut for save (Ctrl+S / Cmd+S)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        handleSave();
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleSave]);
+
   const handleImageUpload = async (
     event: React.ChangeEvent<HTMLInputElement>,
     imageType: 'logo' | 'favicon' | 'headerLogo' | 'footerLogo'

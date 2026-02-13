@@ -234,7 +234,7 @@ export const OfferPageManager: React.FC<OfferPageManagerProps> = ({
         </div>
 
         {/* Table */}
-        <div className="bg-white rounded-lg overflow-hidden flex flex-col min-h-[500px]">
+        <div className="bg-white rounded-lg flex flex-col min-h-[500px]">
           {isLoading ? (
             <div className="p-8 text-center flex-1 flex flex-col items-center justify-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#38bdf8] mx-auto"></div>

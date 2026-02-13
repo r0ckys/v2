@@ -271,9 +271,9 @@ const AdminCatalog: React.FC<AdminCatalogProps> = ({
 
       {/* Data Table */}
       <div className="p-3 sm:p-4 md:p-6">
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
           {/* Desktop Table View */}
-          <div className="hidden md:block overflow-x-auto">
+          <div className="hidden md:block overflow-x-auto overflow-y-visible">
             <table className="w-full">
               <thead>
                 <tr className="bg-cyan-50/60">

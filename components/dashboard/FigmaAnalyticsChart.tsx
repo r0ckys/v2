@@ -244,9 +244,9 @@ const FigmaAnalyticsChart: React.FC<FigmaAnalyticsChartProps> = ({
       </div>
 
       {/* Chart */}
-      <div className="w-full min-h-[280px] sm:min-h-[320px] relative bg-white dark:bg-gray-800 rounded-lg overflow-x-auto">
-        <div className="absolute left-[10px] top-1/3 flex items-center gap-2">
-          <div className="origin-center -rotate-90 text-center text-neutral-600 dark:text-gray-400 text-xs font-normal font-['DM_Sans'] whitespace-nowrap">Units of measure</div>
+      <div className="w-full min-h-[280px] sm:min-h-[320px] relative bg-white dark:bg-gray-800 rounded-lg overflow-x-auto overflow-y-visible">
+        <div className="absolute left-0 top-1/3 flex items-center gap-2 z-10">
+          <div className="origin-center -rotate-90 text-center text-neutral-600 dark:text-gray-400 text-xs font-normal font-['DM_Sans'] whitespace-nowrap" style={{ marginLeft: '-28px' }}>Units of measure</div>
           <div className="w-px h-40 bg-stone-300 dark:bg-gray-600" />
         </div>
         

@@ -6,11 +6,11 @@ import { THEME_DEMO_IMAGES } from './constants';
 // Figma-styled section configuration
 const FIGMA_THEME_SECTIONS = [
   { title: 'Header Section', key: 'headerStyle', count: 5, layout: 'full' },
-  { title: 'Showcase Section', key: 'showcaseSectionStyle', count: 5, layout: 'grid' },
+  // { title: 'Showcase Section', key: 'showcaseSectionStyle', count: 5, layout: 'grid' },
   { title: 'Category Section', key: 'categorySectionStyle', count: 5, layout: 'grid' },
-  { title: 'Product Section', key: 'productSectionStyle', count: 5, layout: 'grid' },
+  // { title: 'Product Section', key: 'productSectionStyle', count: 5, layout: 'grid' },
   { title: 'Product card', key: 'productCardStyle', count: 5, layout: 'cards' },
-  { title: 'Brand Section', key: 'brandSectionStyle', count: 5, layout: 'grid' },
+  // { title: 'Brand Section', key: 'brandSectionStyle', count: 5, layout: 'grid' },
   { title: 'Footer Section', key: 'footerStyle', count: 5, layout: 'grid' },
   { title: 'Bottom Nav Section', key: 'bottomNavStyle', count: 5, layout: 'grid' },
 ];

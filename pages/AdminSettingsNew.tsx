@@ -547,6 +547,19 @@ const AdminSettingsNew: React.FC<AdminSettingsNewProps> = ({ onNavigate, current
       hasInitialized.current = true;
     }
   }, [currentUser]);
+
+  // Keyboard shortcut for save (Ctrl+S / Cmd+S)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        handleSaveProfile();
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  });
   
   // Password change state
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);

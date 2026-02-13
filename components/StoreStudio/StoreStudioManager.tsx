@@ -101,6 +101,19 @@ export const StoreStudioManager: React.FC<StoreStudioManagerProps> = ({
     }
   };
 
+  // Keyboard shortcut for save (Ctrl+S / Cmd+S)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        handleSaveConfig();
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  });
+
   // Toggle store studio enabled/disabled
   const handleToggleEnabled = async () => {
     // Store current config for rollback

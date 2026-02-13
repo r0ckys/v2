@@ -358,8 +358,8 @@ const AdminProducts: React.FC<AdminProductsProps> = ({
       </div>
 
       {/* Table Section */}
-      <div className="w-full overflow-hidden rounded-xl border border-gray-100 shadow-sm bg-white">
-        <div className="overflow-x-auto">
+      <div className="w-full rounded-xl border border-gray-100 shadow-sm bg-white">
+        <div className="overflow-x-auto overflow-y-visible">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-[#EBF5FF] text-[#1F2937] text-sm font-semibold">

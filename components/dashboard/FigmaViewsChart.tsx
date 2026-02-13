@@ -72,10 +72,10 @@ const FigmaViewsChart: React.FC<FigmaViewsChartProps> = ({
   );
 
   return (
-    <div className="w-full min-h-[300px] relative">
+    <div className="w-full min-h-[300px] relative overflow-visible">
       {/* Y-axis label */}
-      <div className="absolute left-0 top-1/2 -translate-y-1/2 flex items-center gap-2">
-        <span className="origin-center -rotate-90 text-center text-neutral-600 text-xs font-normal font-['DM_Sans'] whitespace-nowrap">
+      <div className="absolute left-0 top-1/2 -translate-y-1/2 flex items-center gap-2 z-10">
+        <span className="origin-center -rotate-90 text-center text-neutral-600 text-xs font-normal font-['DM_Sans'] whitespace-nowrap" style={{ marginLeft: '-28px' }}>
           Units of measure
         </span>
         <div className="w-px h-40 bg-stone-300" />

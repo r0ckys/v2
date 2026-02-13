@@ -264,11 +264,12 @@ export const ThemeViewTab: React.FC<ThemeViewTabProps> = ({
             fontFamily: '"Lato", sans-serif',
             fontWeight: 700,
             fontSize: '18px',
-            color: '#023337',
+            color: '#f91515',
             marginBottom: '20px',
           }}
         >
-          Theme Colour
+          Theme Colour - 
+        "(This section is under development, changes here will not reflect on the live website yet.)"
         </h3>
 
         {/* Color Inputs Row */}

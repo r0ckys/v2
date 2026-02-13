@@ -170,6 +170,19 @@ const AdminOrders: React.FC<AdminOrdersProps> = ({ orders, courierConfig, onUpda
     }
   };
 
+  // Ctrl+S keyboard shortcut for save when modal is open
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's' && selectedOrder) {
+        e.preventDefault();
+        handleSaveOrder();
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  });
+
   // Selection handlers
   const toggleOrderSelection = (orderId: string) => {
     setSelectedOrderIds((prev: string[]) =>

@@ -450,6 +450,7 @@ const AdminCustomersReview: React.FC<AdminCustomersReviewProps> = ({ orders, pro
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
                 className="appearance-none bg-[#F1F5F9] text-gray-700 text-sm font-medium py-2.5 pl-4 pr-10 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                style={{ WebkitAppearance: 'none', MozAppearance: 'none', backgroundImage: 'none' }}
               >
                 <option>All Status</option>
                 <option>Active</option>
@@ -464,6 +465,7 @@ const AdminCustomersReview: React.FC<AdminCustomersReviewProps> = ({ orders, pro
                 value={tagFilter}
                 onChange={(e) => setTagFilter(e.target.value)}
                 className="appearance-none bg-[#F1F5F9] text-gray-700 text-sm font-medium py-2.5 pl-4 pr-10 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                style={{ WebkitAppearance: 'none', MozAppearance: 'none', backgroundImage: 'none' }}
               >
                 <option>10 Tags</option>
                 <option>5 Tags</option>
@@ -568,6 +570,7 @@ const AdminCustomersReview: React.FC<AdminCustomersReviewProps> = ({ orders, pro
                   value={customerSortBy}
                   onChange={(e) => setCustomerSortBy(e.target.value)}
                   className="appearance-none bg-[#F1F5F9] text-gray-700 text-sm font-medium py-1.5 pl-3 pr-8 rounded-md focus:outline-none cursor-pointer"
+                  style={{ WebkitAppearance: 'none', MozAppearance: 'none', backgroundImage: 'none' }}
                 >
                   <option>Newest</option>
                   <option>Oldest</option>
@@ -698,6 +701,7 @@ const AdminCustomersReview: React.FC<AdminCustomersReviewProps> = ({ orders, pro
                   value={reviewSortBy}
                   onChange={(e) => setReviewSortBy(e.target.value)}
                   className="appearance-none bg-[#F1F5F9] text-gray-700 text-sm font-medium py-1.5 pl-3 pr-8 rounded-md focus:outline-none cursor-pointer"
+                  style={{ WebkitAppearance: 'none', MozAppearance: 'none', backgroundImage: 'none' }}
                 >
                   <option>Newest</option>
                   <option>Oldest</option>

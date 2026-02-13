@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Search, Globe, RefreshCw, X, Pipette } from 'lucide-react';
+import { Search, RefreshCw, X, Pipette } from 'lucide-react';
 import { WebsiteConfig, ColorKey } from './types';
 import { DEFAULT_COLORS, normalizeHexColor } from './constants';
 
@@ -1123,85 +1123,6 @@ export const ThemeColorsTab: React.FC<ThemeColorsTabProps> = ({
           }}
           placeholder="gadget, gift, toy, electronics..."
         />
-      </div>
-
-      {/* Order Language Section */}
-      <div
-        style={{
-          backgroundColor: 'white',
-          borderRadius: '8px',
-          padding: '20px',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-          <div
-            style={{
-              width: '40px',
-              height: '40px',
-              borderRadius: '10px',
-              background: 'linear-gradient(135deg, #22c55e 0%, #059669 100%)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 2px 8px rgba(34, 197, 94, 0.3)',
-            }}
-          >
-            <Globe size={18} style={{ color: 'white' }} />
-          </div>
-          <div>
-            <h3
-              style={{
-                fontFamily: '"Lato", sans-serif',
-                fontWeight: 700,
-                fontSize: '18px',
-                color: '#023337',
-                margin: 0,
-              }}
-            >
-              Order Language
-            </h3>
-            <p style={{ fontFamily: '"Poppins", sans-serif', fontSize: '12px', color: '#6c6c6c', margin: 0 }}>
-              Choose the language for order notifications and invoices
-            </p>
-          </div>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
-          {(['English', 'Bangla'] as const).map((lang) => (
-            <label
-              key={lang}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                padding: '16px',
-                borderRadius: '10px',
-                border: websiteConfiguration.orderLanguage === lang ? '2px solid #22c55e' : '2px solid #e5e5e5',
-                backgroundColor: websiteConfiguration.orderLanguage === lang ? '#f0fdf4' : 'white',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-              }}
-            >
-              <input
-                type="radio"
-                name="orderLanguage"
-                checked={websiteConfiguration.orderLanguage === lang}
-                onChange={() => setWebsiteConfiguration((p) => ({ ...p, orderLanguage: lang }))}
-                style={{ width: '20px', height: '20px', accentColor: '#22c55e' }}
-              />
-              <span
-                style={{
-                  fontFamily: '"Poppins", sans-serif',
-                  fontWeight: 600,
-                  fontSize: '15px',
-                  color: websiteConfiguration.orderLanguage === lang ? '#15803d' : '#374151',
-                }}
-              >
-                {lang === 'Bangla' ? '🇧🇩 ' : '🇬🇧 '}
-                {lang}
-              </span>
-            </label>
-          ))}
-        </div>
       </div>
     </div>
   );

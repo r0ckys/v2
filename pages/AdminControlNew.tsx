@@ -774,7 +774,7 @@ const AdminControl: React.FC<AdminControlProps> = ({
         </div>
 
         {/* Table */}
-        <div style={{ background: 'white', overflow: 'hidden' }}>
+        <div style={{ background: 'white' }}>
           {/* Desktop Table */}
           <div className="hidden md:block">
             {/* Table Header */}
