@@ -615,7 +615,7 @@ const AdminCustomersReview: React.FC<AdminCustomersReviewProps> = ({ orders, pro
                     </td>
                   </tr>
                 ) : (
-                  filteredCustomers.map((customer) => (
+                  filteredCustomers.map((customer, i) => (
                     <tr key={customer.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50">
                       <td className="p-4">
                         <div 
@@ -625,7 +625,7 @@ const AdminCustomersReview: React.FC<AdminCustomersReviewProps> = ({ orders, pro
                           {selectedCustomers.includes(customer.id) && <CheckCircle className="w-3.5 h-3.5 text-white" />}
                         </div>
                       </td>
-                      <td className="py-4 px-2 text-sm text-gray-600">{customer.serialNumber}</td>
+                      <td className="py-4 px-2 text-sm text-gray-600">{filteredCustomers.length - i}</td>
                       <td className="py-4 px-2">
                         <img src={customer.avatar} alt="" className="w-10 h-10 rounded-lg object-cover bg-gray-200" />
                       </td>
@@ -760,7 +760,7 @@ const AdminCustomersReview: React.FC<AdminCustomersReviewProps> = ({ orders, pro
                               {selectedReviews.includes(review._id) && <CheckCircle className="w-3.5 h-3.5 text-white" />}
                             </div>
                           </td>
-                          <td className="py-4 px-2 text-sm text-gray-600">{100 + idx}</td>
+                          <td className="py-4 px-2 text-sm text-gray-600">{filteredReviews.length - idx}</td>
                           <td className="py-4 px-2">
                             <img src={getUserAvatar(review.userName)} alt="" className="w-9 h-9 rounded-lg object-cover bg-gray-200" />
                           </td>

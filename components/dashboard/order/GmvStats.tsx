@@ -71,7 +71,7 @@ const MetricCard = ({
   showAction,
 }: MetricCardProps) => {
   // Common container classes
-  const containerClasses = "relative w-full p-3 bg-white rounded-lg shadow-sm border border-gray-100 flex flex-col gap-1 transition-all hover:shadow-md";
+  const containerClasses = "relative w-full p-3 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 flex flex-col gap-1 transition-all hover:shadow-md";
 
   // Layout for cards with detailed multi-point info (e.g., Courier Return)
   if (additionalInfo) {
@@ -144,8 +144,8 @@ const MetricCard = ({
  */
 const GmvStats = () => {
   return (
-    <div className="bg-gray-50 rounded-xl p-4 flex flex-col gap-3">
-      <h3 className="text-sm font-medium text-gray-700">Business Overview</h3>
+    <div className="bg-gray-50 rounded-xl p-4 flex flex-col gap-3 dark:bg-gray-800">
+      <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Business Overview</h3>
       
       <div className="flex flex-col gap-2">
         {metricsData.map((metric, index) => (

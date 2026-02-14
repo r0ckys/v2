@@ -677,7 +677,7 @@ const FigmaOrderList: React.FC<FigmaOrderListProps> = ({
   ];
 
   return (
-    <div className="bg-white rounded-2xl mx-2 sm:mx-4 md:mx-6 p-4 sm:p-6 shadow-sm font-['Poppins']">
+    <div className="bg-white dark:bg-gray-800 rounded-2xl mx-2 sm:mx-4 md:mx-6 p-4 sm:p-6 shadow-sm font-['Poppins']">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-semibold text-gray-900">Order List</h1>
@@ -691,24 +691,24 @@ const FigmaOrderList: React.FC<FigmaOrderListProps> = ({
       </div>
 
       {/* Stats Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6 dark:bg-gray-800">
         {/* Order Summary */}
-        <div className="bg-gray-50 rounded-xl p-5 flex flex-col h-full">
+        <div className="bg-gray-50 dark:bg-gray-700 rounded-xl p-5 flex flex-col h-full">
           <h3 className="text-sm font-medium text-gray-700 mb-4">Order Summary</h3>
           <div className="flex items-center justify-center gap-6 flex-1">
             <div className="relative w-[180px] h-[180px] flex-shrink-0">
               <DonutChart data={orderStatusData} total={orderSummary.total} />
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <span className="text-gray-400 text-[9px] font-bold uppercase tracking-widest">Total</span>
-                <span className="text-black font-extrabold text-3xl leading-none my-1">{orders.length}</span>
-                <span className="text-gray-400 text-[9px] font-bold uppercase tracking-widest">Orders</span>
+                <span className="text-gray-400 dark:text-gray-300 text-[9px] font-bold uppercase tracking-widest">Total</span>
+                <span className="text-black dark:text-white font-extrabold text-3xl leading-none my-1">{orders.length}</span>
+                <span className="text-gray-400 dark:text-gray-300 text-[9px] font-bold uppercase tracking-widest">Orders</span>
               </div>
             </div>
             <div className="flex flex-col gap-2 text-sm">
               {orderStatusData.map((status, index) => (
                 <div key={index} className="flex items-center gap-2">
                   <span className={`w-3 h-3 rounded-full ${status.bgColor}`}></span>
-                  <span className="text-slate-700 font-medium">{status.label}</span>
+                  <span className="text-slate-700 dark:text-slate-300 font-medium">{status.label}</span>
                   <span style={{ color: status.color }}>({status.percentage}%)</span>
                 </div>
               ))}
@@ -716,7 +716,7 @@ const FigmaOrderList: React.FC<FigmaOrderListProps> = ({
           </div>
         </div>
 
-        <div className="bg-gray-50 rounded-xl p-5 flex flex-col h-full">
+        <div className="bg-gray-50 dark:bg-gray-700 rounded-xl p-5 flex flex-col h-full">
           <div className="flex items-center gap-4 mb-3">
             <span className="flex items-center gap-1 text-xs font-semibold text-[#FF8A00]">
               <span className="w-2 h-2 rounded-full bg-[#FF8A00]"></span>

@@ -115,13 +115,54 @@ const FigmaSalesPerformance: React.FC<FigmaSalesPerformanceProps> = ({
     return path;
   };
 
+  // Year selection state
+  const [selectedYear, setSelectedYear] = React.useState<number>(new Date().getFullYear());
+  const [showYearDropdown, setShowYearDropdown] = React.useState(false);
+  const [customMode, setCustomMode] = React.useState(false);
+
+  // Last 5 years for custom selection
+  const last5Years = useMemo(() => {
+    const current = new Date().getFullYear();
+    return Array.from({ length: 5 }, (_, i) => current - i);
+  }, []);
+
   return (
     <div className="w-full h-80 sm:h-96 p-3 sm:p-4 bg-white dark:bg-gray-800 rounded-xl border border-zinc-200 dark:border-gray-700 flex flex-col justify-start items-start gap-2 overflow-hidden">
       {/* Header */}
-      <div className="w-full flex justify-start items-center gap-2.5">
+      <div className="w-full flex justify-between items-center gap-2.5">
         <div className="text-zinc-800 dark:text-white text-lg font-bold font-['Lato']">Sale Performance</div>
+        {/* Year/Custom Selector */}
+        <div className="flex gap-2">
+          <button
+            className={`px-3 py-1 rounded-full text-sm font-medium ${!customMode ? 'bg-orange-400 text-white border border-orange-500' : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white'}`}
+            onClick={() => setCustomMode(false)}
+          >
+            Year
+          </button>
+          <div className="relative">
+            <button
+              className={`px-3 py-1 rounded-full text-sm font-medium ${customMode ? 'bg-orange-400 text-white border border-orange-500' : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white'}`}
+              onClick={() => { setCustomMode(true); setShowYearDropdown((v) => !v); }}
+            >
+              Custom
+            </button>
+            {customMode && showYearDropdown && (
+              <div className="absolute right-0 mt-2 w-28 bg-white dark:bg-gray-800 border border-zinc-200 dark:border-gray-700 rounded shadow-lg z-10">
+                {last5Years.map((year) => (
+                  <div
+                    key={year}
+                    className={`px-4 py-2 cursor-pointer hover:bg-orange-100 dark:hover:bg-gray-700 ${selectedYear === year ? 'font-bold text-orange-500' : ''}`}
+                    onClick={() => { setSelectedYear(year); setShowYearDropdown(false); }}
+                  >
+                    {year}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
-      
+
       {/* Legend - Wrap on mobile */}
       <div className="flex flex-wrap justify-start items-center gap-3 sm:gap-6">
         <div className="text-sky-400 text-sm font-bold font-['Poppins']">Placed Order</div>
@@ -130,7 +171,7 @@ const FigmaSalesPerformance: React.FC<FigmaSalesPerformanceProps> = ({
       </div>
 
       {/* Chart Area */}
-        <div className="flex-1 w-full flex overflow-x-auto">
+      <div className="flex-1 w-full flex overflow-x-auto">
         {/* Y-axis labels */}
         <div className="flex flex-col justify-between h-full pr-2">
           {[100, 75, 50, 25, 0].map((val) => (
@@ -150,7 +191,6 @@ const FigmaSalesPerformance: React.FC<FigmaSalesPerformanceProps> = ({
               style={{ top: `${i * 25}%` }} 
             />
           ))}
-          
           {/* Line chart */}
           <svg className="w-full h-full absolute top-0 left-0" viewBox="0 0 700 180" preserveAspectRatio="none">
             {/* Placed Order (sky-400) */}
@@ -181,7 +221,7 @@ const FigmaSalesPerformance: React.FC<FigmaSalesPerformanceProps> = ({
       {/* X-axis labels */}
       <div className="w-full pl-8 inline-flex justify-between items-center">
         {Array.from({ length: 31 }, (_, i) => (
-          <div key={i} className="opacity-50 text-neutral-900 text-[10px] font-medium font-['Poppins']">
+          <div key={i} className="opacity-50 text-neutral-900 dark:text-gray-300 text-[10px] font-medium font-['Poppins']">
             {i + 1}
           </div>
         ))}
